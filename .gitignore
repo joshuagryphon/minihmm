@@ -1,0 +1,7 @@
+.svn/
+__pycache__/
+*.pyc
+build/
+dist/
+.pydevproject
+.project
