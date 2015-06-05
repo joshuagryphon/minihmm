@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+from setuptools import setup, find_packages
+import os
+import minihmm
+
+with open("README.md") as f:
+    long_description = f.read()
+
+
+config_info = { "version"      : minihmm.__version__,
+                "packages"     : find_packages(),
+              }
+
+
+setup(
+    name = "minihmm",
+    install_requires = [
+    	                "numpy>=1.5",
+                        "scipy>=0.12.0",
+                        "matplotlib>=1.3.0",
+                        ],
+
+    zip_safe = True,
+
+    # metadata for upload to PyPI
+    author           = "Joshua Griffin Dunn",
+    author_email     = "joshua.g.dunn@gmail.com",
+    maintainer       = "Joshua Griffin Dunn",
+    maintainer_email = "Joshua Griffin Dunn",
+    
+    description = "Lightweight extensible HMM engine, supporting univariate or multivariate, continuous or discrete emissions",
+    long_description = long_description,
+    license   = "BSD 3-Clause",
+    keywords  = "HMM hidden Markov model machine learning modeling statistics",
+    url       = "",
+    platforms = "POSIX", # windows, 
+    
+    #tests_require=["nose>=1.0"],
+    #test_suite = "nose.collector",
+    
+    classifiers=[
+         'Development Status :: 4 - Beta',
+
+         'Programming Language :: Python',
+         'Programming Language :: Python :: 2.7',
+         'Programming Language :: Python :: 3.3',
+         'Programming Language :: Python :: 3.4',
+
+         'Topic :: Machine learning',
+         'Topic :: Statistics',
+         'Topic :: Modeling',
+         'Topic :: HMM',
+
+         'Intended Audience :: End Users',
+         'Intended Audience :: Developers',
+
+         'License :: BSD 3-Clause',
+         
+         'Operating System :: POSIX',
+         'Operating System :: MacOS :: MacOS X',
+         'Operating System :: Microsoft :: Windows',
+        ]
+    
+    **config_info
+)
