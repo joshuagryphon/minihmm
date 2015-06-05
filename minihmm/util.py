@@ -13,3 +13,9 @@ class NullWriter(object):
     
     def __str__(self):
         return "NullWriter()"
+    
+    def close(self):
+        pass
+
+    def flush(self):
+        pass
