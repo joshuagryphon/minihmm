@@ -5,10 +5,10 @@ import sys
 import functools
 from minihmm.hmm import FirstOrderHMM
 from minihmm.estimators import UnivariateGaussianEmissionEstimator,\
-                                    DiscreteEmissionEstimator
+                               DiscreteEmissionEstimator
 from minihmm.training import train_baum_welch, neg_exp_noise_gen
 from minihmm.factors import ArrayFactor, MatrixFactor, LogFunctionFactor,\
-                                 ScipyDistributionFactor
+                            ScipyDistributionFactor
 
 
 _casino_flat_params    = [0.5,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,0.5,0.5]

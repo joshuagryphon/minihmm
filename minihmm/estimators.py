@@ -21,7 +21,7 @@ distributions, as well as "frozen" estimators which keep parameter
 values constant through Baum-Welch training.
 """
 from minihmm.factors import ArrayFactor, MatrixFactor, FunctionFactor, \
-                                 LogFunctionFactor, ScipyDistributionFactor
+                            LogFunctionFactor, ScipyDistributionFactor
 
 from abc import abstractmethod
 import numpy

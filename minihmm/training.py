@@ -7,16 +7,17 @@ of Expectation maximization).
 Also includes helper functions to add decaying noise during training
 """
 from minihmm.factors import ArrayFactor, MatrixFactor, FunctionFactor, \
-                                 LogFunctionFactor, ScipyDistributionFactor
+                            LogFunctionFactor, ScipyDistributionFactor
 from minihmm.estimators import DiscreteStatePriorEstimator,\
-                                    DiscreteTransitionEstimator,\
-                                    DiscreteEmissionEstimator
+                               DiscreteTransitionEstimator,\
+                               DiscreteEmissionEstimator
 from minihmm.util import NullWriter
 import numpy
 import datetime
 import multiprocessing
 import functools
 
+# TODO: change to biufc
 _number_types = { int, long, float, numpy.long, numpy.longlong, numpy.longdouble, numpy.longfloat, 
                   numpy.uint, numpy.uint0, numpy.uint8, numpy.uint16, numpy.uint32, numpy.uint64,
                   numpy.int,  numpy.int0,  numpy.int8,  numpy.int16,  numpy.int32,  numpy.int64,
@@ -148,7 +149,7 @@ def bw_worker(my_model,
 
     return obs_logprob, my_A, my_E, my_pi, len(my_obs)
 
-def format_for_logging(x,fmt="%.32e"):
+def format_for_logging(x,fmt="%.8f"):
     """Format a model parameter for logging in a text file.
     Numerical types are formatted following the 'fmt' parameter.
     Lists and Numpy arrays are formatted as comma-separated strings.
@@ -178,6 +179,7 @@ def format_for_logging(x,fmt="%.32e"):
     else:
         return str(x)
 
+# TODO: catch KeyboardInterrupt
 def train_baum_welch(model,obs,
                      state_prior_estimator=DiscreteStatePriorEstimator(),
                      transition_estimator=DiscreteTransitionEstimator(),
@@ -388,7 +390,7 @@ def train_baum_welch(model,obs,
                                             logprob_per_obs,
                                             counted,
                                             c,
-                                            "\t".join([format_for_logging(X,fmt="%.4e") for X in params])
+                                            "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
                                             )
         logfile.write("%s\n" % log_message)
         printer.write("%s\n" % print_message)
