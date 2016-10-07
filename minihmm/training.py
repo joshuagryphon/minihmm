@@ -25,23 +25,12 @@ _number_types = { int, long, float, numpy.long, numpy.longlong, numpy.longdouble
                   numpy.ulonglong,
                 }
 
-have_mpmath = True
-
-try:
-    import mpmath as mp
-    _number_types |= { mp.mpf }
-    mpfdtype = numpy.dtype(mp.mpf)
-    to_mpf = numpy.vectorize(mp.mpf,otypes=(mpfdtype,),doc="Convert a numpy array to an array of arbitrary-precision floats")
-    mp_exp = numpy.vectorize(mp.exp,otypes=(mpfdtype,),doc="Exponentiate a numpy array with arbitrary precision")
-    mp_log = numpy.vectorize(mp.log,otypes=(mpfdtype,),doc="Take log of a numpy array with arbitrary precision")
-except ImportError:
-    have_mpmath = False
 
 #===============================================================================
 # INDEX: helper functions
 #===============================================================================
 
-def neg_exp_noise_gen(a=1.0,b=1.0,offset=0):
+def neg_exp_noise_gen(a=1.0, b=1.0, offset=0):
     """Generate exponentially decaying constants following y = ae**-bx
     
     Parameters
@@ -65,7 +54,7 @@ def neg_exp_noise_gen(a=1.0,b=1.0,offset=0):
         offset += 1
         yield a*numpy.exp(-offset*b)
 
-def linear_noise_gen(m=-0.05,b=1,offset=0):
+def linear_noise_gen(m=-0.05, b=1, offset=0):
     """Generate linearly decaying noise following y = max(m*x + b,0)
     
     Parameters
@@ -96,9 +85,9 @@ def linear_noise_gen(m=-0.05,b=1,offset=0):
 
 def bw_worker(my_model,
               my_obs,
-              state_prior_estimator=DiscreteStatePriorEstimator(),
-              emission_estimator=None,
-              transition_estimator=DiscreteTransitionEstimator()):
+              state_prior_estimator = DiscreteStatePriorEstimator(),
+              emission_estimator    = None,
+              transition_estimator  = DiscreteTransitionEstimator()):
     """Collect summary statistics from an observation sequence for Baum-Welch training.
     In an expectation-maximization context, :py:func:`bw_worker` is used in
     evaluating the Q function in the E step.
@@ -149,7 +138,7 @@ def bw_worker(my_model,
 
     return obs_logprob, my_A, my_E, my_pi, len(my_obs)
 
-def format_for_logging(x,fmt="%.8f"):
+def format_for_logging(x, fmt="%.8f"):
     """Format a model parameter for logging in a text file.
     Numerical types are formatted following the 'fmt' parameter.
     Lists and Numpy arrays are formatted as comma-separated strings.
@@ -180,20 +169,21 @@ def format_for_logging(x,fmt="%.8f"):
         return str(x)
 
 # TODO: catch KeyboardInterrupt
-def train_baum_welch(model,obs,
-                     state_prior_estimator=DiscreteStatePriorEstimator(),
-                     transition_estimator=DiscreteTransitionEstimator(),
-                     emission_estimator=None,
-                     pseudocount_weights=iter([1e-10]),
-                     noise_weights=iter([0.0]),
-                     learning_threshold=1e-5,
-                     miniter=10,
-                     maxiter=1000,
-                     start_iteration=0,
-                     processes=4,
-                     chunksize=None,
-                     logfile=NullWriter(),
-                     printer=NullWriter(),
+def train_baum_welch(model,
+                     obs,
+                     state_prior_estimator   = DiscreteStatePriorEstimator(),
+                     transition_estimator    = DiscreteTransitionEstimator(),
+                     emission_estimator      = None,
+                     pseudocount_weights     = iter([1e-10]),
+                     noise_weights           = iter([0.0]),
+                     learning_threshold      = 1e-5,
+                     miniter                 = 10,
+                     maxiter                 = 1000,
+                     start_iteration         = 0,
+                     processes               = 4,
+                     chunksize               = None,
+                     logfile                 = NullWriter(),
+                     printer                 = NullWriter(),
                     ):
     """Train an HMM using the Baum-Welch algorithm on one or more unlabeled observation sequences.
     
