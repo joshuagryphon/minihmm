@@ -270,6 +270,7 @@ def train_baum_welch(model,
     """
     if emission_estimator is None:
         raise AssertionError("Emission estimator required by train_baum_welch(), but not supplied")
+
     
     state_priors     = model.state_priors
     emission_factors = model.emission_probs
@@ -290,14 +291,15 @@ def train_baum_welch(model,
     if chunksize < 1:
         chunksize = 1
     
-    header = ["#datetime","logprob","logprob_per_length","counted","iteration"] +\
-             ["p%s" % X for X in range(len(model.serialize()))]
-    header = "\t".join(header) + "\n"
-    logfile.write(header)
-    printer.write(header)
+#     header = ["#datetime","logprob","logprob_per_length","counted","iteration"] +\
+#              ["p%s" % X for X in range(len(model.serialize()))]
+#     header = "\t".join(header) + "\n"
+#     logfile.write(header)
+#     printer.write(header)
     
     while c < maxiter and (delta > learning_threshold or c < miniter):
-        model = model_type(state_priors,emission_factors,trans_probs)
+        print(trans_probs.data)
+        model = model_type(state_priors,emission_factors, trans_probs)
         try:
             noise_weight = noise_weights.next()
         except StopIteration:
@@ -354,12 +356,10 @@ def train_baum_welch(model,
                 print my_result[1]
                 print "E_part:"
                 print my_result[2]
-                print "pi_part:"
-                print my_result[3]
             raise ValueError("All observation sequences underflowed. None counted. Try repeating with better initial parameter estimates, a different training set, or different emission models.")
 
-        logprobs, A_parts, E_parts, pi_parts, obs_lengths = zip(*results)
-        new_total_logprob = sum(logprobs)
+        obs_logprobs, A_parts, E_parts, pi_parts, obs_lengths = zip(*results)
+        new_total_logprob = sum(obs_logprobs)
         total_obs_length  = sum(obs_lengths)
         logprob_per_obs = new_total_logprob/total_obs_length
 
@@ -367,23 +367,23 @@ def train_baum_welch(model,
         logprobs.append(new_total_logprob)
         
         # record parameters & test convergence
-        params  = model.serialize()
-        log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                                 new_total_logprob,
-                                                 logprob_per_obs,
-                                                 counted,
-                                                 c,
-                                                 "\t".join([format_for_logging(X) for X in params])
-                                                 )
-        print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                            new_total_logprob,
-                                            logprob_per_obs,
-                                            counted,
-                                            c,
-                                            "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
-                                            )
-        logfile.write("%s\n" % log_message)
-        printer.write("%s\n" % print_message)
+#         params  = model.serialize()
+#         log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
+#                                                  new_total_logprob,
+#                                                  logprob_per_obs,
+#                                                  counted,
+#                                                  c,
+#                                                  "\t".join([format_for_logging(X) for X in params])
+#                                                  )
+#         print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
+#                                             new_total_logprob,
+#                                             logprob_per_obs,
+#                                             counted,
+#                                             c,
+#                                             "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
+#                                             )
+#         logfile.write("%s\n" % log_message)
+#         printer.write("%s\n" % print_message)
             
         delta              = new_total_logprob - last_total_logprob
         last_total_logprob = new_total_logprob
@@ -418,5 +418,11 @@ def train_baum_welch(model,
     
     logprobs   = numpy.array(logprobs)
     best_model = models[logprobs.argmax()]
+    dtmp = {
+        "best_model" : best_model,
+        "last_model" : model,
+        "reason"     : reason,
+        "iterations" : c -1,
+    }
         
-    return best_model, model, reason
+    return dtmp

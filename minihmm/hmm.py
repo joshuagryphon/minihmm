@@ -65,7 +65,10 @@ class FirstOrderHMM(AbstractGenerativeFactor):
     
     Observations/emissions can be multivariate
     """
-    def __init__(self,state_priors,emission_probs,trans_probs):
+    def __init__(self,
+                 state_priors   = None,
+                 emission_probs = None,
+                 trans_probs    = None):
         """Create a |FirstOrderHMM|.
         
         Parameters
@@ -398,12 +401,21 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         states.append(self.state_priors.generate())
         emissions.append(self.emission_probs[states[0]].generate())
         
+        logprob  = self.state_priors.logprob(states[0]) 
+        logprob += self.emission_probs[states[0]].logprob(emissions[0])
+        
+        
         for i in range(1,length):
             new_state = self.trans_probs.generate(states[i-1])
+            new_obs   = self.emission_probs[new_state].generate()
+            
             states.append(new_state)
-            emissions.append(self.emission_probs[new_state].generate())
+            emissions.append(new_obs)
+            
+            logprob += self.trans_probs.logprob(states[-1],new_state)
+            logprob += self.emission_probs[new_state].logprob(new_obs)
         
-        return numpy.array(states).astype(int), numpy.array(emissions)
+        return numpy.array(states).astype(int), numpy.array(emissions), logprob
 
     def sample(self,emissions):
         """Probabilistically sample state sequences from the HMM using a modified
@@ -456,16 +468,19 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         Returns
         -------
-        numpy.ndarray
-            Decoded labels for each position in emissions[start:end]
-                            
-        float
-            joint log probability of sequence of emissions[start:end]
-            and the decoded state sequence
-        
         dict
-            dict[state] = log probability of final symbol
-            being in that state
+            Results of decoding, with the following keys:
+            
+            `viterbi_states`
+                :class:`numpy.ndarray`. Decoded labels for each position in
+                emissions[start:end]
+        
+            `logprob`
+                :class:`float`. Joint log probability of sequence of
+                `emissions[start:end]` and the decoded state sequence
+        
+            `state_paths`
+                dict[state] = log probability of final symbol being in that state
         """
         state_dict = { K : [K] for K in range(self.num_states) }
         prev_probs = numpy.array([self.state_priors.logprob(X) + self.emission_probs[X].logprob(emissions[0])\
@@ -487,10 +502,13 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         final_label   = prev_probs.argmax()
         total_logprob = prev_probs.max()
         states = numpy.array(state_dict[final_label])
-        if verbose is False:
-            return states, total_logprob
-        else:
-            return states, total_logprob, state_dict
+        
+        dtmp = {
+            "viterbi_states"  : states,
+            "state_paths"     : state_dict,
+            "logprob"         : total_logprob,
+        }
+        return dtmp
 
 
 # class HighOrderHMM(FirstOrderHMM):
