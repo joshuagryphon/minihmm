@@ -140,7 +140,7 @@ class _BaseExample():
 
 
 
-class TestCoinExample(_BaseExample):
+class TestCoin(_BaseExample):
 
     @classmethod
     def do_subclass_setup(cls):
@@ -179,14 +179,18 @@ class TestCoinExample(_BaseExample):
 
 
 
-class TestGaussianExample(_BaseExample):
+class TestTwoGaussian(_BaseExample):
 
     @classmethod
     def do_subclass_setup(cls):
-        cls.name = "Gaussian example"
+        cls.name = "Two gaussian example"
         cls.min_frac_equal = 0.7
 
-        transitions = numpy.matrix([[0.9,0.1],
+        cls.state_prior_estimator = DiscreteStatePriorEstimator()
+        cls.transition_estimator  = DiscreteTransitionEstimator()
+        cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
+
+         transitions = numpy.matrix([[0.9,0.1],
                                     [0.25,0.75]])
 
         cls.models = {
@@ -207,6 +211,44 @@ class TestGaussianExample(_BaseExample):
         }
 
     
+
+class TestFourPoisson(_BaseExample):
+
+    @classmethod
+    def do_subclass_setup(cls):
+        cls.name = "Four-state Poisson example"
+        cls.min_frac_equal = 0.7
+
+        cls.state_prior_estimator = DiscreteStatePriorEstimator()
+        cls.transition_estimator  = DiscreteTransitionEstimator()
+        cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
+
+        transitions = numpy.matrix([[[0.8,0.05,0.05,0.1],
+                                     [0.2,0.6,0.1,0.1],
+                                     [0.01,0.97,0.01,0.01],
+                                     [0.45,0.01,0.04,0.5],
+                                    ])
+
+        cls.models = {
+            "generating" : {
+                "trans_probs"    : MatrixFactor(transitions),
+                "state_priors"   : ArrayFactor([0.25,0.25,0.25,0.25]),
+                "emission_probs" : [
+                      ScipyDistributionFactor(scipy.stats.poisson,1),
+                      ScipyDistributionFactor(scipy.stats.poisson,5),
+                      ScipyDistributionFactor(scipy.stats.poisson,10),
+                      ScipyDistributionFactor(scipy.stats.poisson,25),
+                 ]
+
+            },
+            "naive"      : {
+                "emission_probs" : [ScipyDistributionFactor(scipy.stats.norm,loc=0,scale=0.6),
+                                    ScipyDistributionFactor(scipy.stats.norm,loc=2,scale=1),
+                                   ],
+                "state_priors"   : ArrayFactor([0.25]*4),
+                "trans_probs"    : MatrixFactor([[0.25]*4]*4),
+            }
+        }
 
 
 def get_coins(hmm_type=FirstOrderHMM):
