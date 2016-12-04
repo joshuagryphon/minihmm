@@ -1,13 +1,15 @@
 #!/usr/bin/env python
-"""
+"""Unit tests for reducing model order and for changing model representation
 """
 
 import numpy
 import itertools
 
 from minihmm.represent import (
-    transcode_sequences,
     get_state_mapping,
+    get_expansion_states,
+    reduce_stateseq_orders,
+    transcode_sequences,
     #reduce_model_order,
     )
 
@@ -16,10 +18,121 @@ from nose.tools import (
     assert_true,
     assert_almost_equal,
     assert_dict_equal,
+    assert_list_equal,
     assert_raises
     )
 
 
+class TestGetExpansionStates():
+
+    @staticmethod
+    def check_results(num_states, starting_order, found_starts, found_ends):
+        e_ends   = [-2*X for X in range(1, starting_order)]
+        e_starts = [1+X for X in e_ends[::-1]]
+        assert_list_equal(e_starts, found_starts)
+        assert_list_equal(e_ends, found_ends)
+
+    def test_expansion_states(self):
+        for num_states in range(4):
+            for starting_order in range(4):
+                found_starts, found_ends = get_expansion_states(num_states, starting_order)
+                yield TestGetExpansionStates.check_results, num_states, starting_order, found_starts, found_ends
+
+
+class TestReduceStateseqOrders():
+
+    @classmethod
+    def setUpClass(cls):
+        cls.num_states = 7
+
+        cls.sequences = [
+            [0, 2, 0, 5, 2, 2, 4, 2, 4, 1],
+        ]
+
+        cls.expected = {
+            2 : [[(-1,0),
+                  ( 0,2),
+                  ( 2,0),
+                  ( 0,5),
+                  ( 5,2),
+                  ( 2,2),
+                  ( 2,4),
+                  ( 4,2),
+                  ( 2,4),
+                  ( 4,1),
+                  (1,-2)],
+            ],
+
+            3 : [[(-3,-1, 0),
+                  (-1, 0, 2),
+                  ( 0, 2, 0),
+                  ( 2, 0, 5),
+                  ( 0, 5, 2),
+                  ( 5, 2, 2),
+                  ( 2, 2, 4),
+                  ( 2, 4, 2),
+                  ( 4, 2, 4),
+                  ( 2, 4, 1),
+                  ( 4, 1,-2),
+                  ( 1,-2,-4),
+                  ],
+
+            ],
+
+            4 : [[(-5,-3,-1, 0),
+                  (-3,-1, 0, 2),
+                  (-1, 0, 2, 0),
+                  ( 0, 2, 0, 5),
+                  ( 2, 0, 5, 2),
+                  ( 0, 5, 2, 2),
+                  ( 5, 2, 2, 4),
+                  ( 2, 2, 4, 2),
+                  ( 2, 4, 2, 4),
+                  ( 4, 2, 4, 1),
+                  ( 2, 4, 1,-2),
+                  ( 4, 1,-2,-4),
+                  ( 1,-2,-4,-6),
+                  ],
+
+            ],
+
+            5 : [[(-7, -5,-3,-1, 0),
+                  (-5, -3,-1, 0, 2),
+                  (-3, -1, 0, 2, 0),
+                  (-1,  0, 2, 0, 5),
+                  ( 0, 2, 0, 5, 2),
+                  ( 2, 0, 5, 2, 2),
+                  ( 0, 5, 2, 2, 4),
+                  ( 5, 2, 2, 4, 2),
+                  ( 2, 2, 4, 2, 4),
+                  ( 2, 4, 2, 4, 1),
+                  ( 4, 2, 4, 1,-2),
+                  ( 2, 4, 1,-2,-4),
+                  ( 4, 1,-2,-4,-6),
+                  ( 1,-2,-4,-6,-8),
+                  ],
+            ],
+        }
+
+
+    def check_results(self, model_order):
+        expected = self.expected[model_order]
+        found    = reduce_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
+        assert_equal(len(expected),len(found),
+                "Number of output sequences '%s' does not match number of input sequences '%s' for ReduceStateseqOrders, order '%s'" % (len(found),len(expected),model_order))
+        for e, f in zip(expected,found):
+            assert_list_equal(e,f)
+
+    def test_reduce_stateseq_orders(self):
+        for model_order in self.expected:
+            yield self.check_results, model_order
+
+    def test_negative_input_states_raises_value_error(self):
+        assert_raises(ValueError,reduce_stateseq_orders,[[5,1,3,4,1,0,-1]],self.num_states,3)
+        assert_raises(ValueError,reduce_stateseq_orders,[[-5,1,3,4,1,0,1]],self.num_states,3)
+        assert_raises(ValueError,reduce_stateseq_orders,[[5,1,3,-4,1,0,1]],self.num_states,3)
+
+    
 class TestGetStateMapping():
 
     @staticmethod

@@ -7,13 +7,9 @@ import itertools
 import numpy
 
 
-def get_state_mapping(num_states, starting_order=2):
-    """Create dicts mapping states between a high-order and a first-order HMM,
-    adding new start and end states to handle inhomogeneities at sequence ends.
-    
-    In the representation space of the high-order model, new start states
-    are given negative odd indices, and new end states negative even indices.
-    
+
+def get_expansion_states(num_states, starting_order=2):
+    """Create sorted lists of expansion states required to reduce a model with `num_states` and `starting_order` to an equivalent first-order model
     
     Parameters
     ----------
@@ -24,6 +20,49 @@ def get_state_mapping(num_states, starting_order=2):
         Starting order of HMM/MM (Default: 2)
         
         
+    Returns
+    -------
+    list
+        List of new start states, sorted
+    
+    list
+        List of new end states, sorted
+    """
+    newstarts = []
+    newends   = []
+    for i in range(1, starting_order):
+        newend   = - 2*i
+        newstart = - 2*i + 1
+        newstarts.append(newstart)
+        newends.append(newend)
+        
+    newstarts = list(reversed(newstarts))
+    return newstarts, newends
+    
+def get_state_mapping(num_states, starting_order=2, newstarts=None, newends=None):
+    """Create dicts mapping states between a high-order and a first-order HMM,
+    adding new start and end states to handle inhomogeneities at sequence ends.
+    
+    In the representation space of the high-order model, new start states
+    are given negative odd indices, and new end states negative even indices.
+    
+    Parameters
+    ----------
+    num_states : int
+        Number of states in high-order HMM/MM
+    
+    starting_order : int, optional 
+        Starting order of HMM/MM (Default: 2)
+    
+    newstarts : list, optional
+        Sorted list of new start states. If `None`, will be calculated using
+        :func:`get_expansion_states`
+
+    newends : list, optional
+        Sorted list of new start end states. If `None`, will be calculated using
+        :func:`get_expansion_states`
+
+
     Returns
     -------
     :class:`dict`
@@ -44,16 +83,9 @@ def get_state_mapping(num_states, starting_order=2):
     reverse = {}
     states = list(range(num_states))
 
-    newstarts = []
-    newends   = []
-    for i in range(1, starting_order):
-        newend   = - 2*i
-        newstart = - 2*i + 1
-        newstarts.append(newstart)
-        newends.append(newend)
+    if newstarts is None or newends is None:
+        newstarts, newends = get_expansion_states(num_states, starting_order=starting_order)
         
-    newstarts = list(reversed(newstarts))
-    
     c = 0
     
     # create maps for newly added start and end states
@@ -79,6 +111,58 @@ def get_state_mapping(num_states, starting_order=2):
     
     return forward, reverse
 
+def reduce_stateseq_orders(state_seqs,
+                           num_states,
+                           starting_order = 2,
+                           newstarts      = None,
+                           newends        = None,
+                           state_map      = None):
+    """Remap a high-order sequence of states into an equivalent first-order model
+    
+    Parameters
+    ----------
+    states : list
+        List of states sequences
+    
+    num_states : int
+        Number of states in high-order HMM/MM
+
+    starting_order : int, optional 
+        Starting order of HMM/MM (Default: 2)
+    
+    newstarts : list, optional
+        Sorted list of new start states. If `None`, will be calculated using
+        :func:`get_expansion_states`
+
+    newends : list, optional
+        Sorted list of new start end states. If `None`, will be calculated using
+        :func:`get_expansion_states`
+        
+    state_map : dict, optional
+        Dictionary mapping tuples of high-order states to low-order states.
+        If `None`, will be calculated useing :func:`get_state_mapping`
+    """
+    if newstarts is None or newends is None:
+        newstarts, newends = get_expansion_states(num_states, starting_order=starting_order)
+        
+    if state_map is None:
+        state_map, _ = get_state_mapping(num_states,
+                                         starting_order = starting_order,
+                                         newstarts      = newstarts,
+                                         newends        = newends)
+    
+    outseqs = []
+    for n, inseq in enumerate(state_seqs):
+        if (numpy.array(inseq) < 0).any():
+            raise ValueError("Found negative state label in input sequence %s!" % n)
+        
+        baseseq = newstarts + list(inseq) + newends
+        outseqs.append([tuple(baseseq[idx:idx+starting_order]) for idx in range(0, len(baseseq) - starting_order + 1)])
+    
+    return outseqs 
+    
+
+
 def transcode_sequences(sequences,alphadict):
     """Transcode a sequence from one alphabet to another
     
@@ -98,12 +182,12 @@ def transcode_sequences(sequences,alphadict):
     return [numpy.array([alphadict[X] for X in Y]) for Y in sequences]
 
 
-# def reduce_order(states,
-#                  starting_order   = 2,
-#                  state_priors     = None,
-#                  transition_probs = None,
-#                  emission_probs   = None,
-#                  ):
+# def reduce_model_order(states,
+#                        starting_order   = 2,
+#                        state_priors     = None,
+#                        transition_probs = None,
+#                        emission_probs   = None,
+#                       ):
 #     """Create states and probability tables that map a high-order HMM to an equivalent 1st-order HMM
 #     
 #     
