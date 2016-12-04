@@ -2,8 +2,6 @@
 """Testing functions"""
 import numpy
 import scipy.stats
-import sys
-
 from nose.tools import assert_greater_equal
 from numpy.testing import (assert_array_equal,
                            assert_array_almost_equal,
@@ -75,6 +73,7 @@ class _BaseExample():
         for expected_states, obs in zip(self.states, self.observations):
             found_states = self.generating_hmm.viterbi(obs)["viterbi_states"]
             frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
+            msg = "Failed viterib test for test case '%s'. Expected at least %s\% accuracy. Got %s\%." % (self.name,self.min_frac_equal,frac_equal)
             yield assert_greater_equal, frac_equal, self.min_frac_equal, msg
          
 
@@ -84,7 +83,7 @@ class _BaseExample():
     def test_forward_logprob(self):
         numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected) in enumerate(zip(self.observations, self.logprobs)):
-            found, scaled_forward, b, scale_factors = self.hmm.forward(obj)
+            found, scaled_forward, b, scale_factors = self.generating_hmm.forward(obs)
             msg = "Failed test case %s on HMM %s. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                               self.name,
                                                                                               expected,
@@ -96,19 +95,7 @@ class _BaseExample():
     def test_fast_forward(self):
         numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected) in enumerate(zip(self.observations, self.logprobs)):
-            found = self.hmm.fast_forward(obj)
-            msg = "Failed test case %s on HMM %s. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
-                                                                                              self.name,
-                                                                                              expected,
-                                                                                              found,
-                                                                                              abs(expected-found)
-                                                                                              )
-            yield assert_almost_equal, expected, found, msg
-
-    def test_fast_forward(self):
-        numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected) in enumerate(zip(self.observations, self.logprobs)):
-            found = self.hmm.logprob(obj)
+            found = self.generating_hmm.fast_forward(obs)
             msg = "Failed test case %s on HMM %s. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                               self.name,
                                                                                               expected,
@@ -118,7 +105,7 @@ class _BaseExample():
             yield assert_almost_equal, expected, found, msg
 
     def test_forward_backward(self):
-        pass
+        assert False
 
     def test_train(self):
         mdict = train_baum_welch(self.naive_hmm,
@@ -190,7 +177,7 @@ class TestTwoGaussian(_BaseExample):
         cls.transition_estimator  = DiscreteTransitionEstimator()
         cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
 
-         transitions = numpy.matrix([[0.9,0.1],
+        transitions = numpy.matrix([[0.9,0.1],
                                     [0.25,0.75]])
 
         cls.models = {
@@ -223,11 +210,11 @@ class TestFourPoisson(_BaseExample):
         cls.transition_estimator  = DiscreteTransitionEstimator()
         cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
 
-        transitions = numpy.matrix([[[0.8,0.05,0.05,0.1],
-                                     [0.2,0.6,0.1,0.1],
-                                     [0.01,0.97,0.01,0.01],
-                                     [0.45,0.01,0.04,0.5],
-                                    ])
+        transitions = numpy.matrix([[0.8,0.05,0.05,0.1],
+                                    [0.2,0.6,0.1,0.1],
+                                    [0.01,0.97,0.01,0.01],
+                                    [0.45,0.01,0.04,0.5],
+                                   ])
 
         cls.models = {
             "generating" : {
@@ -252,7 +239,7 @@ class TestFourPoisson(_BaseExample):
 
 
 def get_coins(hmm_type=FirstOrderHMM):
-    """Constrruct a two-state HMM with fair and unfair coins
+    """Construct a two-state HMM with fair and unfair coins
 
     @param hmm_type          Type of HMM to instantiate (must be FirstOrderHMM
                               or a subclass)
@@ -271,29 +258,3 @@ def get_coins(hmm_type=FirstOrderHMM):
                                             [0,  0.1, 0.7, 0.2],
                                             [0,  0.1, 0.2, 0.7]]))
     return hmm_type(emission_factors,trans_probs)
-
-
-#def get_fourstate(hmm_type=FirstOrderHMM):
-#    """Construct a four-state HMM over discrete values for testing purposes
-#    
-#    This also implicitly tests ArrayFactor, MatrixFactor, and ScipyDistributionFactor
-#
-#    @param hmm_type          Type of HMM to instantiate (must be FirstOrderHMM
-#                              or a subclass)
-#    """
-#    import scipy.stats
-#    state_priors = ArrayFactor([0.25,0.25,0.25,0.25])
-#    trans_probs = MatrixFactor(numpy.matrix([[0.8,0.05,0.05,0.1],
-#                                            [0.2,0.6,0.1,0.1],
-#                                            [0.01,0.97,0.01,0.01],
-#                                            [0.45,0.01,0.04,0.5],
-#                                            ]))
-#    emission_probs = [ScipyDistributionFactor(scipy.stats.poisson,1),
-#                      ScipyDistributionFactor(scipy.stats.poisson,5),
-#                      ScipyDistributionFactor(scipy.stats.poisson,10),
-#                      ScipyDistributionFactor(scipy.stats.poisson,25),
-#                      ]
-#    return hmm_type(state_priors,emission_probs,trans_probs)
-#
-#
-## testing functions ------------------------------------------------------------
