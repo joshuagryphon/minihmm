@@ -354,7 +354,8 @@ class MatrixFactor(AbstractTableFactor):
             Sample, as *(row,col)*
         """
         if self.row_conditional is True:
-            return (self.data[i,:].cumsum() >= numpy.random.random()).argmax()
+            #return (self.data[i,:].cumsum() >= numpy.random.random()).argmax()
+            return (numpy.random.random() < self.data[i,:].cumsum()).argmax()
         else:
             #TODO: implement!
             pass

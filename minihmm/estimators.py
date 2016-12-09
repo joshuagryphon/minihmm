@@ -20,12 +20,15 @@ Here we provide examples of estimators for discrete and continuous
 distributions, as well as "frozen" estimators which keep parameter
 values constant through Baum-Welch training.
 """
-from minihmm.factors import ArrayFactor, MatrixFactor, FunctionFactor, \
-                            LogFunctionFactor, ScipyDistributionFactor
+from minihmm.factors import (ArrayFactor,
+                             MatrixFactor,
+                             FunctionFactor,
+                             LogFunctionFactor,
+                             ScipyDistributionFactor)
 
 from abc import abstractmethod
 import numpy
-import scipy
+import scipy.stats
 import copy
 
 #===============================================================================

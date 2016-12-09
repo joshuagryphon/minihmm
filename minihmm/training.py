@@ -25,23 +25,12 @@ _number_types = { int, long, float, numpy.long, numpy.longlong, numpy.longdouble
                   numpy.ulonglong,
                 }
 
-have_mpmath = True
-
-try:
-    import mpmath as mp
-    _number_types |= { mp.mpf }
-    mpfdtype = numpy.dtype(mp.mpf)
-    to_mpf = numpy.vectorize(mp.mpf,otypes=(mpfdtype,),doc="Convert a numpy array to an array of arbitrary-precision floats")
-    mp_exp = numpy.vectorize(mp.exp,otypes=(mpfdtype,),doc="Exponentiate a numpy array with arbitrary precision")
-    mp_log = numpy.vectorize(mp.log,otypes=(mpfdtype,),doc="Take log of a numpy array with arbitrary precision")
-except ImportError:
-    have_mpmath = False
 
 #===============================================================================
 # INDEX: helper functions
 #===============================================================================
 
-def neg_exp_noise_gen(a=1.0,b=1.0,offset=0):
+def neg_exp_noise_gen(a=1.0, b=1.0, offset=0):
     """Generate exponentially decaying constants following y = ae**-bx
     
     Parameters
@@ -65,7 +54,7 @@ def neg_exp_noise_gen(a=1.0,b=1.0,offset=0):
         offset += 1
         yield a*numpy.exp(-offset*b)
 
-def linear_noise_gen(m=-0.05,b=1,offset=0):
+def linear_noise_gen(m=-0.05, b=1, offset=0):
     """Generate linearly decaying noise following y = max(m*x + b,0)
     
     Parameters
@@ -96,9 +85,9 @@ def linear_noise_gen(m=-0.05,b=1,offset=0):
 
 def bw_worker(my_model,
               my_obs,
-              state_prior_estimator=DiscreteStatePriorEstimator(),
-              emission_estimator=None,
-              transition_estimator=DiscreteTransitionEstimator()):
+              state_prior_estimator = DiscreteStatePriorEstimator(),
+              emission_estimator    = None,
+              transition_estimator  = DiscreteTransitionEstimator()):
     """Collect summary statistics from an observation sequence for Baum-Welch training.
     In an expectation-maximization context, :py:func:`bw_worker` is used in
     evaluating the Q function in the E step.
@@ -149,7 +138,7 @@ def bw_worker(my_model,
 
     return obs_logprob, my_A, my_E, my_pi, len(my_obs)
 
-def format_for_logging(x,fmt="%.8f"):
+def format_for_logging(x, fmt="%.8f"):
     """Format a model parameter for logging in a text file.
     Numerical types are formatted following the 'fmt' parameter.
     Lists and Numpy arrays are formatted as comma-separated strings.
@@ -180,20 +169,21 @@ def format_for_logging(x,fmt="%.8f"):
         return str(x)
 
 # TODO: catch KeyboardInterrupt
-def train_baum_welch(model,obs,
-                     state_prior_estimator=DiscreteStatePriorEstimator(),
-                     transition_estimator=DiscreteTransitionEstimator(),
-                     emission_estimator=None,
-                     pseudocount_weights=iter([1e-10]),
-                     noise_weights=iter([0.0]),
-                     learning_threshold=1e-5,
-                     miniter=10,
-                     maxiter=1000,
-                     start_iteration=0,
-                     processes=4,
-                     chunksize=None,
-                     logfile=NullWriter(),
-                     printer=NullWriter(),
+def train_baum_welch(model,
+                     obs,
+                     state_prior_estimator   = DiscreteStatePriorEstimator(),
+                     transition_estimator    = DiscreteTransitionEstimator(),
+                     emission_estimator      = None,
+                     pseudocount_weights     = iter([1e-10]),
+                     noise_weights           = iter([0.0]),
+                     learning_threshold      = 1e-5,
+                     miniter                 = 10,
+                     maxiter                 = 1000,
+                     start_iteration         = 0,
+                     processes               = 4,
+                     chunksize               = None,
+                     logfile                 = NullWriter(),
+                     printer                 = NullWriter(),
                     ):
     """Train an HMM using the Baum-Welch algorithm on one or more unlabeled observation sequences.
     
@@ -280,6 +270,7 @@ def train_baum_welch(model,obs,
     """
     if emission_estimator is None:
         raise AssertionError("Emission estimator required by train_baum_welch(), but not supplied")
+
     
     state_priors     = model.state_priors
     emission_factors = model.emission_probs
@@ -300,14 +291,15 @@ def train_baum_welch(model,obs,
     if chunksize < 1:
         chunksize = 1
     
-    header = ["#datetime","logprob","logprob_per_length","counted","iteration"] +\
-             ["p%s" % X for X in range(len(model.serialize()))]
-    header = "\t".join(header) + "\n"
-    logfile.write(header)
-    printer.write(header)
+#     header = ["#datetime","logprob","logprob_per_length","counted","iteration"] +\
+#              ["p%s" % X for X in range(len(model.serialize()))]
+#     header = "\t".join(header) + "\n"
+#     logfile.write(header)
+#     printer.write(header)
     
     while c < maxiter and (delta > learning_threshold or c < miniter):
-        model = model_type(state_priors,emission_factors,trans_probs)
+        print(trans_probs.data)
+        model = model_type(state_priors,emission_factors, trans_probs)
         try:
             noise_weight = noise_weights.next()
         except StopIteration:
@@ -364,12 +356,10 @@ def train_baum_welch(model,obs,
                 print my_result[1]
                 print "E_part:"
                 print my_result[2]
-                print "pi_part:"
-                print my_result[3]
             raise ValueError("All observation sequences underflowed. None counted. Try repeating with better initial parameter estimates, a different training set, or different emission models.")
 
-        logprobs, A_parts, E_parts, pi_parts, obs_lengths = zip(*results)
-        new_total_logprob = sum(logprobs)
+        obs_logprobs, A_parts, E_parts, pi_parts, obs_lengths = zip(*results)
+        new_total_logprob = sum(obs_logprobs)
         total_obs_length  = sum(obs_lengths)
         logprob_per_obs = new_total_logprob/total_obs_length
 
@@ -377,23 +367,23 @@ def train_baum_welch(model,obs,
         logprobs.append(new_total_logprob)
         
         # record parameters & test convergence
-        params  = model.serialize()
-        log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                                 new_total_logprob,
-                                                 logprob_per_obs,
-                                                 counted,
-                                                 c,
-                                                 "\t".join([format_for_logging(X) for X in params])
-                                                 )
-        print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                            new_total_logprob,
-                                            logprob_per_obs,
-                                            counted,
-                                            c,
-                                            "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
-                                            )
-        logfile.write("%s\n" % log_message)
-        printer.write("%s\n" % print_message)
+#         params  = model.serialize()
+#         log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
+#                                                  new_total_logprob,
+#                                                  logprob_per_obs,
+#                                                  counted,
+#                                                  c,
+#                                                  "\t".join([format_for_logging(X) for X in params])
+#                                                  )
+#         print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
+#                                             new_total_logprob,
+#                                             logprob_per_obs,
+#                                             counted,
+#                                             c,
+#                                             "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
+#                                             )
+#         logfile.write("%s\n" % log_message)
+#         printer.write("%s\n" % print_message)
             
         delta              = new_total_logprob - last_total_logprob
         last_total_logprob = new_total_logprob
@@ -428,5 +418,11 @@ def train_baum_welch(model,obs,
     
     logprobs   = numpy.array(logprobs)
     best_model = models[logprobs.argmax()]
+    dtmp = {
+        "best_model" : best_model,
+        "last_model" : model,
+        "reason"     : reason,
+        "iterations" : c -1,
+    }
         
-    return best_model, model, reason
+    return dtmp
