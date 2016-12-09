@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 import os
 import minihmm
 
-with open("README.md") as f:
+with open("README.rst") as f:
     long_description = f.read()
 
 
@@ -35,30 +35,20 @@ setup(
     url       = "",
     platforms = "POSIX", # windows, 
     
-    #tests_require=["nose>=1.0"],
+    tests_require=["nose>=1.0"],
     #test_suite = "nose.collector",
     
     classifiers=[
-         'Development Status :: 4 - Beta',
+         'Development Status :: 3 - Alpha',
 
          'Programming Language :: Python',
          'Programming Language :: Python :: 2.7',
          'Programming Language :: Python :: 3.3',
          'Programming Language :: Python :: 3.4',
 
-         'Topic :: Machine learning',
-         'Topic :: Statistics',
-         'Topic :: Modeling',
-         'Topic :: HMM',
-
-         'Intended Audience :: End Users',
-         'Intended Audience :: Developers',
-
+         'Topic :: Scientific/Engineering',
          'License :: BSD 3-Clause',
-         
          'Operating System :: POSIX',
-         'Operating System :: MacOS :: MacOS X',
-         'Operating System :: Microsoft :: Windows',
         ]
     
     **config_info
