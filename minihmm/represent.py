@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 """Utilities for changing representations of observation sequences and/or models
+
+.. autosummary::
+
+   get_expansion_states
+   get_state_mapping
+   reduce_stateseq_orders
+   reduce_model_order
 """
 import copy
 import warnings
@@ -111,13 +118,66 @@ def get_state_mapping(num_states, starting_order=2, newstarts=None, newends=None
     
     return forward, reverse
 
+def _get_stateseq_tuples(state_seqs,
+                           num_states,
+                           starting_order = 2,
+                           newstarts      = None,
+                           newends        = None):
+    """Remap a high-order sequence of states into tuples for use in a low-ordermodel,
+    adding start and end states.
+    
+    Notes
+    -----
+    This does *not* remap those tuples into lower state spaces. Use
+    :func:`reduce_stateseq_orders`, which wraps this function, for that
+    
+    
+    Parameters
+    ----------
+    states : list
+        List of states sequences
+    
+    num_states : int
+        Number of states in high-order HMM/MM
+
+    starting_order : int, optional 
+        Starting order of HMM/MM (Default: 2)
+    
+    newstarts : list, optional
+        Sorted list of new start states. If `None`, will be calculated using
+        :func:`get_expansion_states`
+
+    newends : list, optional
+        Sorted list of new start end states. If `None`, will be calculated using
+        :func:`get_expansion_states`
+    """
+    if newstarts is None or newends is None:
+        newstarts, newends = get_expansion_states(num_states, starting_order=starting_order)
+    
+    outseqs = []
+    for n, inseq in enumerate(state_seqs):
+        if (numpy.array(inseq) < 0).any():
+            raise ValueError("Found negative state label in input sequence %s!" % n)
+        
+        baseseq = newstarts + list(inseq) + newends
+        outseqs.append([tuple(baseseq[idx:idx+starting_order]) for idx in range(0, len(baseseq) - starting_order + 1)])
+    
+    return outseqs 
+    
 def reduce_stateseq_orders(state_seqs,
                            num_states,
                            starting_order = 2,
                            newstarts      = None,
                            newends        = None,
                            state_map      = None):
-    """Remap a high-order sequence of states into an equivalent first-order model
+    """Remap a high-order sequence of states into tuples for use in a low-ordermodel,
+    adding start and end states.
+    
+    Notes
+    -----
+    This does *not* remap those tuples into lower state spaces. Use
+    :func:`reduce_stateseq_orders`, which wraps this function, for that
+    
     
     Parameters
     ----------
@@ -150,19 +210,15 @@ def reduce_stateseq_orders(state_seqs,
                                          starting_order = starting_order,
                                          newstarts      = newstarts,
                                          newends        = newends)
-    
-    outseqs = []
-    for n, inseq in enumerate(state_seqs):
-        if (numpy.array(inseq) < 0).any():
-            raise ValueError("Found negative state label in input sequence %s!" % n)
         
-        baseseq = newstarts + list(inseq) + newends
-        outseqs.append([tuple(baseseq[idx:idx+starting_order]) for idx in range(0, len(baseseq) - starting_order + 1)])
-    
-    return outseqs 
-    
-
-
+    remapped = _get_stateseq_tuples(state_seqs,
+                                    num_states,
+                                    starting_order = starting_order,
+                                    newstarts      = newstarts,
+                                    newends        = newends)
+    return transcode_sequences(remapped, state_map)
+        
+        
 def transcode_sequences(sequences,alphadict):
     """Transcode a sequence from one alphabet to another
     

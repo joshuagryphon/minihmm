@@ -8,6 +8,7 @@ import itertools
 from minihmm.represent import (
     get_state_mapping,
     get_expansion_states,
+    _get_stateseq_tuples,
     reduce_stateseq_orders,
     transcode_sequences,
     #reduce_model_order,
@@ -39,7 +40,8 @@ class TestGetExpansionStates():
                 yield TestGetExpansionStates.check_results, num_states, starting_order, found_starts, found_ends
 
 
-class TestReduceStateseqOrders():
+class TestReduceStateSequenceManipulation():
+    """Tests _get_stateseq_tuples, reduce_stateseq_orders, and transcode_sequences)"""
 
     @classmethod
     def setUpClass(cls):
@@ -49,7 +51,7 @@ class TestReduceStateseqOrders():
             [0, 2, 0, 5, 2, 2, 4, 2, 4, 1],
         ]
 
-        cls.expected = {
+        cls.expected_tuples = {
             2 : [[(-1,0),
                   ( 0,2),
                   ( 2,0),
@@ -114,18 +116,33 @@ class TestReduceStateseqOrders():
             ],
         }
 
+        cls.expected_remapped = {
+        }
 
-    def check_results(self, model_order):
-        expected = self.expected[model_order]
-        found    = reduce_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
+
+    def check_tuples(self, model_order):
+        expected = self.expected_tuples[model_order]
+        found    = _get_stateseq_tuples(self.sequences, self.num_states, starting_order=model_order)
         assert_equal(len(expected),len(found),
-                "Number of output sequences '%s' does not match number of input sequences '%s' for ReduceStateseqOrders, order '%s'" % (len(found),len(expected),model_order))
+                "Number of output sequences '%s' does not match number of input sequences '%s' for _get_stateseq_tuples(), order '%s'" % (len(found),len(expected),model_order))
         for e, f in zip(expected,found):
             assert_list_equal(e,f)
 
+    def check_reduced(self, model_order):
+        expected = self.expected_remapped[model_order]
+        found    = reduce_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
+        assert_equal(len(expected),len(found),
+                "Number of output sequences '%s' does not match number of input sequences '%s' for reduce_stateseq_orders, order '%s'" % (len(found),len(expected),model_order))
+        for e,f in zip(expected, found):
+            assert False
+
+    def test_get_stateseq_tuples(self):
+        for model_order in self.expected:
+            yield self.check_tuples, model_order
+
     def test_reduce_stateseq_orders(self):
         for model_order in self.expected:
-            yield self.check_results, model_order
+            yield self.check_reduced, model_order
 
     def test_negative_input_states_raises_value_error(self):
         assert_raises(ValueError,reduce_stateseq_orders,[[5,1,3,4,1,0,-1]],self.num_states,3)
