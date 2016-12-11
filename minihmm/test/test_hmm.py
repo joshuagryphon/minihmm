@@ -95,22 +95,33 @@ class _BaseExample():
             
             cls.expected_logprobs.append(numpy.log(total_prob))
             
+        print("Creating decoding testss")
+            
         print("Set up class %s" % cls.__name__)
+        cls.decode_tests = [cls.generating_hmm.generate(1000) for _ in range(10)]
 
     def test_generate(self):
+        # TODO : not sure what proper test is
         assert False
 
     def test_viterbi(self):
-        for expected_states, obs in zip(self.states, self.observations):
+        # make sure viterbi calls are above accuracy expected by model
+        for expected_states, obs, _ in self.decode_tests:
             found_states = self.generating_hmm.viterbi(obs)["viterbi_states"]
             frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
-            msg = "Failed viterib test for test case '%s'. Expected at least %s%% accuracy. Got %s%%." % (self.name,self.min_frac_equal,frac_equal)
+            msg = "Failed viterbi test for test case '%s'. Expected at least %s%% accuracy. Got %s%%." % (self.name,self.min_frac_equal,frac_equal)
             assert_greater_equal(frac_equal, self.min_frac_equal, msg)
          
     def test_posterior_decode(self):
-        assert False
+        # make sure posterior decode calls are above accuracy expected by model
+        for expected_states, obs, _ in self.decode_tests:
+            found_states = self.generating_hmm.posterior_decode(obs)[0]
+            frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
+            msg = "Failed posterior decode test for test case '%s'. Expected at least %s%% accuracy. Got %s%%." % (self.name,self.min_frac_equal,frac_equal)
+            assert_greater_equal(frac_equal, self.min_frac_equal, msg)
 
     def test_forward_logprob(self):
+        # make sure vectorized forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected) in enumerate(zip(self.observations, self.expected_logprobs)):
             found, _, _ = self.generating_hmm.forward(obs)
@@ -120,9 +131,10 @@ class _BaseExample():
                                                                                                   found,
                                                                                                   abs(expected-found)
                                                                                                  )
-            yield assert_almost_equal, expected, found #, msg
+            yield assert_almost_equal, expected, found, 7, msg
 
     def test_fast_forward(self):
+        # make sure fast forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected) in enumerate(zip(self.observations, self.expected_logprobs)):
             found = self.generating_hmm.fast_forward(obs)
@@ -132,9 +144,10 @@ class _BaseExample():
                                                                                                  found,
                                                                                                  abs(expected-found)
                                                                                                 )
-            yield assert_almost_equal, expected, found#, msg
+            yield assert_almost_equal, expected, found, 7, msg
 
     def test_forward_backward(self):
+        # TODO : not sure what proper test is
         assert False
 
 #     def test_train(self):
@@ -157,7 +170,7 @@ class _BaseExample():
 
 
 
-class TestCoin(_BaseExample):
+class TestACoin(_BaseExample):
 
     @classmethod
     def do_subclass_setup(cls):
@@ -177,12 +190,12 @@ class TestCoin(_BaseExample):
 
         cls.models = {
             "generating" : {
-                "state_priors"     : ArrayFactor([0.0,1.0]),
+                "state_priors"     : ArrayFactor([0.005,0.995]),
                 "trans_probs"      : MatrixFactor(numpy.array([
-                                                    [0.7, 0.3],
+                                                    [0.8, 0.2],
                                                     [0.3, 0.7]])),
-                "emission_probs"   : [ArrayFactor([0.5,0.5]),
-                                      ArrayFactor([0.2,0.8])],
+                "emission_probs"   : [ArrayFactor([0.6,0.4]),
+                                      ArrayFactor([0.15,0.85])],
             },
             "naive"      : {
                 "state_priors"     : ArrayFactor([0.48,0.52]),
@@ -196,7 +209,7 @@ class TestCoin(_BaseExample):
 
 
 
-class TestTwoGaussian(_BaseExample):
+class TestBTwoGaussian(_BaseExample):
 
     @classmethod
     def do_subclass_setup(cls):
@@ -229,7 +242,7 @@ class TestTwoGaussian(_BaseExample):
 
     
 
-class TestFourPoisson(_BaseExample):
+class TestCFourPoisson(_BaseExample):
 
     @classmethod
     def do_subclass_setup(cls):
@@ -238,6 +251,8 @@ class TestFourPoisson(_BaseExample):
 
         cls.state_prior_estimator = DiscreteStatePriorEstimator()
         cls.transition_estimator  = DiscreteTransitionEstimator()
+        
+        # FIXME
         cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
 
         transitions = numpy.matrix([[0.8,0.05,0.05,0.1],
