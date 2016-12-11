@@ -4,6 +4,7 @@ the forward-backward algorithm, posterior decoding, and re-training are all test
 
 
 """
+import unittest
 import itertools
 import numpy
 import scipy.stats
@@ -26,11 +27,6 @@ from minihmm.factors import (ArrayFactor,
                              ScipyDistributionFactor)
 
 
-#_casino_flat_params    = [0.5,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,1.0/6,0.5,0.5]
-#_gaussian_flat_params  = [0.5,0,1,0,1,0.5,0.5]
-#_gaussian_flat_params2 = [0.5,-1,1,1,1,0.5,0.5]
-
-# sample HMMs ------------------------------------------------------------------
 
 _FORWARD_SEED  = 5139284
 _TRAINING_SEED = 134067
@@ -69,15 +65,13 @@ class _BaseExample():
 
         print("    Generating sequences ...")
         numpy.random.seed(_TRAINING_SEED)
-        (cls.states,
-         cls.observations,
-         cls.logprobs) = zip(*[cls.generating_hmm.generate(X) for X in [5,10]])#,20]])#,150]])
+        cls.forward_tests = [cls.generating_hmm.generate(X) for X in [5,10]]#,20]])#,150]])
 
-        cls.expected_logprobs = []          
+        cls.expected_forward_logprobs = []          
         # evaluate probabilities of generated observations by brute force
         # to compare against forward algorithm calculations later
         print("    Calculating probabilities ...")
-        for obs_seq in cls.observations:
+        for _,  obs_seq, _ in cls.forward_tests:
             state_paths = itertools.product(list(range(cls.generating_hmm.num_states)),
                                             repeat=len(obs_seq))
             total_prob  = 0
@@ -93,19 +87,35 @@ class _BaseExample():
                 
                 total_prob += numpy.exp(numpy.nansum(my_logprob))
             
-            cls.expected_logprobs.append(numpy.log(total_prob))
-            
+            cls.expected_forward_logprobs.append(numpy.log(total_prob))
+
+        # Generate test cases for Viterbi and posterior decoding            
         print("Creating decoding testss")
+        cls.decode_tests = [cls.generating_hmm.generate(1000) for _ in range(10)]
             
         print("Set up class %s" % cls.__name__)
-        cls.decode_tests = [cls.generating_hmm.generate(1000) for _ in range(10)]
 
+    @unittest.skip
     def test_generate(self):
-        # TODO : not sure what proper test is
+        # TODO : not sure what proper test is. Median probability should be 
+        # less than mean, if 
         assert False
 
+    @unittest.skip
+    def test_sample(self):
+        # TODO : not sure what proper test is; distribution of samples
+        # should approximate distribution of HMM, but we don't know what
+        # distribution of HMM actually is.
+        
+        #
+        # Maybe calculate ML solution (Viterbi) and make sure everything sampled
+        # is lower probability?
+        #
+        # Some test of shape of distribution? Require one mode? 
+        assert False
+        
     def test_viterbi(self):
-        # make sure viterbi calls are above accuracy expected by model
+        # make sure viterbi calls are above accuracy threshold listed above 
         for expected_states, obs, _ in self.decode_tests:
             found_states = self.generating_hmm.viterbi(obs)["viterbi_states"]
             frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
@@ -113,7 +123,7 @@ class _BaseExample():
             assert_greater_equal(frac_equal, self.min_frac_equal, msg)
          
     def test_posterior_decode(self):
-        # make sure posterior decode calls are above accuracy expected by model
+        # make sure posterior decode calls are above accuracy threshold listed above
         for expected_states, obs, _ in self.decode_tests:
             found_states = self.generating_hmm.posterior_decode(obs)[0]
             frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
@@ -123,7 +133,7 @@ class _BaseExample():
     def test_forward_logprob(self):
         # make sure vectorized forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected) in enumerate(zip(self.observations, self.expected_logprobs)):
+        for n, ((_,obs,_), expected) in enumerate(zip(self.forward_tests, self.expected_forward_logprobs)):
             found, _, _ = self.generating_hmm.forward(obs)
             msg = "Failed forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                   self.name,
@@ -136,7 +146,7 @@ class _BaseExample():
     def test_fast_forward(self):
         # make sure fast forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected) in enumerate(zip(self.observations, self.expected_logprobs)):
+        for n, ((_,obs,_), expected) in enumerate(zip(self.forward_tests, self.expected_forward_logprobs)):
             found = self.generating_hmm.fast_forward(obs)
             msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                  self.name,
@@ -147,8 +157,23 @@ class _BaseExample():
             yield assert_almost_equal, expected, found, 7, msg
 
     def test_forward_backward(self):
-        # TODO : not sure what proper test is
-        assert False
+        # test forward algorithm portion of forward_backward
+        
+        # TODO: test backward component
+        numpy.random.seed(_FORWARD_SEED)
+        for n, ((_,obs,_), expected_logprob) in enumerate(zip(self.forward_tests, self.expected_forward_logprobs)):
+            (found_logprob,
+             scaled_forward,
+             scaled_backward,
+             scale_factors,
+             ksi)     = self.generating_hmm.forward_backward(obs)
+            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
+                                                                                                 self.name,
+                                                                                                 expected_logprob,
+                                                                                                 found_logprob,
+                                                                                                 abs(expected_logprob-found_logprob)
+                                                                                                )
+            yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
 
 #     def test_train(self):
 #         mdict = train_baum_welch(self.naive_hmm,
@@ -284,25 +309,3 @@ class TestCFourPoisson(_BaseExample):
                  ]
             }
         }
-
-
-def get_coins(hmm_type=FirstOrderHMM):
-    """Construct a two-state HMM with fair and unfair coins
-
-    @param hmm_type          Type of HMM to instantiate (must be FirstOrderHMM
-                              or a subclass)
-    """
-    # 0 is fair coin
-    # 1 is unfair coin
-    #
-    # for emissions, 0 is heads, 1 is tails
-    emission_factors = [None,
-                        None,
-                        ArrayFactor([0.5,0.5]),
-                        ArrayFactor([0.2,0.8])
-                        ]
-    trans_probs = MatrixFactor(numpy.array([[0,  0,   1  , 0.0],
-                                            [0,  0,   0,   0.0],
-                                            [0,  0.1, 0.7, 0.2],
-                                            [0,  0.1, 0.2, 0.7]]))
-    return hmm_type(emission_factors,trans_probs)
