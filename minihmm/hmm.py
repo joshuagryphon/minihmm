@@ -120,7 +120,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         new_emission_probs = []
         items_per_factor = len(remaining_items) // self.num_states
         assert len(remaining_items) % self.num_states == 0 # this won't be true for heterogenous factors
-        for i in range(num_states):
+        for i in range(self.num_states):
             nf_params = remaining_items[i*items_per_factor:(i+1)*items_per_factor]
             new_factor = self.trans_probs.deserialize("\t".join(nf_params))
             new_emission_probs.append(new_factor)
@@ -386,6 +386,12 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         numpy.ndarray
             Array of dimension [t x Q] indicating the observation at each timestep.
             Q = 1 for univariate HMMs, or more than 1 if observations are multivariate.
+            
+        float
+            Joint log probability of generated state and observation sequence.
+            **Note**: this is different from the log probability of the observation
+            sequence alone, which would be the sum of its joint probabilities
+            with all possible state sequences.
         
         
         Notes
@@ -841,18 +847,10 @@ class FirstOrderMM(AbstractGenerativeFactor):
                                          self.serialize())
     
     def serialize(self):
-        ltmp = ["state_priors",
-                self.state_priors.serialize(),
-                "transitions",
-                self.trans_probs.serialize()]
-        return "\t".join(ltmp)
+        raise NotImplementedError()
 
     def deserialize(self,param_str):
-        sp = param_str.search("state_priors\t")
-        t  = param_str.search("transitions\t")
-        new_state_priors = self.state_priors.deserialize(param_str[sp+len("state_priors\t"):t])
-        new_trans_probs  = self.trans_probs.deserialize(param_str[t+len("transition\ts"):e])
-        return self.__class__(new_state_priors,new_trans_probs)
+        raise NotImplementedError()
 
     def probability(self,sequence):
         """Compute the probability of observing a sequence.
@@ -1109,9 +1107,8 @@ class FirstOrderMM(AbstractGenerativeFactor):
             joint log probability of sequence of sequence
             and the returned state sequence
         """
-        pass
+        raise NotImplementedError("FirstOrderHMM.sample() is not yet implemented")
     
-    # TODO: TEST    
     def viterbi(self,sequence,verbose=False):
         """Finds the most likely state sequence underlying a set of sequence
         using the Viterbi algorithm. Also returns the natural log probability

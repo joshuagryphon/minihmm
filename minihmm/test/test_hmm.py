@@ -4,6 +4,7 @@ the forward-backward algorithm, posterior decoding, and re-training are all test
 
 
 """
+import itertools
 import numpy
 import scipy.stats
 from nose.tools import assert_greater_equal
@@ -61,14 +62,40 @@ class _BaseExample():
 
     @classmethod
     def setUpClass(cls):
+        print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
         cls.generating_hmm = FirstOrderHMM(**cls.models["generating"])
         cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
 
+        print("    Generating sequences ...")
         numpy.random.seed(_TRAINING_SEED)
         (cls.states,
          cls.observations,
-         cls.logprobs) = zip(*[cls.generating_hmm.generate(200) for _ in range(500)])
+         cls.logprobs) = zip(*[cls.generating_hmm.generate(X) for X in [5,10]])#,20]])#,150]])
+
+        cls.expected_logprobs = []          
+        # evaluate probabilities of generated observations by brute force
+        # to compare against forward algorithm calculations later
+        print("    Calculating probabilities ...")
+        for obs_seq in cls.observations:
+            state_paths = itertools.product(list(range(cls.generating_hmm.num_states)),
+                                            repeat=len(obs_seq))
+            total_prob  = 0
+            for my_path in state_paths:
+                my_logprob = []
+                last_state = my_path[0]
+                my_logprob.append(cls.generating_hmm.state_priors.logprob(last_state))
+                my_logprob.append(cls.generating_hmm.emission_probs[last_state].logprob(obs_seq[0]))
+                for my_state, my_obs in zip(my_path, obs_seq)[1:]:
+                    my_logprob.append(cls.generating_hmm.trans_probs.logprob(last_state,my_state))
+                    my_logprob.append(cls.generating_hmm.emission_probs[my_state].logprob(my_obs))
+                    last_state = my_state
+                
+                total_prob += numpy.exp(numpy.nansum(my_logprob))
+            
+            cls.expected_logprobs.append(numpy.log(total_prob))
+            
+        print("Set up class %s" % cls.__name__)
 
     def test_generate(self):
         assert False
@@ -78,34 +105,34 @@ class _BaseExample():
             found_states = self.generating_hmm.viterbi(obs)["viterbi_states"]
             frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
             msg = "Failed viterib test for test case '%s'. Expected at least %s%% accuracy. Got %s%%." % (self.name,self.min_frac_equal,frac_equal)
-            yield assert_greater_equal, frac_equal, self.min_frac_equal, msg
+            assert_greater_equal(frac_equal, self.min_frac_equal, msg)
          
     def test_posterior_decode(self):
         assert False
 
     def test_forward_logprob(self):
         numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected) in enumerate(zip(self.observations, self.logprobs)):
-            found, scaled_forward, b, scale_factors = self.generating_hmm.forward(obs)
-            msg = "Failed test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
+        for n, (obs, expected) in enumerate(zip(self.observations, self.expected_logprobs)):
+            found, _, _ = self.generating_hmm.forward(obs)
+            msg = "Failed forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                   self.name,
                                                                                                   expected,
                                                                                                   found,
                                                                                                   abs(expected-found)
                                                                                                  )
-            yield assert_almost_equal, expected, found, msg
+            yield assert_almost_equal, expected, found #, msg
 
     def test_fast_forward(self):
         numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected) in enumerate(zip(self.observations, self.logprobs)):
+        for n, (obs, expected) in enumerate(zip(self.observations, self.expected_logprobs)):
             found = self.generating_hmm.fast_forward(obs)
-            msg = "Failed test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
+            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                  self.name,
                                                                                                  expected,
                                                                                                  found,
                                                                                                  abs(expected-found)
                                                                                                 )
-            yield assert_almost_equal, expected, found, msg
+            yield assert_almost_equal, expected, found#, msg
 
     def test_forward_backward(self):
         assert False
@@ -222,7 +249,7 @@ class TestFourPoisson(_BaseExample):
         cls.models = {
             "generating" : {
                 "trans_probs"    : MatrixFactor(transitions),
-                "state_priors"   : ArrayFactor([0.25,0.25,0.25,0.25]),
+                "state_priors"   : ArrayFactor([0.7,0.05,0.15,0.10]),
                 "emission_probs" : [
                       ScipyDistributionFactor(scipy.stats.poisson,1),
                       ScipyDistributionFactor(scipy.stats.poisson,5),
@@ -232,11 +259,14 @@ class TestFourPoisson(_BaseExample):
 
             },
             "naive"      : {
-                "emission_probs" : [ScipyDistributionFactor(scipy.stats.norm,loc=0,scale=0.6),
-                                    ScipyDistributionFactor(scipy.stats.norm,loc=2,scale=1),
-                                   ],
-                "state_priors"   : ArrayFactor([0.25]*4),
-                "trans_probs"    : MatrixFactor([[0.25]*4]*4),
+                "trans_probs"    : MatrixFactor(numpy.full((4,4),1.0/16)),
+                "state_priors"   : ArrayFactor([0.25,0.25,0.25,0.25]),
+                "emission_probs" : [
+                      ScipyDistributionFactor(scipy.stats.poisson,3),
+                      ScipyDistributionFactor(scipy.stats.poisson,2),
+                      ScipyDistributionFactor(scipy.stats.poisson,1),
+                      ScipyDistributionFactor(scipy.stats.poisson,4),
+                 ]
             }
         }
 
