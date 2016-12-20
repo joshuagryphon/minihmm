@@ -79,11 +79,9 @@ This will require lots of translation of model parameters between spaces.
    lower_stateseq_orders
    raise_stateseq_orders
 """
-import copy
 import warnings
 import itertools
 import numpy
-
 
 
 def _get_dummy_states(starting_order):
@@ -317,9 +315,12 @@ def transcode_sequences(sequences, alphadict):
 
 
 
+# def raise_parameter_order()
+#     pass
 
-# def remap_model_parameters(states,
+# def lower_parameter_order(states,
 #                            starting_order   = 2,
+#                            state_map        = None,
 #                            state_priors     = None,
 #                            transition_probs = None,
 #                            emission_probs   = None,

@@ -42,7 +42,7 @@ class TestGetDummyStates():
 
 
 class TestLowerStateSequenceManipulation():
-    """Tests _get_stateseq_tuples, reduce_stateseq_orders, and transcode_sequences)"""
+    """Tests lower_stateseq_orders, and implicitly tests _get_stateseq_tuples and transcode_sequences)"""
  
     @classmethod
     def setUpClass(cls):
@@ -104,9 +104,6 @@ class TestLowerStateSequenceManipulation():
                   ( 2, 4, 2, 4, 1),
                   ],
             ],
-        }
- 
-        cls.expected_remapped = {
         }
         
         cls.num_states   = 6
@@ -316,7 +313,6 @@ class TestGetStateMapping():
     def test_orders(self):
         for (num_states, model_order), expected_htf in self.expected_forward.items():
             yield self.check_results, num_states, model_order, expected_htf
-            
              
     #get_state_mapping(num_states, dummy_states, starting_order=2)
     def test_bad_parameters_raises_value_error(self):
