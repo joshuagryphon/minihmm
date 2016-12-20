@@ -24,6 +24,9 @@ from nose.tools import (
     assert_raises
     )
 
+from numpy.testing import assert_array_equal
+
+
 
 class TestGetDummyStates():
 
@@ -33,120 +36,118 @@ class TestGetDummyStates():
         assert_list_equal(expected, found)
 
     def test_get_dummy_states(self):
-        for num_states in range(4):
-            for starting_order in range(4):
-                dummies = _get_dummy_states(starting_order)
-                yield self.check_results, starting_order, dummies
+        for starting_order in range(4):
+            dummies = _get_dummy_states(starting_order)
+            yield self.check_results, starting_order, dummies
 
 
-# class TestLowerStateSequenceManipulation():
-#     """Tests _get_stateseq_tuples, reduce_stateseq_orders, and transcode_sequences)"""
-# 
-#     @classmethod
-#     def setUpClass(cls):
-#         cls.num_states = 7
-# 
-#         cls.sequences = [
-#             [0, 2, 0, 5, 2, 2, 4, 2, 4, 1],
-#         ]
-# 
-#         cls.expected_tuples = {
-#             2 : [[(-1,0),
-#                   ( 0,2),
-#                   ( 2,0),
-#                   ( 0,5),
-#                   ( 5,2),
-#                   ( 2,2),
-#                   ( 2,4),
-#                   ( 4,2),
-#                   ( 2,4),
-#                   ( 4,1),
-#                   (1,-2)],
-#             ],
-# 
-#             3 : [[(-3,-1, 0),
-#                   (-1, 0, 2),
-#                   ( 0, 2, 0),
-#                   ( 2, 0, 5),
-#                   ( 0, 5, 2),
-#                   ( 5, 2, 2),
-#                   ( 2, 2, 4),
-#                   ( 2, 4, 2),
-#                   ( 4, 2, 4),
-#                   ( 2, 4, 1),
-#                   ( 4, 1,-2),
-#                   ( 1,-2,-4),
-#                   ],
-# 
-#             ],
-# 
-#             4 : [[(-5,-3,-1, 0),
-#                   (-3,-1, 0, 2),
-#                   (-1, 0, 2, 0),
-#                   ( 0, 2, 0, 5),
-#                   ( 2, 0, 5, 2),
-#                   ( 0, 5, 2, 2),
-#                   ( 5, 2, 2, 4),
-#                   ( 2, 2, 4, 2),
-#                   ( 2, 4, 2, 4),
-#                   ( 4, 2, 4, 1),
-#                   ( 2, 4, 1,-2),
-#                   ( 4, 1,-2,-4),
-#                   ( 1,-2,-4,-6),
-#                   ],
-# 
-#             ],
-# 
-#             5 : [[(-7, -5,-3,-1, 0),
-#                   (-5, -3,-1, 0, 2),
-#                   (-3, -1, 0, 2, 0),
-#                   (-1,  0, 2, 0, 5),
-#                   ( 0, 2, 0, 5, 2),
-#                   ( 2, 0, 5, 2, 2),
-#                   ( 0, 5, 2, 2, 4),
-#                   ( 5, 2, 2, 4, 2),
-#                   ( 2, 2, 4, 2, 4),
-#                   ( 2, 4, 2, 4, 1),
-#                   ( 4, 2, 4, 1,-2),
-#                   ( 2, 4, 1,-2,-4),
-#                   ( 4, 1,-2,-4,-6),
-#                   ( 1,-2,-4,-6,-8),
-#                   ],
-#             ],
-#         }
-# 
-#         cls.expected_remapped = {
-#         }
-# 
-# 
-#     def check_tuples(self, model_order):
-#         expected = self.expected_tuples[model_order]
-#         found    = _get_stateseq_tuples(self.sequences, self.num_states, starting_order=model_order)
-#         assert_equal(len(expected),len(found),
-#                 "Number of output sequences '%s' does not match number of input sequences '%s' for _get_stateseq_tuples(), order '%s'" % (len(found),len(expected),model_order))
-#         for e, f in zip(expected,found):
-#             assert_list_equal(e,f)
-# 
-#     def check_reduced(self, model_order):
-#         expected = self.expected_remapped[model_order]
-#         found    = lower_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
-#         assert_equal(len(expected),len(found),
-#                 "Number of output sequences '%s' does not match number of input sequences '%s' for reduce_stateseq_orders, order '%s'" % (len(found),len(expected),model_order))
-#         for e,f in zip(expected, found):
-#             assert False
-# 
-#     def test_get_stateseq_tuples(self):
-#         for model_order in self.expected_tuples:
-#             yield self.check_tuples, model_order
-# 
-#     def test_reduce_stateseq_orders(self):
-#         for model_order in self.expected_tuples:
-#             yield self.check_reduced, model_order
-# 
-#     def test_negative_input_states_raises_value_error(self):
-#         assert_raises(ValueError,lower_stateseq_orders,[[5,1,3,4,1,0,-1]],self.num_states,3)
-#         assert_raises(ValueError,lower_stateseq_orders,[[-5,1,3,4,1,0,1]],self.num_states,3)
-#         assert_raises(ValueError,lower_stateseq_orders,[[5,1,3,-4,1,0,1]],self.num_states,3)
+class TestLowerStateSequenceManipulation():
+    """Tests _get_stateseq_tuples, reduce_stateseq_orders, and transcode_sequences)"""
+ 
+    @classmethod
+    def setUpClass(cls):
+        cls.num_states = 7
+ 
+        cls.sequences = [
+            [0, 2, 0, 5, 2, 2, 4, 2, 4, 1],
+        ]
+ 
+        cls.expected_tuples = {
+            2 : [[(-1,0),
+                  ( 0,2),
+                  ( 2,0),
+                  ( 0,5),
+                  ( 5,2),
+                  ( 2,2),
+                  ( 2,4),
+                  ( 4,2),
+                  ( 2,4),
+                  ( 4,1)],
+            ],
+ 
+            3 : [[(-2,-1, 0),
+                  (-1, 0, 2),
+                  ( 0, 2, 0),
+                  ( 2, 0, 5),
+                  ( 0, 5, 2),
+                  ( 5, 2, 2),
+                  ( 2, 2, 4),
+                  ( 2, 4, 2),
+                  ( 4, 2, 4),
+                  ( 2, 4, 1),
+                  ],
+ 
+            ],
+ 
+            4 : [[(-3,-2,-1, 0),
+                  (-2,-1, 0, 2),
+                  (-1, 0, 2, 0),
+                  ( 0, 2, 0, 5),
+                  ( 2, 0, 5, 2),
+                  ( 0, 5, 2, 2),
+                  ( 5, 2, 2, 4),
+                  ( 2, 2, 4, 2),
+                  ( 2, 4, 2, 4),
+                  ( 4, 2, 4, 1),
+                  ],
+            ],
+ 
+            5 : [[(-4, -3,-2,-1, 0),
+                  (-3, -2,-1, 0, 2),
+                  (-2, -1, 0, 2, 0),
+                  (-1,  0, 2, 0, 5),
+                  ( 0, 2, 0, 5, 2),
+                  ( 2, 0, 5, 2, 2),
+                  ( 0, 5, 2, 2, 4),
+                  ( 5, 2, 2, 4, 2),
+                  ( 2, 2, 4, 2, 4),
+                  ( 2, 4, 2, 4, 1),
+                  ],
+            ],
+        }
+ 
+        cls.expected_remapped = {
+        }
+        
+        cls.num_states   = 6
+ 
+    def check_tuples(self, model_order):
+        # n.b. test assumes _get_dummy_states is working
+        dummy_states = _get_dummy_states(model_order)
+        expected = self.expected_tuples[model_order]
+        found    = _get_stateseq_tuples(self.sequences, dummy_states, starting_order=model_order)
+        assert_equal(len(expected),len(found),
+                "Number of output sequences '%s' does not match number of input sequences '%s' for _get_stateseq_tuples(), order '%s'" % (len(found),len(expected),model_order))
+        for e, f in zip(expected,found):
+            assert_list_equal(e,f)
+ 
+    def check_reduced(self, model_order):
+        #requires _get_dummy_states, and get_state_mapping to function
+        dummy_states = _get_dummy_states(model_order)
+        forward, _ = get_state_mapping(self.num_states, dummy_states, starting_order=model_order)
+        expected   = []
+        for my_seq in self.sequences:
+            expected.append(numpy.array([forward[tuple(my_seq[X:X+model_order])] for X in range(0,len(my_seq)-model_order + 1)])) 
+        
+        dtmp  = lower_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
+        found = dtmp["state_seqs"]
+        assert_equal(len(expected),len(found),
+                "Number of output sequences '%s' does not match number of input sequences '%s' for reduce_stateseq_orders, order '%s'" % (len(found),len(self.sequences),model_order))
+        for e,f in zip(expected, found):
+            yield assert_array_equal, e, f
+ 
+    def test_get_stateseq_tuples(self):
+        for model_order in self.expected_tuples:
+            yield self.check_tuples, model_order
+ 
+    def test_reduce_stateseq_orders(self):
+        for model_order in self.expected_tuples:
+            yield self.check_reduced, model_order
+ 
+    def test_negative_input_states_raises_value_error(self):
+        assert_raises(ValueError,lower_stateseq_orders,[[5,1,3,4,1,0,-1]],self.num_states,3)
+        assert_raises(ValueError,lower_stateseq_orders,[[-5,1,3,4,1,0,1]],self.num_states,3)
+        assert_raises(ValueError,lower_stateseq_orders,[[5,1,3,-4,1,0,1]],self.num_states,3)
 
     
 class TestGetStateMapping():
@@ -327,9 +328,12 @@ class TestGetStateMapping():
         with warnings.catch_warnings():
             warnings.simplefilter("ignore",UserWarning) 
             yield self.check_results, 4, 1, expected
- 
 
 
 def test_transcode_sequences():
-    assert False
-
+    testseq  = ["A","B","C","D","E"]
+    expected = numpy.arange(5)
+    dtmp = {K : V for K,V in zip(testseq,expected)}
+    
+    found = transcode_sequences([testseq], dtmp)
+    assert_array_equal(expected, found[0])

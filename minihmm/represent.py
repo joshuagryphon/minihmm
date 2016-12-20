@@ -162,7 +162,6 @@ def get_state_mapping(num_states, dummy_states, starting_order=2):
     return forward, reverse
 
 def _get_stateseq_tuples(state_seqs,
-                         num_states,
                          dummy_states, 
                          starting_order = 2):
     """Remap a high-order sequence of states into tuples for use in a low-order model,
@@ -252,7 +251,7 @@ def lower_stateseq_orders(state_seqs,
     raise_stateseq_orders
     """
     if dummy_states is None:
-        newstarts = _get_dummy_states(starting_order)
+        dummy_states = _get_dummy_states(starting_order)
         
     if state_map is None:
         state_map, _ = get_state_mapping(num_states,
@@ -260,9 +259,8 @@ def lower_stateseq_orders(state_seqs,
                                          starting_order = starting_order)
         
     remapped = _get_stateseq_tuples(state_seqs,
-                                    num_states,
-                                    starting_order = starting_order,
-                                    newstarts      = newstarts)
+                                    dummy_states,
+                                    starting_order = starting_order)
     
     dtmp = {
         "dummy_states" : dummy_states,
