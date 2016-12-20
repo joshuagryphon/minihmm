@@ -1,8 +1,63 @@
 #!/usr/bin/env python
-"""Utilities for changing representations of observation sequences and/or models
+"""Utilities for changing representations of observation sequences and/or models.
+The primary functionality of the tools in this module is to translate Nth-order
+HMMs into equivalent first order HMMs.
+
+Note, there are two ways two model the starting regions of sequences in 
+high-order models, both of which are compatible with :mod:`miniHMM`
+
+ 1. Start with an Nth order tuple of states. E.g. in a 3rd-order Markov model
+
+    .. math::
+    
+       P = p(S_1, S_2) * p(S_3 | S_1, S_2, ) * p(S_4 | S_1, S_2, ) * ... * p(S_N | S_{N-2}, S_{N-1})
+
+    The limitation of this approach is that observation sequences must be
+    of length greater than or equal to N. In an English language model, this
+    would make it impossible to generate one- or two-letter words like "a" or "an"
+    in a 3rd order model.
+    
+    To set this up in :mod:`miniHMM`, specify state priors as an (N-1)th order array,
+    where each cell value represents the probability of a sequence starting
+    with that sequence of states. 
+    
+ 2. Introduce inhomogeneities into the model, by addition of extra states:
+ 
+    .. math::
+    
+       P = p(S_1) * p(S_2 | S_1) * p(S_3 | S_2, S_1) * p(S_4 | S_3, S_2) *  ... * p(S_N |, S_{N-2}, S_{N-1})          
+       
+    This approach enables Nth order models to generate sequences of any length,
+    but to work in :mod:`miniHMM` requires adding extra states to the model
+    and padding observation sequences. For a third-order model, we would need
+    to add two dummy start states in high-order space, $ S_{dummy1} $ and $ S_{dummy2} $.
+    
+    Then, we rephrase the model above as:
+    
+    .. math::
+    
+       P = p(S_1 | S_{dummy2}, S_{dummy1}) * p(S_2 | S_1, S_{dummy2}, ) * p(S_3 | S_2, S_1) * p(S_4 | S_3, S_2) *  ... * p(S_N |, S_{N-2}, S_{N-1})
+    
+    Then:
+    
+     - Set the prior probabilities of every state pair to zero, except
+       $ p(S_{dummy2}, S_{dummy1}, $ which must be set to one.
+       
+     - Set the transition probabilities of p(S_i | S_{dummy2}, S_{dummy1})
+       to the prior probability of P(S_i) in the previous model description
+       
+     - Set the transition probabilities of p(S_i | S_{i-1}, S_{dummy2})
+       to observed values for P(S_i | S_{i-1}) in the previous model description
+
+
+:mod:`miniHMM`'s model translation tools are agnostic to which is used, as it
+only depends on how parameters are specified. Note, in the latter case, state
+sequences inferred by the Viterbi or Forward-Backward algorithms will always
+start with the sequence of dummy states. 
+
 
 .. autosummary::
-
+       
    get_expansion_states
    get_state_mapping
    reduce_stateseq_orders
@@ -73,10 +128,10 @@ def get_state_mapping(num_states, starting_order=2, newstarts=None, newends=None
     Returns
     -------
     :class:`dict`
-        Dictionary mapping old states to new ones
+        Forward state map, mapping high-order states to tuples of equivalent low-order states
         
     :class:`dict`
-        Dictionary mapping new states to old ones
+        Reverse state map, mapping new first-order states to tuples of high-order states
     """
     if num_states < 1:
         raise ValueError("Must have >= 1 state in model.")
@@ -119,11 +174,11 @@ def get_state_mapping(num_states, starting_order=2, newstarts=None, newends=None
     return forward, reverse
 
 def _get_stateseq_tuples(state_seqs,
-                           num_states,
-                           starting_order = 2,
-                           newstarts      = None,
-                           newends        = None):
-    """Remap a high-order sequence of states into tuples for use in a low-ordermodel,
+                         num_states,
+                         starting_order = 2,
+                         newstarts      = None,
+                         newends        = None):
+    """Remap a high-order sequence of states into tuples for use in a low-order model,
     adding start and end states.
     
     Notes
@@ -164,25 +219,18 @@ def _get_stateseq_tuples(state_seqs,
     
     return outseqs 
     
-def reduce_stateseq_orders(state_seqs,
-                           num_states,
-                           starting_order = 2,
-                           newstarts      = None,
-                           newends        = None,
-                           state_map      = None):
-    """Remap a high-order sequence of states into tuples for use in a low-ordermodel,
-    adding start and end states.
-    
-    Notes
-    -----
-    This does *not* remap those tuples into lower state spaces. Use
-    :func:`reduce_stateseq_orders`, which wraps this function, for that
-    
+def lower_stateseq_orders(state_seqs,
+                          num_states,
+                          starting_order = 2,
+                          newstarts      = None,
+                          newends        = None,
+                          state_map      = None):
+    """Map a high-order sequence of states into an equivalent first-order state sequence
     
     Parameters
     ----------
     states : list
-        List of states sequences
+        List of state sequences
     
     num_states : int
         Number of states in high-order HMM/MM
@@ -200,7 +248,18 @@ def reduce_stateseq_orders(state_seqs,
         
     state_map : dict, optional
         Dictionary mapping tuples of high-order states to low-order states.
-        If `None`, will be calculated useing :func:`get_state_mapping`
+        If `None`, will be calculated using :func:`get_state_mapping`
+        
+        
+    Returns
+    -------
+    list
+        List of remapped state sequences, each a :class:`numpy.ndarray`
+        
+        
+    See also
+    --------
+    raise_stateseq_orders
     """
     if newstarts is None or newends is None:
         newstarts, newends = get_expansion_states(num_states, starting_order=starting_order)
@@ -218,7 +277,31 @@ def reduce_stateseq_orders(state_seqs,
                                     newends        = newends)
     return transcode_sequences(remapped, state_map)
         
+def raise_stateseq_orders(state_seqs,reverse_state_map):
+    """Map a state sequence from first-order space back to high-order space
+    
+    Parameters
+    ----------    
+    state_seqs : list
+        List of high-order state sequences
         
+    reverse_state_map : dict
+        Dictionary mapping first-order model states back to equivalent
+        tuples of high-order states. Created by :func:`get_state_mapping`
+
+
+    Returns
+    -------
+    list
+        List of remapped state sequences, each a :class:`numpy.ndarray`
+        
+        
+    See also
+    --------
+    lower_stateseq_orders
+    """
+    return [X[-1] for X in transcode_sequences(state_seqs, reverse_state_map)]
+    
 def transcode_sequences(sequences,alphadict):
     """Transcode a sequence from one alphabet to another
     

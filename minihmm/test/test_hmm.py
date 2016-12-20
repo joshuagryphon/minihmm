@@ -112,6 +112,10 @@ class _BaseExample():
         # is lower probability?
         #
         # Some test of shape of distribution? Require one mode? 
+        #
+        # Or, sample from a path through a known sequence of e.g. coin tosses,
+        # where we can calculate the background distribution, and then make
+        # sure the sampled distribution approximates the background?
         assert False
         
     def test_viterbi(self):

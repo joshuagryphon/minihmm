@@ -9,7 +9,8 @@ from minihmm.represent import (
     get_state_mapping,
     get_expansion_states,
     _get_stateseq_tuples,
-    reduce_stateseq_orders,
+    raise_stateseq_orders,
+    lower_stateseq_orders,
     transcode_sequences,
     #reduce_model_order,
     )
@@ -130,7 +131,7 @@ class TestReduceStateSequenceManipulation():
 
     def check_reduced(self, model_order):
         expected = self.expected_remapped[model_order]
-        found    = reduce_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
+        found    = lower_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
         assert_equal(len(expected),len(found),
                 "Number of output sequences '%s' does not match number of input sequences '%s' for reduce_stateseq_orders, order '%s'" % (len(found),len(expected),model_order))
         for e,f in zip(expected, found):
@@ -145,9 +146,9 @@ class TestReduceStateSequenceManipulation():
             yield self.check_reduced, model_order
 
     def test_negative_input_states_raises_value_error(self):
-        assert_raises(ValueError,reduce_stateseq_orders,[[5,1,3,4,1,0,-1]],self.num_states,3)
-        assert_raises(ValueError,reduce_stateseq_orders,[[-5,1,3,4,1,0,1]],self.num_states,3)
-        assert_raises(ValueError,reduce_stateseq_orders,[[5,1,3,-4,1,0,1]],self.num_states,3)
+        assert_raises(ValueError,lower_stateseq_orders,[[5,1,3,4,1,0,-1]],self.num_states,3)
+        assert_raises(ValueError,lower_stateseq_orders,[[-5,1,3,4,1,0,1]],self.num_states,3)
+        assert_raises(ValueError,lower_stateseq_orders,[[5,1,3,-4,1,0,1]],self.num_states,3)
 
     
 class TestGetStateMapping():
