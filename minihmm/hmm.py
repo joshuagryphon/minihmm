@@ -92,6 +92,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         self.state_priors   = state_priors
         self.emission_probs = emission_probs
         self.trans_probs    = trans_probs
+        self._logt = numpy.log(trans_probs.data)
     
     def __str__(self):
         return repr(self)
@@ -109,7 +110,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         ltmp.extend([X.serialize() for X in self.emission_probs])
         return "\t".join(ltmp)
 
-    def deserialize(self,param_str):
+    def deserialize(self, param_str):
         sp = param_str.search("state_priors\t")
         t  = param_str.search("transitions\t")
         e  = param_str.search("emissions\t")
@@ -127,7 +128,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         return self.__class__(new_state_priors,new_emission_probs,new_trans_probs)
 
-    def probability(self,emission):
+    def probability(self, emission):
         """Compute the probability of observing a sequence of emissions.
         This number is likely to undeflow for long sequences.
 
@@ -143,7 +144,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         """
         return numpy.exp(self.logprob(emission))
     
-    def logprob(self,emission):
+    def logprob(self, emission):
         """Compute the log probability of observing a sequence of emissions.
 
         Parameters
@@ -158,7 +159,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         """
         return self.fast_forward(emission)
 
-    def fast_forward(self,emissions):
+    def fast_forward(self, emissions):
         """Compute the log probability of observing a sequence of emissions.
         
         More memory efficient implementation of the forward algorithm, retaining
@@ -195,7 +196,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             
         return log_probability
 
-    def forward(self,emissions):
+    def forward(self, emissions):
         """Calculates the log-probability of observing a sequence of emissions,
         regardless of the state sequence, using the Forward Algorithm. This
         implementation also retains intermediate state information useful in
@@ -230,7 +231,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions,calc_backward=False)
         return total_logprob, scaled_forward, scale_factors
     
-    def forward_backward(self,emissions,calc_backward=True):
+    def forward_backward(self, emissions, calc_backward=True):
         """Calculates the forward algorithm, the backward algorithm, and sufficient
         statistics useful in Baum-Welch calculations, all in factored and 
         vectorized forms. 
@@ -340,7 +341,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
     
         return total_logprob, scaled_forward, scaled_backward, scale_factors, ksi    
     
-    def posterior_decode(self,emissions):
+    def posterior_decode(self, emissions):
         """Find the most probable state for each individual state in the sequence
         of emissions, using posterior decoding. Note, this objective is distinct
         from finding the most probable sequence of states for all emissions, as
@@ -369,7 +370,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         
         return most_likely_states, posterior_probs
     
-    def generate(self,length):
+    def generate(self, length):
         """Generates a random sequence of states and emissions from the HMM
         
         Parameters
@@ -423,7 +424,8 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         
         return numpy.array(states).astype(int), numpy.array(emissions), logprob
 
-    def sample(self,emissions):
+    # TODO: test
+    def sample(self, emissions):
         """Probabilistically sample state sequences from the HMM using a modified
         Viterbi algorithm, given a set of observations. This may be used to test
         the reliability of a Viterbi decoding, or of subregions of the Viterbi
@@ -438,17 +440,42 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         
         Returns
         -------
-        numpy.ndarray
-            A sequence of states, sampled according to its probability under
-            the model
+        dict
+            Results of decoding, with the following keys:
+            
+            `states`
+                :class:`numpy.ndarray`. Decoded labels for each position in
+                emissions[start:end]
         
-        float
-            joint log probability of sequence of emissions
-            and the returned state sequence
+            `logprob`
+                :class:`float`. Joint log probability of sequence of
+                `emissions[start:end]` and the decoded state sequence
         """
-        pass
+        rvals = numpy.random.random(len(emissions))
+        T     = self._logt
+
+        prev_probs = numpy.array([self.state_priors.logprob(X) + self.emission_probs[X].logprob(emissions[0])\
+                                  for X in range(self.num_states)])
+        
+        newstate   = (prev_probs.cumsum() >= rvals[0]).argmax()
+        state_path = [newstate]
+        logprob    = prev_probs[newstate] 
+        
+        for r, x in zip(rvals, emissions)[1:]:
+            emission_logprobs = numpy.array([X.logprob(x) for X in self.emission_probs])
+            current_probs     = T[state_path[-1],:] + emission_logprobs + logprob
+            newstate          = (current_probs.cumsum() >= r).argmax()
+            
+            state_path.append(newstate)
+            logprob += current_probs[newstate]
+        
+        dtmp = {
+            "sampled_states"  : state_path,
+            "logprob"         : logprob,
+        }
+        return dtmp
     
-    def viterbi(self,emissions,start=0,end=None,verbose=False):
+    def viterbi(self, emissions, start=0, end=None):
         """Finds the most likely state sequence underlying a set of emissions
         using the Viterbi algorithm. Also returns the natural log probability
         of that state sequence.
@@ -466,11 +493,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         end : int, optional
             Ending point in emissions to consider (Default: None, end of sequence)
         
-        verbose : bool
-            If True, the dictionary of log-probabilities at 
-            the final state is returned in addition to the
-            total log probability (Default: False)
-
 
         Returns
         -------
@@ -489,10 +511,10 @@ class FirstOrderHMM(AbstractGenerativeFactor):
                 dict[state] = log probability of final symbol being in that state
         """
         state_dict = { K : [K] for K in range(self.num_states) }
-        prev_probs = numpy.array([self.state_priors.logprob(X) + self.emission_probs[X].logprob(emissions[0])\
+        prev_probs = numpy.array([self.state_priors.logprob(X) + self.emission_probs[X].logprob(emissions[start])\
                                   for X in range(self.num_states)])
 
-        T = numpy.log(self.trans_probs.data)
+        T = self._logt
         for x in emissions[start+1:end]:
             new_state_dict = {}
             emission_logprobs = numpy.array([X.logprob(x) for X in self.emission_probs])

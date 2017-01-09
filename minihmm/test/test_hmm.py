@@ -95,10 +95,7 @@ class _BaseExample():
             
         print("Set up class %s" % cls.__name__)
 
-    @unittest.skip
     def test_generate(self):
-        # TODO : not sure what proper test is. Median probability should be 
-        # less than mean, if 
         assert False
 
     @unittest.skip
