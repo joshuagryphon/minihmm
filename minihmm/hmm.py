@@ -425,55 +425,103 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         return numpy.array(states).astype(int), numpy.array(emissions), logprob
 
     # TODO: test
-    def sample(self, emissions):
-        """Probabilistically sample state sequences from the HMM using a modified
-        Viterbi algorithm, given a set of observations. This may be used to test
-        the reliability of a Viterbi decoding, or of subregions of the Viterbi
-        decoding. 
-        
-        See Durbin1997 ch 4.3
+    def sample(self, emissions, num_samples=1):
+        """Sample state sequences from the distribution P(states | emissions),
+        by tracing backward through the matrix of forward probabilities. 
+        See Durbin1997 ch 4.3, section "Probabilistic sampling of aligments"
 
         Parameters
         ----------
         emissions : numpy.ndarray
             Sequence of observations
-        
+
+        num_samples : int, optional
+            Number of state paths to generate (Default: 1)
+
         Returns
         -------
-        dict
-            Results of decoding, with the following keys:
-            
-            `states`
-                :class:`numpy.ndarray`. Decoded labels for each position in
-                emissions[start:end]
-        
-            `logprob`
-                :class:`float`. Joint log probability of sequence of
-                `emissions[start:end]` and the decoded state sequence
+        list
+            List of state paths
         """
-        rvals = numpy.random.random(len(emissions))
-        T     = self._logt
+        L = len(emissions)
+        T = self.trans_probs.data
 
-        prev_probs = numpy.array([self.state_priors.logprob(X) + self.emission_probs[X].logprob(emissions[0])\
-                                  for X in range(self.num_states)])
-        
-        newstate   = (prev_probs.cumsum() >= rvals[0]).argmax()
-        state_path = [newstate]
-        logprob    = prev_probs[newstate] 
-        
-        for r, x in zip(rvals, emissions)[1:]:
-            emission_logprobs = numpy.array([X.logprob(x) for X in self.emission_probs])
-            current_probs     = T[state_path[-1],:] + emission_logprobs + logprob
-            newstate          = (current_probs.cumsum() >= r).argmax()
-            
-            state_path.append(newstate)
-            logprob += current_probs[newstate]
-        
-        dtmp = {
-            "sampled_states"  : state_path,
-            "logprob"         : logprob,
-        }
-        return dtmp
+        total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions, calc_backward=False)
+        randos = numpy.random.random(size=(num_samples,L))
+
+        paths = []
+        for n in range(num_samples):
+            my_path = numpy.full(len(emissions), -1)
+
+            # because probabilty at all steps is scaled to one, we can just 
+            # examine cumsum of final step
+            last_state = (scaled_forward[:,-1] > = randos[n,0]).argmax()
+
+            # TODO: verify scale factor equations on paper- all should cancel except final 
+            # in denominator, as I have sketched below
+            for i in range(1, L):
+                pvec = numpy.array([X.probability(emissions[-i]) for X in self.emission_probs]) \
+                       * scaled_forward[:,-i-1] \
+                       / scaled_forward[last_state,-i] \
+                       / scale_factors[-i] \
+                       * T[:,last_state]
+
+                last_state = (pvec.cumsum() >= randos[n,i+1]).argmax()
+                my_path[-i-1] = last_state
+
+            paths.append(my_path)
+
+        return paths
+
+#     commented out - this actually samples according to joint distribution P(states,obs), NOT P(states|obs)
+#     # TODO: test
+#     def sample(self, emissions):
+#         """Probabilistically sample state sequences from the joint distribution
+#         P(emissions, states), using a modified Viterbi algorithm
+#         
+#         See Durbin1997 ch 4.3
+# 
+#         Parameters
+#         ----------
+#         emissions : numpy.ndarray
+#             Sequence of observations
+#         
+#         Returns
+#         -------
+#         dict
+#             Results of decoding, with the following keys:
+#             
+#             `states`
+#                 :class:`numpy.ndarray`. Decoded labels for each position in
+#                 emissions[start:end]
+#         
+#             `logprob`
+#                 :class:`float`. Joint log probability of sequence of
+#                 `emissions[start:end]` and the decoded state sequence
+#         """
+#         rvals = numpy.random.random(len(emissions))
+#         T     = self._logt
+# 
+#         prev_probs = numpy.array([self.state_priors.logprob(X) + self.emission_probs[X].logprob(emissions[0])\
+#                                   for X in range(self.num_states)])
+#         
+#         newstate   = (prev_probs.cumsum() >= rvals[0]).argmax()
+#         state_path = [newstate]
+#         logprob    = prev_probs[newstate] 
+#         
+#         for r, x in zip(rvals, emissions)[1:]:
+#             emission_logprobs = numpy.array([X.logprob(x) for X in self.emission_probs])
+#             current_probs     = T[state_path[-1],:] + emission_logprobs + logprob
+#             newstate          = (current_probs.cumsum() >= r).argmax()
+#             
+#             state_path.append(newstate)
+#             logprob += current_probs[newstate]
+#         
+#         dtmp = {
+#             "sampled_states"  : state_path,
+#             "logprob"         : logprob,
+#         }
+#         return dtmp
     
     def viterbi(self, emissions, start=0, end=None):
         """Finds the most likely state sequence underlying a set of emissions
