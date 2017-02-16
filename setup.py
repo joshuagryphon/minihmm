@@ -49,7 +49,7 @@ setup(
          'Topic :: Scientific/Engineering',
          'License :: BSD 3-Clause',
          'Operating System :: POSIX',
-        ]
+        ],
     
     **config_info
 )
