@@ -455,7 +455,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
             # because probabilty at all steps is scaled to one, we can just 
             # examine cumsum of final step
-            last_state = (scaled_forward[:,-1] > = randos[n,0]).argmax()
+            last_state = (scaled_forward[:,-1] >= randos[n,0]).argmax()
 
             # TODO: verify scale factor equations on paper- all should cancel except final 
             # in denominator, as I have sketched below
