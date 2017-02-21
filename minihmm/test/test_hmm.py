@@ -58,6 +58,19 @@ class _BaseExample():
 
     @classmethod
     def setUpClass(cls):
+
+
+        cls.test_obs_seqs   = []    # test observation sequencs
+        cls.test_state_seqs = []    # state paths through test observation seqs. not currently used
+        cls.decode_tests    = []    # tests for Viterbi and posterior decoding
+
+        cls.expected_forward_logprobs = [] # log probabilities for cls.test_obs_seqs
+        cls.found_forward_logprobs    = []
+        cls.forward_scalefactors      = []
+
+
+        cls.seq_lengths = [5,10]
+
         print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
         cls.generating_hmm = FirstOrderHMM(**cls.models["generating"])
@@ -65,13 +78,24 @@ class _BaseExample():
 
         print("    Generating sequences ...")
         numpy.random.seed(_TRAINING_SEED)
-        cls.forward_tests = [cls.generating_hmm.generate(X) for X in [5,10]]#,20]])#,150]])
 
-        cls.expected_forward_logprobs = []          
+
+        for x in cls.seq_lengths:
+            states, obs, _ = cls.generating_hmm.generate(x)
+            cls.test_state_seqs.append(states)
+            cls.test_obs_seqs.append(obs)
+
+        # run forward algorithm; we'll use their results for tests below
+        for obs in cls.test_obs_seqs:
+            logprob, scaled_forward, scaled_backward, scale_factors, ksi = cls.generating_hmm.forward_backward(obs)
+            cls.found_forward_logprobs.append(logprob)
+            cls.forward_scalefactors.append(scale_factors)
+
+
         # evaluate probabilities of generated observations by brute force
         # to compare against forward algorithm calculations later
         print("    Calculating probabilities ...")
-        for _,  obs_seq, _ in cls.forward_tests:
+        for obs_seq in cls.test_obs_seqs:
             state_paths = itertools.product(list(range(cls.generating_hmm.num_states)),
                                             repeat=len(obs_seq))
             total_prob  = 0
@@ -90,7 +114,6 @@ class _BaseExample():
             cls.expected_forward_logprobs.append(numpy.log(total_prob))
 
         # Generate test cases for Viterbi and posterior decoding            
-        print("Creating decoding testss")
         cls.decode_tests = [cls.generating_hmm.generate(1000) for _ in range(10)]
             
         print("Set up class %s" % cls.__name__)
@@ -134,8 +157,7 @@ class _BaseExample():
     def test_forward_logprob(self):
         # make sure vectorized forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
-        for n, ((_,obs,_), expected) in enumerate(zip(self.forward_tests, self.expected_forward_logprobs)):
-            found, _, _ = self.generating_hmm.forward(obs)
+        for n, (expected, found) in enumerate(zip(self.expected_forward_logprobs, self.found_forward_logprobs)):
             msg = "Failed forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                   self.name,
                                                                                                   expected,
@@ -147,7 +169,7 @@ class _BaseExample():
     def test_fast_forward(self):
         # make sure fast forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
-        for n, ((_,obs,_), expected) in enumerate(zip(self.forward_tests, self.expected_forward_logprobs)):
+        for n, (obs, expected) in enumerate(zip(self.test_obs_seqs, self.expected_forward_logprobs)):
             found = self.generating_hmm.fast_forward(obs)
             msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                  self.name,
@@ -162,7 +184,7 @@ class _BaseExample():
         
         # TODO: test backward component
         numpy.random.seed(_FORWARD_SEED)
-        for n, ((_,obs,_), expected_logprob) in enumerate(zip(self.forward_tests, self.expected_forward_logprobs)):
+        for n, (obs, expected_logprob) in enumerate(zip(self.test_obs_seqs, self.expected_forward_logprobs)):
             (found_logprob,
              scaled_forward,
              scaled_backward,
