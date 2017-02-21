@@ -1,18 +1,31 @@
 Change Log
 ==========
-All major changes to ``minihmm`` will be documented here.
-Version numbers follow the conventions described in
-`PEP440 <https://www.python.org/dev/peps/pep-0440/>`_ and
-follow  `Semantic versioning <http://semver.org/>`_.
+Changes to ``minihmm`` are documented here.
+
+Version numbers follow a scheme of ERA.MAJOR.MINOR, following the conventions
+described in `PEP440 <https://www.python.org/dev/peps/pep-0440/>`_ and 
+`Semantic versioning <http://semver.org/>`_, with the exception that we have
+prepended the era to the version number.
 
 
-Unreleased
-----------
+0.1.1
+-----
+
+Added
+.....
+
+ - Can now sample state paths given an observation sequence, from the
+   conditional distribution :math:`P(Path | observation sequence)`
+
+ - Unit tests
 
 
 Changed
 .......
+
   - miniHMM factored out of unpublished scientific project
+
   - Migration from SVN to GIT repo
+
   - get_free_parameters() and from_parameters() replaced by serialize()
     and deserialize() methods in all factors
