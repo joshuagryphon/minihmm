@@ -58,7 +58,7 @@ class _BaseExample():
 
     @classmethod
     def setUpClass(cls):
-
+        cls.seq_lengths = [5,10]
 
         cls.test_obs_seqs   = []    # test observation sequences
         cls.test_state_seqs = []    # state paths through test observation seqs. not currently used
@@ -66,12 +66,12 @@ class _BaseExample():
 
         cls.expected_forward_logprobs = [] # log probabilities for cls.test_obs_seqs
         cls.found_forward_logprobs    = []
-        cls.forward_scalefactors      = []
+        cls.found_forward_scalefactors      = []
+        cls.found_forward_scaled_forward_matrices = []
 
         cls.expected_joint_logprobs = [] # expected joint probabilities for states and observations
 
 
-        cls.seq_lengths = [5,10]
 
         print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
@@ -79,9 +79,7 @@ class _BaseExample():
         cls.generating_hmm = hmm
         cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
 
-        print("    Generating sequences ...")
         numpy.random.seed(_TRAINING_SEED)
-
 
         for x in cls.seq_lengths:
             states, obs, _ = hmm.generate(x)
@@ -93,7 +91,8 @@ class _BaseExample():
             # run forward algorithm; we'll use their results for tests below
             logprob, scaled_forward, scaled_backward, scale_factors, ksi = hmm.forward_backward(obs)
             cls.found_forward_logprobs.append(logprob)
-            cls.forward_scalefactors.append(scale_factors)
+            cls.found_forward_scalefactors.append(scale_factors)
+            cls.found_forward_scaled_forward_matrices.append(scaled_forward)
 
             # manually calculate probabilities of generated observations via dynamic programming
             # the forward probability of an observation sequence is equal to the sum of its joint 
@@ -202,7 +201,21 @@ class _BaseExample():
                                                                                                 )
             yield assert_almost_equal, expected, found, 7, msg
 
-    def test_forward_backward(self):
+
+    def test_forward_backward_scalefactors_product_sum_is_consistent(self):
+        # product of scale factors and forward algorithm at each timestep
+        # should equal probability of that sequence up to that point
+        for n, (obs, scale_factors, scaled_forward) in enumerate(zip(self.test_obs_seqs,
+                                                                     self.found_forward_scalefactors,
+                                                                     self.found_forward_scaled_forward_matrices)):
+
+            expected = [numpy.exp(self.generating_hmm.fast_forward(obs[:X+1])) for X in range(len(obs))]
+            found    = scaled_forward.sum(1) * scale_factors.cumprod()
+            msg = ""
+            yield assert_almost_equal, expected, found, 7, msg
+
+
+    def test_forward_backward_logprob(self):
         # test forward algorithm portion of forward_backward
         
         # TODO: test backward component
@@ -238,7 +251,6 @@ class _BaseExample():
 #         for expected, found in zip(self.generating_hmm.emission_probs, new_model.emission_probs):
 #             if expected is not None:
 #                 yield assert_array_almost_equal, expected.data, found.data
-
 
 
 class TestACoin(_BaseExample):
