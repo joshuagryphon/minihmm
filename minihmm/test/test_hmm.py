@@ -58,7 +58,7 @@ class _BaseExample():
 
     @classmethod
     def setUpClass(cls):
-        cls.seq_lengths = [5,10]
+        cls.seq_lengths = [5,10] #,20]
 
         cls.test_obs_seqs   = []    # test observation sequences
         cls.test_state_seqs = []    # state paths through test observation seqs. not currently used
@@ -70,8 +70,6 @@ class _BaseExample():
         cls.found_forward_scaled_forward_matrices = []
 
         cls.expected_joint_logprobs = [] # expected joint probabilities for states and observations
-
-
 
         print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
@@ -141,23 +139,15 @@ class _BaseExample():
 
     @unittest.skip
     def test_generate(self):
+        # testable
+        
+        # 1. test length of state and observation sequences is correct
+        # 2. test sampling is according to joint distribution?
+        # TODO: what else?
         assert False
 
     @unittest.skip
     def test_sample(self):
-        # TODO : not sure what proper test is; distribution of samples
-        # should approximate distribution of HMM, but we don't know what
-        # distribution of HMM actually is.
-        
-        #
-        # Maybe calculate ML solution (Viterbi) and make sure everything sampled
-        # is lower probability?
-        #
-        # Some test of shape of distribution? Require one mode? 
-        #
-        # Or, sample from a path through a known sequence of e.g. coin tosses,
-        # where we can calculate the background distribution, and then make
-        # sure the sampled distribution approximates the background?
         assert False
         
     def test_viterbi(self):
@@ -209,6 +199,8 @@ class _BaseExample():
     def test_forward_backward_scalefactors_product_sum_is_consistent(self):
         # product of scale factors and forward algorithm at each timestep
         # should equal probability of that sequence up to that point
+
+        # n.b. at present we're only scaling from timestep 1 onwards
         for n, (obs, scale_factors, scaled_forward) in enumerate(zip(self.test_obs_seqs,
                                                                      self.found_forward_scalefactors,
                                                                      self.found_forward_scaled_forward_matrices)):
@@ -236,7 +228,8 @@ class _BaseExample():
             yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
 
     @unittest.skip
-    def test_forward_backwward_backward(self):
+    def test_forward_backward_backward(self):
+        # TODO: test backward component of forward-backward algorithm
         assert False
 
 #     def test_train(self):
@@ -263,7 +256,7 @@ class TestACoin(_BaseExample):
     @classmethod
     def do_subclass_setup(cls):
         cls.name = "Coin example"
-        cls.min_frac_equal = 0.7
+        cls.min_frac_equal = 0.69
 
         cls.state_prior_estimator = DiscreteStatePriorEstimator()
         cls.transition_estimator  = DiscreteTransitionEstimator()
