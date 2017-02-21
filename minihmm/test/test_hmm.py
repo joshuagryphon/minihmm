@@ -201,6 +201,10 @@ class _BaseExample():
                                                                                                 )
             yield assert_almost_equal, expected, found, 7, msg
 
+    def test_scaled_forward_is_scaled_to_one(self):
+        # n.b. at present we're only scaling from timestep 1 onwards
+        for n, scaled_forward in enumerate(self.found_forward_scaled_forward_matrices):
+            yield assert_almost_equal, scaled_forward[1:].sum(1), 1
 
     def test_forward_backward_scalefactors_product_sum_is_consistent(self):
         # product of scale factors and forward algorithm at each timestep
@@ -211,14 +215,11 @@ class _BaseExample():
 
             expected = [numpy.exp(self.generating_hmm.fast_forward(obs[:X+1])) for X in range(len(obs))]
             found    = scaled_forward.sum(1) * scale_factors.cumprod()
-            msg = ""
-            yield assert_almost_equal, expected, found, 7, msg
-
+            yield assert_almost_equal, expected[1:], found[1:]
 
     def test_forward_backward_logprob(self):
         # test forward algorithm portion of forward_backward
         
-        # TODO: test backward component
         numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected_logprob) in enumerate(zip(self.test_obs_seqs, self.expected_forward_logprobs)):
             (found_logprob,
@@ -233,6 +234,10 @@ class _BaseExample():
                                                                                                  abs(expected_logprob-found_logprob)
                                                                                                 )
             yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
+
+    @unittest.skip
+    def test_forward_backwward_backward(self):
+        assert False
 
 #     def test_train(self):
 #         mdict = train_baum_welch(self.naive_hmm,
