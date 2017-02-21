@@ -424,7 +424,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         
         return numpy.array(states).astype(int), numpy.array(emissions), logprob
 
-    # TODO: test
     def sample(self, emissions, num_samples=1):
         """Sample state sequences from the distribution P(states | emissions),
         by tracing backward through the matrix of forward probabilities. 
@@ -437,6 +436,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         num_samples : int, optional
             Number of state paths to generate (Default: 1)
+
 
         Returns
         -------
@@ -454,19 +454,18 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             my_path = numpy.full(len(emissions), -1)
 
             # because probabilty at all steps is scaled to one, we can just 
-            # examine cumsum of final step
-            last_state = (scaled_forward[:,-1] >= randos[n,0]).argmax()
-
-            # TODO: verify scale factor equations on paper- all should cancel except final 
-            # in denominator, as I have sketched below
+            # examine cumsum of final step to start
+            last_state = (scaled_forward[-1,:].cumsum() >= randos[n,0]).argmax()
+            my_path[-1] = last_state
+            
             for i in range(1, L):
-                pvec = numpy.array([X.probability(emissions[-i]) for X in self.emission_probs]) \
-                       * scaled_forward[:,-i-1] \
-                       / scaled_forward[last_state,-i] \
-                       / scale_factors[-i] \
-                       * T[:,last_state]
+                pvec = T[:,last_state] \
+                       * hmm.emission_probs[last_state].probability(emissions[-i]) \
+                       * scaled_forward[-i-1,:] \
+                       / scaled_forward[-i,last_state] \
+                       / scale_factors[-i]
 
-                last_state = (pvec.cumsum() >= randos[n,i+1]).argmax()
+                last_state = (pvec.cumsum() >= randos[n, i]).argmax()
                 my_path[-i-1] = last_state
 
             paths.append(my_path)
