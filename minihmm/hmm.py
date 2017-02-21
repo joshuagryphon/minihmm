@@ -460,7 +460,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             
             for i in range(1, L):
                 pvec = T[:,last_state] \
-                       * hmm.emission_probs[last_state].probability(emissions[-i]) \
+                       * self.emission_probs[last_state].probability(emissions[-i]) \
                        * scaled_forward[-i-1,:] \
                        / scaled_forward[-i,last_state] \
                        / scale_factors[-i]

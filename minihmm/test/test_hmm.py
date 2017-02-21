@@ -8,7 +8,9 @@ import unittest
 import itertools
 import numpy
 import scipy.stats
-from nose.tools import assert_greater_equal
+
+from collections import Counter
+from nose.tools import assert_greater_equal, assert_less_equal
 from numpy.testing import (assert_array_equal,
                            assert_array_almost_equal,
                            assert_almost_equal)
@@ -146,9 +148,27 @@ class _BaseExample():
         # TODO: what else?
         assert False
 
-    @unittest.skip
     def test_sample(self):
-        assert False
+        # Test sampling algorithm by checking the slope and intercept of the regression line
+        # between expected and observed numbers of observations for each state path
+        num_samples = 10000
+
+        for n, (obs, logprob, joint_probs) in enumerate(zip(self.test_obs_seqs,
+                                                           self.expected_forward_logprobs,
+                                                           self.expected_joint_logprobs)):
+            cond_probs = { K : V - logprob for K,V in joint_probs.items() }
+            paths    = self.generating_hmm.sample(obs, num_samples=num_samples)
+            samples  = Counter([tuple(X.astype(int)) for X in paths])
+            expected = numpy.zeros(len(cond_probs))
+            found    = numpy.zeros(len(cond_probs))
+
+            for n, (k, v) in enumerate(sorted(cond_probs.items())):
+                expected[n] = num_samples * numpy.exp(v)
+                found[n]    = samples.get(k,0)
+
+            m, b, r, p, std = scipy.stats.linregress(expected,found)
+            assert_less_equal(abs(m - 1), 0.05, "Slope '%s' further from 1.0 than expected." % (m))
+            assert_less_equal(abs(b), 1, "Intercept '%s' further from 0.0 than expected." % (b))
         
     def test_viterbi(self):
         # make sure viterbi calls are above accuracy threshold listed above 
