@@ -60,7 +60,7 @@ class _BaseExample():
     def setUpClass(cls):
 
 
-        cls.test_obs_seqs   = []    # test observation sequencs
+        cls.test_obs_seqs   = []    # test observation sequences
         cls.test_state_seqs = []    # state paths through test observation seqs. not currently used
         cls.decode_tests    = []    # tests for Viterbi and posterior decoding
 
@@ -68,12 +68,15 @@ class _BaseExample():
         cls.found_forward_logprobs    = []
         cls.forward_scalefactors      = []
 
+        cls.expected_joint_logprobs = [] # expected joint probabilities for states and observations
+
 
         cls.seq_lengths = [5,10]
 
         print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
-        cls.generating_hmm = FirstOrderHMM(**cls.models["generating"])
+        hmm = FirstOrderHMM(**cls.models["generating"])
+        cls.generating_hmm = hmm
         cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
 
         print("    Generating sequences ...")
@@ -81,43 +84,63 @@ class _BaseExample():
 
 
         for x in cls.seq_lengths:
-            states, obs, _ = cls.generating_hmm.generate(x)
+            states, obs, _ = hmm.generate(x)
             cls.test_state_seqs.append(states)
             cls.test_obs_seqs.append(obs)
 
-        # run forward algorithm; we'll use their results for tests below
+        # precalculate useful quantities on observation sequences
         for obs in cls.test_obs_seqs:
-            logprob, scaled_forward, scaled_backward, scale_factors, ksi = cls.generating_hmm.forward_backward(obs)
+            # run forward algorithm; we'll use their results for tests below
+            logprob, scaled_forward, scaled_backward, scale_factors, ksi = hmm.forward_backward(obs)
             cls.found_forward_logprobs.append(logprob)
             cls.forward_scalefactors.append(scale_factors)
 
+            # manually calculate probabilities of generated observations via dynamic programming
+            # the forward probability of an observation sequence is equal to the sum of its joint 
+            # probabilities with all possible state paths. We calculate each joint probability here,
+            # then sum these to find the total expected probability
+            my_states = list(range(hmm.num_states))
+            paths = { (X,) : hmm.state_priors.logprob(X) + hmm.emission_probs[X].logprob(obs[0]) for X in my_states }
 
-        # evaluate probabilities of generated observations by brute force
-        # to compare against forward algorithm calculations later
-        print("    Calculating probabilities ...")
-        for obs_seq in cls.test_obs_seqs:
-            state_paths = itertools.product(list(range(cls.generating_hmm.num_states)),
-                                            repeat=len(obs_seq))
-            total_prob  = 0
-            for my_path in state_paths:
-                my_logprob = []
-                last_state = my_path[0]
-                my_logprob.append(cls.generating_hmm.state_priors.logprob(last_state))
-                my_logprob.append(cls.generating_hmm.emission_probs[last_state].logprob(obs_seq[0]))
-                for my_state, my_obs in zip(my_path, obs_seq)[1:]:
-                    my_logprob.append(cls.generating_hmm.trans_probs.logprob(last_state,my_state))
-                    my_logprob.append(cls.generating_hmm.emission_probs[my_state].logprob(my_obs))
-                    last_state = my_state
-                
-                total_prob += numpy.exp(numpy.nansum(my_logprob))
-            
-            cls.expected_forward_logprobs.append(numpy.log(total_prob))
+            for my_obs in obs[1:]:
+                new_paths = {}
+                for partial, prob in paths.items():
+                    for new_state in my_states:
+                        new_paths[ tuple(list(partial) + [new_state])] = prob + hmm.trans_probs.logprob(partial[-1], new_state) + hmm.emission_probs[new_state].logprob(my_obs)
+                        
+                paths = new_paths
+
+            dp_prob = numpy.log(numpy.exp(paths.values()).sum())
+            cls.expected_forward_logprobs.append(dp_prob)
+            cls.expected_joint_logprobs.append(paths)
+
+#         # evaluate probabilities of generated observations by brute force
+#         # to compare against forward algorithm calculations later
+#         print("    Calculating probabilities ...")
+#         for obs_seq in cls.test_obs_seqs:
+#             state_paths = itertools.product(list(range(cls.generating_hmm.num_states)),
+#                                             repeat=len(obs))
+#             total_prob  = 0
+#             for my_path in state_paths:
+#                 my_logprob = []
+#                 last_state = my_path[0]
+#                 my_logprob.append(cls.generating_hmm.state_priors.logprob(last_state))
+#                 my_logprob.append(cls.generating_hmm.emission_probs[last_state].logprob(obs[0]))
+#                 for my_state, my_obs in zip(my_path, obs)[1:]:
+#                     my_logprob.append(cls.generating_hmm.trans_probs.logprob(last_state,my_state))
+#                     my_logprob.append(cls.generating_hmm.emission_probs[my_state].logprob(my_obs))
+#                     last_state = my_state
+#                 
+#                 total_prob += numpy.exp(numpy.nansum(my_logprob))
+#             
+#            cls.expected_forward_logprobs.append(numpy.log(total_prob))
 
         # Generate test cases for Viterbi and posterior decoding            
-        cls.decode_tests = [cls.generating_hmm.generate(1000) for _ in range(10)]
+        cls.decode_tests = [hmm.generate(1000) for _ in range(10)]
             
         print("Set up class %s" % cls.__name__)
 
+    @unittest.skip
     def test_generate(self):
         assert False
 
