@@ -12,6 +12,7 @@ from minihmm.represent import (
     raise_stateseq_orders,
     lower_stateseq_orders,
     transcode_sequences,
+    remap_emission_factors,
     #reduce_model_order,
     )
 
@@ -39,6 +40,35 @@ class TestGetDummyStates():
         for starting_order in range(4):
             dummies = _get_dummy_states(starting_order)
             yield self.check_results, starting_order, dummies
+
+
+class TestLowerParameterOrder():
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    def test_remap_emission_factors(self):
+        for num_states in (2, 3, 4):
+            for starting_order in (1, 2, 3, 4):
+                factors    = list("abcdefg"[:num_states])
+
+                # expected length is number starting states times the number of paths to each, including
+                # paths via dummy states
+                elen = (num_states ** numpy.arange(1, starting_order+1)).sum()
+                mult = elen / num_states
+
+                f_expected = factors * mult
+                f_found    = remap_emission_factors(num_states, factors, starting_order=starting_order)
+                assert_list_equal(f_expected, f_found)
+
+    @unittest.skip
+    def test_remap_state_priors(self):
+        assert False
+
+    @unittest.skip
+    def test_remap_transitions(self):
+        assert False
 
 
 class TestLowerStateSequenceManipulation():

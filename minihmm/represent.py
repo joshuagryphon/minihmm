@@ -52,7 +52,9 @@ If you have known series of states
 
 In this case, it is easiest to transcode the state sequences into first-order
 space, and then calculate the model parameters from the known state sequences.
-To do this, call :func:`lower_stateseq_orders`.
+To do this, call :func:`lower_stateseq_orders`, to re-map state sequences
+into the reduced model space, then calculate transition probabilities as
+for a first order model.
 
 
 If high-order model parameters are known, but state sequences are not
@@ -103,7 +105,7 @@ def _get_dummy_states(starting_order):
     """
     return list(range(1 - starting_order, 0))
     
-def get_state_mapping(num_states, dummy_states, starting_order=2):
+def get_state_mapping(num_states, dummy_states=None, starting_order=2):
     """Create dicts mapping states between a high-order and a first-order HMM,
     adding dummy states to handle inhomogeneities at the starts of sequences.
     
@@ -137,6 +139,9 @@ def get_state_mapping(num_states, dummy_states, starting_order=2):
     elif starting_order == 1:
         warnings.warn("Reducing a first-order model doesn't make much sense.",UserWarning)
     
+    if dummy_states is None:
+        dummy_states = _get_dummy_states(starting_order)
+
     forward = {}
     reverse = {}
     states = list(range(num_states))
@@ -312,124 +317,166 @@ def transcode_sequences(sequences, alphadict):
     return [numpy.array([alphadict[X] for X in Y]) for Y in sequences]
 
 
-
-
-
 # def raise_parameter_order()
 #     pass
 
-# def lower_parameter_order(states,
-#                            starting_order   = 2,
-#                            state_map        = None,
-#                            state_priors     = None,
-#                            transition_probs = None,
-#                            emission_probs   = None,
-#                           ):
-#     """Create states and probability tables that map a high-order HMM to an equivalent first-order HMM
-#      
-#      
-#     Parameters
-#     ----------
-#     states : int
-#         Number of model states in high-order space
-#      
-#     starting_order : int, optional
-#         Order of starting HMM/MM (Default: 2)
-#          
-#     state_priors : class:`numpy.ndarray`, optional
-#         Probabilities of starting in any given state
-#      
-#     transition_probs : :class:`numpy.ndarray`, optional
-#         Probabilities of transitions between states
-#      
-#      
-#     Returns
-#     -------
-#     dict
-#         Dictionary of objects describing reduced model:
-#          
-#             =================  ========================================  =================================================
-#             Key                Type                                      Contains
-#             -----------------  ----------------------------------------  -------------------------------------------------
-#             statemap_forward   :class:`dict`                             Maps tuples of high-order states to new 1st-order
-#                                                                          states
-#  
-#             statemap_reverse   :class:`dict`                             Maps new 1st-order states to corresponding
-#                                                                          high-order states
-#                                                                         
-#             state_priors       :class:`numpy.ndarray`                    Mapping of 2nd order state priors to 1st order
-#                                                                          space, with impossible starting points set to
-#                                                                          zero
-#                                                                         
-#             transitions        :class:`numpy.ndarray`                    Mapping of 2nd order transition probabilities
-#                                                                          to 1st order space, with impossible transitions
-#                                                                          set to zero
-#                                                                         
-#             emissions          :class:`numpy.ndarray`                    Mapping of 2nd order emisison probabilities to
-#                                                                          1st order space
-#             =================  ========================================  =================================================
-#     """
-#     num_starting_states = len(states) 
-#     starting_states      = range(num_starting_states)
-#      
-#     if state_priors is None:
-#         state_priors = numpy.full(len(states),1.0/num_starting_states)
-#          
-#     if transition_probs is None:
-#         transition_probs = numpy.full(*([num_starting_states]*(1 + starting_order)),
-#                                       1.0/num_starting_states)
-#  
-#     dtmp = {}    
-#     fullstates = copy.deepcopy(states)
-#      
-#     for n in range(starting_order-1):
-#         fullstates.append("start%s" % n)
-#         fullstates.append("end%s" % n)
-#  
-#     statemap_forward, statemap_reverse = map_states(fullstates)
-#     dtmp["statemap_forward"] = statemap_forward
-#     dtmp["statemap_reverse"] = statemap_reverse
-#      
-#     num_new_states = len(fullstates)
-#      
-#     new_state_priors = numpy.zeros(num_new_states, dtype=float)
-#     new_transprobs   = numpy.zeros((num_new_states, num_new_states),
-#                                    dtype = float)
-#      
-#     # transition probabilities
-#     statepaths = itertools.product( *([starting_states]* (starting_order + 1)))
-#     # remap transition probabilities to 1st order space
-#     for path in statepaths:
-#         old_startstate = path[:-1]
-#         old_endstate   = path[1:]
-#         new_transprobs[statemap_forward[old_startstate],
-#                        statemap_forward[old_endstate]] = transition_probs[path]
-#      
-#     # add probabilities for added start, end states
-#     for i in range(starting_order-1):
-#         base = ["start%s" % X for X in range(i)]
-#         for remaining in itertools.product( *([starting_states]* starting_order)):
-#             idx = tuple(base + list(remaining))
-#             fromstate = idx[:-1]
-#             tostate   = idx[1:]
-#              
-#             # MARGINALIZE APPROPRIATELY
-#             new_transprobs[statemap_forward[fromstate],
-#                            statemap_forward[tostate]] = None 
-#      
-#     # remap state priors
-#     for i in range(num_starting_states):
-#         baseidx = ["start%s" % X for X in range(starting_order)]
-#         idx = statemap_forward[tuple(baseidx + [i])]
-#         new_state_priors[statemap_forward[idx]] = state_priors[i]
-#          
-#     # remap emissions
-#     if emission_probs is not None:        
-#         new_emission_probs = [None]*num_new_states
-#         for i in range(num_new_states):
-#             new_emission_probs[i] = emission_probs[statemap_reverse[i][:-1]]
-#         dtmp["emissions"] = new_emission_probs
-#      
-#     dtmp["state_priors"] = new_state_priors
-#     dtmp["transitions"]  = new_transprobs
-#     return dtmp
+
+def remap_emission_factors(num_states,
+                           emission_probs,
+                           starting_order    = 2,
+                           reverse_state_map = None,
+                           ):
+    """Map emission probabilities from high-order space to equivalent reduced space
+
+    Parameters
+    ----------
+    num_states : int
+        Number of states in high-order space
+
+    emission_probs : list of :class:`~minihmm.factors.AbstractFactor`
+        List of emission probabilities, indexed by state in high-order space.
+
+    starting_order : int
+        Order of model
+
+    reverse_state_map : dict, optional
+        Reverse state map made by :func:`get_state_mapping`. If `None`, wil be calculated
+
+
+    Returns
+    -------
+    list
+        list of Factors, indexed by states in equivalent first-order
+    """
+    if reverse_state_map is None:
+        _, reverse_state_map = get_state_mapping(num_states, starting_order=starting_order)
+
+    # make empty list length of new states
+    ltmp = [None] * len(reverse_state_map)
+
+    # populate list
+    for newstate, state_tuple in reverse_state_map.items():
+        ltmp[newstate] = emission_probs[state_tuple[-1]]
+
+    return ltmp
+
+
+
+#TODO :  implement and test
+def lower_parameter_order(states,
+                          starting_order   = 2,
+                          state_map        = None,
+                          state_priors     = None,
+                          transition_probs = None,
+                          emission_probs   = None,
+                         ):
+    """Create states and probability tables that map a high-order HMM to an equivalent first-order HMM
+     
+     
+    Parameters
+    ----------
+    states : int
+        Number of model states in high-order space
+     
+    starting_order : int, optional
+        Order of starting HMM/MM (Default: 2)
+         
+    state_priors : class:`numpy.ndarray`, optional
+        Probabilities of starting in any given state
+     
+    transition_probs : :class:`numpy.ndarray`, optional
+        Probabilities of transitions between states
+     
+     
+    Returns
+    -------
+    dict
+        Dictionary of objects describing reduced model:
+         
+            =================  ========================================  =================================================
+            Key                Type                                      Contains
+            -----------------  ----------------------------------------  -------------------------------------------------
+            statemap_forward   :class:`dict`                             Maps tuples of high-order states to new 1st-order
+                                                                         states
+ 
+            statemap_reverse   :class:`dict`                             Maps new 1st-order states to corresponding
+                                                                         high-order states
+                                                                        
+            state_priors       :class:`numpy.ndarray`                    Mapping of 2nd order state priors to 1st order
+                                                                         space, with impossible starting points set to
+                                                                         zero
+                                                                        
+            transitions        :class:`numpy.ndarray`                    Mapping of 2nd order transition probabilities
+                                                                         to 1st order space, with impossible transitions
+                                                                         set to zero
+                                                                        
+            emissions          :class:`numpy.ndarray`                    Mapping of 2nd order emisison probabilities to
+                                                                         1st order space
+            =================  ========================================  =================================================
+    """
+    num_starting_states = len(states) 
+    starting_states     = range(num_starting_states)
+     
+    if state_priors is None:
+        state_priors = numpy.full(len(states), 1.0/num_starting_states)
+         
+    if transition_probs is None:
+        transition_probs = numpy.full(([num_starting_states]*(1 + starting_order)),
+                                      1.0/num_starting_states)
+ 
+    dtmp = {}    
+    fullstates = copy.deepcopy(states)
+     
+    for n in range(starting_order-1):
+        fullstates.append("start%s" % n)
+        fullstates.append("end%s" % n)
+ 
+    statemap_forward, statemap_reverse = map_states(fullstates)
+    dtmp["statemap_forward"] = statemap_forward
+    dtmp["statemap_reverse"] = statemap_reverse
+     
+    num_new_states = len(fullstates)
+     
+    new_state_priors = numpy.zeros(num_new_states, dtype=float)
+    new_transprobs   = numpy.zeros((num_new_states, num_new_states),
+                                   dtype = float)
+     
+    # transition probabilities
+    statepaths = itertools.product( *([starting_states]* (starting_order + 1)))
+    # remap transition probabilities to 1st order space
+    for path in statepaths:
+        old_startstate = path[:-1]
+        old_endstate   = path[1:]
+        new_transprobs[statemap_forward[old_startstate],
+                       statemap_forward[old_endstate]] = transition_probs[path]
+     
+    # add probabilities for added start, end states
+    for i in range(starting_order-1):
+        base = ["start%s" % X for X in range(i)]
+        for remaining in itertools.product( *([starting_states]* starting_order)):
+            idx = tuple(base + list(remaining))
+            fromstate = idx[:-1]
+            tostate   = idx[1:]
+             
+            # MARGINALIZE APPROPRIATELY
+            new_transprobs[statemap_forward[fromstate],
+                           statemap_forward[tostate]] = None 
+     
+    # remap state priors
+    for i in range(num_starting_states):
+        baseidx = ["start%s" % X for X in range(starting_order)]
+        idx = statemap_forward[tuple(baseidx + [i])]
+        new_state_priors[statemap_forward[idx]] = state_priors[i]
+         
+    # remap emissions - we stipulate that high order HMMs be first-order in emissions,
+    # so this is a fairly direct remapping
+    if emission_probs is not None:        
+        new_emission_probs = [None]*num_new_states
+        for i in range(num_new_states):
+            new_emission_probs[i] = emission_probs[statemap_reverse[i][:-1]]
+
+        dtmp["emissions"] = new_emission_probs
+     
+    dtmp["state_priors"] = new_state_priors
+    dtmp["transitions"]  = new_transprobs
+    return dtmp
