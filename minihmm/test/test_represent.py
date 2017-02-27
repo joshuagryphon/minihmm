@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Unit tests for reducing model order and for changing model representation
 """
+import unittest
 import warnings
 import itertools
 import numpy
@@ -18,6 +19,7 @@ from minihmm.represent import (
 
 from nose.tools import (
     assert_equal,
+    assert_greater,
     assert_true,
     assert_almost_equal,
     assert_dict_equal,
@@ -138,7 +140,7 @@ class TestLowerStateSequenceManipulation():
         
         cls.num_states   = 6
  
-    def check_tuples(self, model_order):
+    def check_get_stateseq_tuples(self, model_order):
         # n.b. test assumes _get_dummy_states is working
         dummy_states = _get_dummy_states(model_order)
         expected = self.expected_tuples[model_order]
@@ -147,6 +149,7 @@ class TestLowerStateSequenceManipulation():
                 "Number of output sequences '%s' does not match number of input sequences '%s' for _get_stateseq_tuples(), order '%s'" % (len(found),len(expected),model_order))
         for e, f in zip(expected,found):
             assert_list_equal(e,f)
+
  
     def check_reduced(self, model_order):
         #requires _get_dummy_states, and get_state_mapping to function
@@ -154,20 +157,33 @@ class TestLowerStateSequenceManipulation():
         forward, _ = get_state_mapping(self.num_states, dummy_states, starting_order=model_order)
         expected   = []
         for my_seq in self.sequences:
+
+            # prepend dummy states to sequence
+            my_seq = sorted(dummy_states) + my_seq
+
+            # translate
             expected.append(numpy.array([forward[tuple(my_seq[X:X+model_order])] for X in range(0,len(my_seq)-model_order + 1)])) 
         
         dtmp  = lower_stateseq_orders(self.sequences, self.num_states, starting_order=model_order)
         found = dtmp["state_seqs"]
+        assert len(found) > 0
         assert_equal(len(expected),len(found),
                 "Number of output sequences '%s' does not match number of input sequences '%s' for reduce_stateseq_orders, order '%s'" % (len(found),len(self.sequences),model_order))
         for e,f in zip(expected, found):
-            yield assert_array_equal, e, f
+            print("---------------------------------------")
+            print(e)
+            print(f)
+            assert_array_equal(e, f)
  
-    def test_get_stateseq_tuples(self):
+    def test_get_stateseq_tuples_forward(self):
         for model_order in self.expected_tuples:
-            yield self.check_tuples, model_order
+            yield self.check_get_stateseq_tuples, model_order
  
-    def test_reduce_stateseq_orders(self):
+    def test_raise_stateseq_orders(self):
+        assert False
+
+    def test_lower_stateseq_orders(self):
+        assert_greater(len(self.expected_tuples),0)
         for model_order in self.expected_tuples:
             yield self.check_reduced, model_order
  
