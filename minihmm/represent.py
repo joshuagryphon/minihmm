@@ -86,285 +86,233 @@ import itertools
 import numpy
 
 
-def _get_dummy_states(starting_order):
-    """Create sorted lists of dummy states required to reduce a model with
-    `num_states` and `starting_order` to an equivalent first-order model.
-    
-    By convention, dummy states are given negative indices in high-order space.
-    Don't rely on this- it may change in the future
-    
-    Parameters
+
+class ModelReducer(object):
+    """Utility class for reducing high-order HMMs to equivalent first-order HMMs.
+
+
+    Attributes
     ----------
     starting_order : int
-        Starting order of HMM/MM
-        
-    Returns
-    -------
-    list
-        List of new dummy states, sorted
+        Order of starting model
+
+    high_order_states : int
+        Number of states, in high-order space
+
+    high_states_to_low : dict
+        Dictionary mapping high-order states to tuples of low-order states
+
+    low_states_to_high : dict
+        Dicitonary mapping tuples of low-order states to high-order states
     """
-    return list(range(1 - starting_order, 0))
-    
-def get_state_mapping(num_states, dummy_states=None, starting_order=2):
-    """Create dicts mapping states between a high-order and a first-order HMM,
-    adding dummy states to handle inhomogeneities at the starts of sequences.
-    
-    In the representation space of the high-order model, new start states
-    are given negative indices.
-    
-    Parameters
-    ----------
-    num_states : int
-        Number of states in high-order HMM/MM
 
-    dummy_states : list
-        Sorted list of dummy states. See :func:`_get_dummy_states`
-    
-    starting_order : int, optional 
-        Starting order of HMM/MM (Default: 2)
+    def __init__(self, starting_order, num_states):
 
-    Returns
-    -------
-    :class:`dict`
-        Forward state map, mapping high-order states to tuples of equivalent low-order states
-        
-    :class:`dict`
-        Reverse state map, mapping new first-order states to tuples of high-order states
-    """
-    if num_states < 1:
-        raise ValueError("Must have >= 1 state in model.")
-    
-    if starting_order < 1:
-        raise ValueError("Cannot reduce order of 0-order model")
-    elif starting_order == 1:
-        warnings.warn("Reducing a first-order model doesn't make much sense.",UserWarning)
-    
-    if dummy_states is None:
-        dummy_states = _get_dummy_states(starting_order)
+        if num_states < 1:
+            raise ValueError("Must have >= 1 state in model.")
+        if starting_order < 1:
+            raise ValueError("Cannot reduce order of 0-order model")
+        elif starting_order == 1:
+            warnings.warn("Reducing a first-order model doesn't make much sense.", UserWarning)
+ 
+        self.starting_order    = starting_order
+        self.high_order_states = num_states
+        self._dummy_states     = self._get_dummy_states()
+        self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
 
-    forward = {}
-    reverse = {}
-    states = list(range(num_states))
+    @staticmethod
+    def transcode_sequences(sequences, alphadict):
+        """Transcode a sequence from one alphabet to another
         
-    c = 0
-    
-    # create maps for newly added start and end states
-    for idx in range(starting_order - 1):
-        root = dummy_states[idx:]
-        for symbol in itertools.product(*([states]*(idx + 1))):
-            tup = tuple(root + list(symbol))
-            forward[tup] = c
-            reverse[c]   = tup
-            c += 1
-    
-    # combinations of true states
-    for n, symbol in enumerate(itertools.product(*([states]*starting_order))):
-        forward[symbol] = n + c
-        reverse[c + n] = symbol
-    
-    return forward, reverse
-
-def _get_stateseq_tuples(state_seqs,
-                         dummy_states, 
-                         starting_order = 2):
-    """Remap a high-order sequence of states into tuples for use in a low-order model,
-    adding dummy start states
-    
-    Notes
-    -----
-    This does *not* remap those tuples into lower state spaces. Use
-    :func:`lower_stateseq_orders`, which wraps this function, for that
-    
-    
-    Parameters
-    ----------
-    states : list
-        List of states sequences
-    
-    num_states : int
-        Number of states in high-order HMM/MM
-    
-    dummy_states : list
-        Sorted list of dummy states. See :func:`_get_dummy_states`
-
-    starting_order : int, optional 
-        Starting order of HMM/MM (Default: 2)
-    """
-    outseqs = []
-    for n, inseq in enumerate(state_seqs):
-        if (numpy.array(inseq) < 0).any():
-            raise ValueError("Found negative state label in input sequence %s!" % n)
-        
-        baseseq = dummy_states + list(inseq)
-        outseqs.append([tuple(baseseq[idx:idx+starting_order]) for idx in range(0, len(baseseq) - starting_order + 1)])
-    
-    return outseqs 
-    
-def lower_stateseq_orders(state_seqs,
-                          num_states,
-                          starting_order = 2,
-                          dummy_states   = None,
-                          state_map      = None):
-    """Map a high-order sequence of states into an equivalent first-order state sequence,
-    creating dummy states as necessary and dictionaries that map states between
-    high and first-order spaces.
-    
-    
-    Parameters
-    ----------
-    states : list
-        List of state sequences, each given in high-order space
-    
-    num_states : int
-        Number of states in high-order HMM/MM
-
-    starting_order : int, optional 
-        Starting order of HMM/MM (Default: 2)
-    
-    newstarts : list, optional
-        Sorted list of dummy states. If `None`, will be calculated using
-        :func:`_get_dummy_states`
-        
-    state_map : dict, optional
-        Dictionary mapping tuples of high-order states to equivalent single
-        low-order states. If `None`, will be calculated using :func:`get_state_mapping`
-        
-        
-    Returns
-    -------
-    dict
-        Dictionary containing the following keys:
-        
-        ======================   ===============================================
-        **Key**                  **Value**
-        ----------------------   -----------------------------------------------
-        `dummy_states`           List of dummy states. Calculated if not
-                                 supplied
-                                 
-        `state_map`              Dictionary mapping high order states to
-                                 first-order states. Calculated if not supplied
-        
-        `state_seqs`             List of remapped state sequences, each a
-                                 :class:`numpy.ndarray`
-        ======================   ===============================================
-        
-        
-    See also
-    --------
-    raise_stateseq_orders
-    """
-    if dummy_states is None:
-        dummy_states = _get_dummy_states(starting_order)
-        
-    if state_map is None:
-        state_map, _ = get_state_mapping(num_states,
-                                         dummy_states,
-                                         starting_order = starting_order)
-        
-    remapped = _get_stateseq_tuples(state_seqs,
-                                    dummy_states,
-                                    starting_order = starting_order)
-    
-    dtmp = {
-        "dummy_states" : dummy_states,
-        "state_map"    : state_map,
-        "state_seqs"   : transcode_sequences(remapped, state_map) 
+        Parameters
+        ----------
+        sequences : iterable
+            Iterable of sequences (each, itself, an iterable like a list et c)
             
-    }
-    return dtmp
+        alphadict : dict-like
+            Dictionary mapping symbols input sequence to symbols in output sequence
+            
+        Returns
+        -------
+        list of :class:`numpy.ndarray`
+            List of each transcoded sequence
+        """
+        return [numpy.array([alphadict[X] for X in Y]) for Y in sequences]
+
+    def _get_dummy_states(self):
+        """Create sorted lists of dummy states required to reduce `self` to an equivalent first-order model.
         
-def raise_stateseq_orders(state_seqs, reverse_state_map):
-    """Map a state sequence from first-order space back to original high-order space
-    
-    Parameters
-    ----------    
-    state_seqs : list
-        List of high-order state sequences
+        By convention, dummy states are given negative indices in high-order space.
+        Don't rely on this- it may change in the future
         
-    reverse_state_map : dict
-        Dictionary mapping single first-order model states back to equivalent
-        tuples of high-order states. Created by :func:`get_state_mapping`
+        Parameters
+        ----------
+        starting_order : int
+            Starting order of HMM/MM
+            
+        Returns
+        -------
+        list
+            List of new dummy states, sorted
+        """
+        return list(range(1 - self.starting_order, 0))
+        
+    def _get_state_mapping(self):
+        """Create dicts mapping states between a high-order and a first-order HMM.
 
+        Returns
+        -------
+        :class:`dict`
+            Forward state map, mapping high-order states to tuples of equivalent low-order states
+            
+        :class:`dict`
+            Reverse state map, mapping new first-order states to tuples of high-order states
+        """
+        forward = {}
+        reverse = {}
+        states = list(range(self.high_order_states))
+            
+        c = 0
+        
+        # create maps for newly added start and end states
+        for idx in range(self.starting_order - 1):
+            root = self._dummy_states[idx:]
+            for symbol in itertools.product(*([states]*(idx + 1))):
+                tup = tuple(root + list(symbol))
+                forward[tup] = c
+                reverse[c]   = tup
+                c += 1
+        
+        # combinations of true states
+        for n, symbol in enumerate(itertools.product(*([states]*self.starting_order))):
+            forward[symbol] = n + c
+            reverse[c + n] = symbol
+        
+        return forward, reverse
 
-    Returns
-    -------
-    list
-        List of remapped state sequences, each a :class:`numpy.ndarray`
+    def _get_stateseq_tuples(self, state_seqs):
+        """Remap a high-order sequence of states into tuples for use in a low-order model, adding dummy start states
+        
+        Notes
+        -----
+        This does *not* remap those tuples into lower state spaces. Use
+        :func:`lower_stateseq_orders`, which wraps this function, for that
         
         
-    See also
-    --------
-    lower_stateseq_orders
-    """
-    ltmp = []
-    for t in transcode_sequences(state_seqs, reverse_state_map):
-        ltmp.append([X[-1] for X in t])
-    
-    return ltmp
-    
-def transcode_sequences(sequences, alphadict):
-    """Transcode a sequence from one alphabet to another
-    
-    Parameters
-    ----------
-    sequences : iterable
-        Iterable of sequences (each, itself, an iterable like a list et c)
+        Parameters
+        ----------
+        state_seqs : list of list-like
+            List of state sequences
+
+        Returns
+        -------
+        list of lists
+            List of tuples of state sequences
+        """
+        dummy_states   = self._dummy_states
+        starting_order = self.starting_order
+        outseqs = []
+        for n, inseq in enumerate(state_seqs):
+            if (numpy.array(inseq) < 0).any():
+                raise ValueError("Found negative state label in input sequence %s!" % n)
+            
+            baseseq = dummy_states + list(inseq)
+            outseqs.append([tuple(baseseq[idx:idx+starting_order]) for idx in range(0, len(baseseq) - starting_order + 1)])
         
-    alphadict : dict-like
-        Dictionary mapping symbols input sequence to symbols in output sequence
+        return outseqs 
         
-    Returns
-    -------
-    list of :class:`numpy.ndarray`
-        List of each transcoded sequence
-    """
-    return [numpy.array([alphadict[X] for X in Y]) for Y in sequences]
+    def lower_stateseq_orders(self, state_seqs):
+        """Map a high-order sequence of states into an equivalent first-order state sequence,
+        creating dummy states as necessary and dictionaries that map states between
+        high and first-order spaces.
+        
+        
+        Parameters
+        ----------
+        state_seqs : list of list-like
+            List of state sequences, each given in high-order space
+            
+        Returns
+        -------
+        list of :class`numpy.ndarray`
+            List of state sequences, represented in first-order space
+
+           
+        See also
+        --------
+        raise_stateseq_orders
+        """
+        dummy_states = self._dummy_states
+        state_map    = self.high_states_to_low
+            
+        tuple_seqs = self._get_stateseq_tuples(state_seqs)
+        return ModelReducer.transcode_sequences(tuple_seqs, state_map)
+            
+    def raise_stateseq_orders(self, state_seqs):
+        """Map a state sequence from first-order space back to original high-order space
+        
+        Parameters
+        ----------    
+        state_seqs : list
+            List of high-order state sequences
+
+        Returns
+        -------
+        list of :class:`numpy.ndarray`
+            State sequences, in high-order space
+            
+            
+        See also
+        --------
+        lower_stateseq_orders
+        """
+        ltmp = []
+        for t in transcode_sequences(state_seqs, self.low_states_to_high):
+            ltmp.append([X[-1] for X in t])
+        
+        return ltmp
+        
+    # def raise_parameter_order()
+    #     pass
 
 
-# def raise_parameter_order()
-#     pass
+    def remap_emission_factors(self, emission_probs):
+        """Map emission probabilities from high-order space to equivalent reduced space
 
+        Parameters
+        ----------
+        emission_probs : list of :class:`~minihmm.factors.AbstractFactor`
+            List of emission probabilities, indexed by state in high-order space.
 
-def remap_emission_factors(num_states,
-                           emission_probs,
-                           starting_order    = 2,
-                           reverse_state_map = None,
-                           ):
-    """Map emission probabilities from high-order space to equivalent reduced space
+        Returns
+        -------
+        list
+            list of Factors, indexed by states in equivalent first-order
+        """
+        reverse_state_map = self.low_states_to_high
 
-    Parameters
-    ----------
-    num_states : int
-        Number of states in high-order space
+        # make empty list length of new states
+        ltmp = [None] * len(reverse_state_map)
 
-    emission_probs : list of :class:`~minihmm.factors.AbstractFactor`
-        List of emission probabilities, indexed by state in high-order space.
+        # populate list
+        for newstate, state_tuple in reverse_state_map.items():
+            ltmp[newstate] = emission_probs[state_tuple[-1]]
 
-    starting_order : int
-        Order of model
+        return ltmp
 
-    reverse_state_map : dict, optional
-        Reverse state map made by :func:`get_state_mapping`. If `None`, wil be calculated
+    def get_pseudocount_array(self):
+        """Return a valid pseudocount array for transition tables in first-order space,
+        where *valid* stipulates that cells corresponding transitions that
+        cannot exist in high-order space are set to zero.
 
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            Square matrix
+        """
+        raise NotImplementedError()
 
-    Returns
-    -------
-    list
-        list of Factors, indexed by states in equivalent first-order
-    """
-    if reverse_state_map is None:
-        _, reverse_state_map = get_state_mapping(num_states, starting_order=starting_order)
-
-    # make empty list length of new states
-    ltmp = [None] * len(reverse_state_map)
-
-    # populate list
-    for newstate, state_tuple in reverse_state_map.items():
-        ltmp[newstate] = emission_probs[state_tuple[-1]]
-
-    return ltmp
-
-
+ 
 
 #TODO :  implement and test
 #def lower_parameter_order(states,
