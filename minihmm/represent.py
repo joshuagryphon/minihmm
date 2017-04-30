@@ -85,6 +85,11 @@ import warnings
 import itertools
 import numpy
 
+from scipy.sparse import (
+    lil_matrix,
+    dok_matrix,
+    coo_matrix
+)
 
 
 class ModelReducer(object):
@@ -299,7 +304,12 @@ class ModelReducer(object):
             ltmp[newstate] = emission_probs[state_tuple[-1]]
 
         return ltmp
-
+ 
+    # potential unit tests
+    #     - row sums ot num_states high space
+    #     - column sums depend on number of dummy states contained in duple
+    #     - convert to csr or csc before computations depending on which needed
+    #     - serialize coomat as coomat.row, coomat.col, coomat.data
     def get_pseudocount_array(self):
         """Return a valid pseudocount array for transition tables in first-order space,
         where *valid* stipulates that cells corresponding transitions that
@@ -307,10 +317,21 @@ class ModelReducer(object):
 
         Returns
         -------
-        :class:`numpy.ndarray`
-            Square matrix
+        :class:`scipy.sparse.coo_matrix`
         """
-        raise NotImplementedError()
+        row_ords = []
+        col_ordts = []
+        for lstate, hseq in self.low_states_to_high.iteritems():
+            stub = hseq[1:]
+            for i in range(self.high_order_states):
+                next_state = self.high_states_to_low[tuple(list(stub) + [i])]
+                row_ords.append(lstate)
+                col_ords.append(next_state)
+
+        vals = [1] * len(row_ords)
+
+        return coo_matrix((vals, (row_ords, col_ords)))
+
 
  
 
