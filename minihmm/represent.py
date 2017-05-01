@@ -85,6 +85,8 @@ import warnings
 import itertools
 import numpy
 
+from minihmm.hmm import FirstOrderHMM
+
 from scipy.sparse import (
     lil_matrix,
     dok_matrix,
@@ -109,9 +111,13 @@ class ModelReducer(object):
 
     low_states_to_high : dict
         Dicitonary mapping tuples of low-order states to high-order states
+
+    hmm : :class:`minihmm.hmm.FirstOrderHMM`
+        Associated first-order HMM.  Not used yet. Will be used for sampling,
+        decoding, et c
     """
 
-    def __init__(self, starting_order, num_states):
+    def __init__(self, starting_order, num_states, hmm=None):
 
         if num_states < 1:
             raise ValueError("Must have >= 1 state in model.")
@@ -124,6 +130,32 @@ class ModelReducer(object):
         self.high_order_states = num_states
         self._dummy_states     = self._get_dummy_states()
         self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
+
+        self.hmm = hmm
+
+    def __str__(self):
+        return "<%s order=2 high_states=%s hmm=%s>" % (self.__class__.__name__, self.high_order_states, self.hmm is not None)
+
+    def __repr__(self):
+        return str(self)
+
+    def _check_hmm(self):
+        if self.hmm is None:
+            cname = self.__class__.__name__
+            raise ValueError("No HMM associated with %s. See %s.set_hmm()" % (cname, cname))
+
+    def set_hmm(self, hmm):
+        """Associate a first-order hmm with the :class:`ModelReducer`
+
+        Parameters
+        ----------
+        hmm : :class:`minihmm.hmm.FirstOrderHMM`
+           First-order representation of high-order model 
+        """
+        if not isinstance(hmm, FirstOrderHMM):
+            raise ValueError("`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" % (type(hmm)))
+        
+        self.hmm = hmm
 
     @staticmethod
     def transcode_sequences(sequences, alphadict):
@@ -253,6 +285,7 @@ class ModelReducer(object):
         tuple_seqs = self._get_stateseq_tuples(state_seqs)
         return ModelReducer.transcode_sequences(tuple_seqs, state_map)
             
+    # TODO: unit test
     def raise_stateseq_orders(self, state_seqs):
         """Map a state sequence from first-order space back to original high-order space
         
@@ -272,14 +305,36 @@ class ModelReducer(object):
         lower_stateseq_orders
         """
         ltmp = []
-        for t in transcode_sequences(state_seqs, self.low_states_to_high):
+        for t in self.transcode_sequences(state_seqs, self.low_states_to_high):
             ltmp.append([X[-1] for X in t])
         
         return ltmp
-        
-    # def raise_parameter_order()
-    #     pass
 
+    # TODO: unit test
+    def viterbi(self, emissions):
+        self._check_hmm()
+        raw = self.hmm.viterbi(emissions)["viterbi_states"]
+        high = self.raise_stateseq_orders(self, [raw])
+        return high
+
+    # TODO: test
+    def posterior_decode(self, emissions):
+        self._check_hmm()
+        raw, _ = self.hmm.posterior_decode(emissions)
+        return self.raise_stateseq_orders(self, [raw])
+
+    # TODO: test
+    def sample(self, emissions, num_samples):
+        self._check_hmm()
+        raw_paths = self.hmm.sample(emissions, num_samples=num_samples)
+        return self.raise_stateseq_orders(self, raw_paths)
+
+    # TODO: test
+    def generate(self, length):
+        self._check_hmm()
+        raw_path, obs, logprob = self.hmm.generate(length)
+        high_path = self.raise_stateseq_orders(self, [raw_path])
+        return high_path, obs, logprob
 
     def remap_emission_factors(self, emission_probs):
         """Map emission probabilities from high-order space to equivalent reduced space

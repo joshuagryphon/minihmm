@@ -48,6 +48,9 @@ class TestModelReducer():
             [0, 2, 0, 5, 2, 2, 4, 2, 4, 1],
         ]
 
+
+        # expected tuples for each seq in cls.sequences
+        # when moving in model order K
         cls.expected_tuples = {
             2 : [[(-1,0),
                   ( 0,2),
@@ -313,16 +316,28 @@ class TestModelReducer():
             print("---------------------------------------")
             print(e)
             print(f)
-            assert_array_equal(e, f)
+            assert_array_equal(f, e)
 
-#    def test_raise_stateseq_orders(self):
-#        assert False
-#
+    # NOTE: check function assumes high_states_to_low is correct
     def test_lower_stateseq_orders(self):
-        assert_greater(len(self.expected_tuples),0)
+        assert_greater(len(self.expected_tuples), 0)
         for model_order in self.expected_tuples:
             yield self.check_lower_stateseq_orders, model_order
- 
+
+    def check_raise_stateseq_orders(self, model_order):
+        model = self.models[(model_order, 6)]
+        expected = self.sequences
+        inp = ([model.high_states_to_low[X] for X in Y] for Y in self.expected_tuples[model_order])
+        found = model.raise_stateseq_orders(inp)
+        assert_equal(len(found),len(expected))
+        for f, e in zip(found, expected):
+            assert_array_equal(f, e)
+
+    # NOTE: check function assumes high_states_to_low is correct
+    def test_raise_stateseq_orders(self):
+        for model_order in self.expected_tuples:
+            yield self.check_raise_stateseq_orders, model_order
+
     def test_negative_input_states_raises_value_error(self):
         model = self.models.values()[0]
         assert_raises(ValueError, model.lower_stateseq_orders, [[5,1,3,4,1,0,-1]])
@@ -350,3 +365,6 @@ class TestModelReducer():
             warnings.simplefilter("ignore",UserWarning) 
             assert_dict_equal(model.high_states_to_low, expected)
             assert_dict_equal(model.low_states_to_high, self.revdict(expected))
+
+    def test_pseudocount_matrix(self):
+        assert False
