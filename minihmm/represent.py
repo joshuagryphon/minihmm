@@ -431,6 +431,77 @@ class ModelReducer(object):
 
 
  
+class SparseMatrixWrapper(object):
+    """Wrapper class to enable use of sparse matrices with minimial changes to FirstOrderHMM.
+
+    Rows and columns may be fetched via slicing, provided that the slices
+    request individual rows or columns. Internally,
+    :class:`~scipy.sparse.csc_matrix` and :class:`scipy.sparse.csr_matrix` are
+    made as needed
+
+    """
+
+    def __init__(self, matrix):
+        """Create a SparseMatrixWrapper
+
+        Parameters
+        ----------
+        matrix : :class:`scipy.sparse.coo_matrix` or similar
+            Sparse matrix
+        """
+        self._sparse = matrix
+        self._csc = None
+        self._csr = None
+
+    def _tryrow(self, key):
+        try:
+            return self._csr[key]
+        except TypeError:
+            self._csr = self._sparse.tocsr()
+            return self._csr[key]
+
+    def _trycol(self, key):
+        try:
+            return self._csc[key]
+        except TypeError:
+            self._csc = self._sparse.tocsc()
+            return self._csc[key]
+
+    def __getitem__(self, args):
+        """Function to allow row and column slicing from appropriate matrix forms.
+
+        Calls for row slices are delegated to :class:`scipy.sparse.csc_matrix`
+
+        Calls for column slices are delegated to :class:`scipy.sparse.csr_matrix` 
+        """
+        arglen = len(args) if isinstance(args, tuple) else 1
+        if arglen != 2:
+            raise IndexError("Number of slices '%d' incorrect for number of dimensions '2'" % arglen)
+
+        # if slice is a column
+        if isinstance(args[1], int) and isinstance(args[0], slice):
+            my_slice = args[0]
+            if my_slice.start is None and my_slice.stop is None and my_slice.step is None:
+                return self._trycol(args)
+
+        # if slice is a row
+        if isinstance(args[0], int) and isinstance(args[1], slice):
+            my_slice = args[1]
+            if my_slice.start is None and my_slice.stop is None and my_slice.step is None:
+                return self._tryrow(args)
+
+        raise ValueError("Slicing only supported for single rows and columns")
+
+    def __getattr__(self, attr):
+        """Delegate all non-supported properties/methods to :class:`scipy.sparse.csc_matrix` form"""
+        if attr == "__setitem__":
+            raise TypeError("__setitem__ is not supported")
+        try:
+            return getattr(self._csc, attr)
+        except:
+            self._csc = self._sparse.tocsc()
+            return getattr(self._csc, attr)
+
 
 #TODO :  implement and test
 #def lower_parameter_order(states,
