@@ -14,7 +14,8 @@ from nose.tools import (
     assert_almost_equal,
     assert_dict_equal,
     assert_list_equal,
-    assert_raises
+    assert_tuple_equal,
+    assert_raises,
     )
 
 from numpy.testing import assert_array_equal
@@ -28,6 +29,9 @@ def check_dict_equal(a, b, msg=None):
 
 def check_array_equal(a, b, msg=None):
     assert_array_equal(a, b, msg)
+
+def check_tuple_equal(a, b, msg=None):
+    assert_tuple_equal(a, b, msg)
 
 def check_raises(cls, callable_, *args):
     assert_raises(cls, callable_, *args)
@@ -366,5 +370,15 @@ class TestModelReducer():
             assert_dict_equal(model.high_states_to_low, expected)
             assert_dict_equal(model.low_states_to_high, self.revdict(expected))
 
-    def test_pseudocount_matrix(self):
-        assert False
+    def test_pseudocount_array(self):
+        for num_states in range(2, self.max_states):
+            for starting_order in range(1, self.max_order):
+                model = self.models[(starting_order, num_states)]
+                pmat = model.get_pseudocount_array()
+
+                for (x, y, v) in zip (pmat.row, pmat.col, pmat.data):
+                    from_state = model.low_states_to_high[x]
+                    to_state   = model.low_states_to_high[y]
+
+                    yield check_tuple_equal, from_state[1:], to_state[:-1]
+       

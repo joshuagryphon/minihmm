@@ -285,7 +285,6 @@ class ModelReducer(object):
         tuple_seqs = self._get_stateseq_tuples(state_seqs)
         return ModelReducer.transcode_sequences(tuple_seqs, state_map)
             
-    # TODO: unit test
     def raise_stateseq_orders(self, state_seqs):
         """Map a state sequence from first-order space back to original high-order space
         
@@ -375,7 +374,7 @@ class ModelReducer(object):
         :class:`scipy.sparse.coo_matrix`
         """
         row_ords = []
-        col_ordts = []
+        col_ords = []
         for lstate, hseq in self.low_states_to_high.iteritems():
             stub = hseq[1:]
             for i in range(self.high_order_states):
