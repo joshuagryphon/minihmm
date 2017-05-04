@@ -3,10 +3,15 @@ TODO
 
 To add
 ------
-  - Forward probability estimation and viterbi estimation with some
-    known states
-  - 1st-order non-hidden Markov Model
+
+ - Forward probability estimation and viterbi estimation with some
+   known states
+
+ - Finish unit tests for factors, estimators, & hmm
+
+
 
 To change
 ---------
-  - Migrate unit tests to serialize() and deserialize()
+
+ - Develop better object serialization/deserialization protocols

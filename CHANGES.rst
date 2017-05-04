@@ -8,6 +8,15 @@ described in `PEP440 <https://www.python.org/dev/peps/pep-0440/>`_ and
 prepended the era to the version number.
 
 
+Unreleased
+----------
+
+ - Methods for reducing high-order models to first-order models, and
+   for converting state sequences between orders
+
+ - Yet more unit tests
+
+
 0.1.1
 -----
 
