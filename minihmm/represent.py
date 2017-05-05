@@ -113,8 +113,8 @@ class ModelReducer(object):
         Dicitonary mapping tuples of low-order states to high-order states
 
     hmm : :class:`minihmm.hmm.FirstOrderHMM`
-        Associated first-order HMM.  Not used yet. Will be used for sampling,
-        decoding, et c
+        Associated first-order HMM. At the moment, this must be constructed by
+        the user.. Will be used for sampling, decoding, et c
     """
 
     def __init__(self, starting_order, num_states, hmm=None):
@@ -158,23 +158,42 @@ class ModelReducer(object):
         self.hmm = hmm
 
     @staticmethod
-    def transcode_sequences(sequences, alphadict):
-        """Transcode a sequence from one alphabet to another
+    def transcode_sequence(sequence, alphadict):
+        """Transcode a single sequence from one alphabet to another
         
         Parameters
         ----------
-        sequences : iterable
+        sequence : list-like
+            A sequence
+            
+        alphadict : dict-like
+            Dictionary mapping symbols in input sequence to symbols in output sequence
+            
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            Transcoded sequence
+        """
+        return numpy.array([alphadict[X] for X in sequence])
+
+    @staticmethod
+    def transcode_sequences(sequences, alphadict):
+        """Transcode a set of sequences from one alphabet to another
+        
+        Parameters
+        ----------
+        sequences : iterable of list-like
             Iterable of sequences (each, itself, an iterable like a list et c)
             
         alphadict : dict-like
-            Dictionary mapping symbols input sequence to symbols in output sequence
+            Dictionary mapping symbols in input sequence to symbols in output sequence
             
         Returns
         -------
         list of :class:`numpy.ndarray`
-            List of each transcoded sequence
+            List of transcoded sequences
         """
-        return [numpy.array([alphadict[X] for X in Y]) for Y in sequences]
+        return [ModelReducer.transcode_sequence(X, alphadict) for X in sequences]
 
     def _get_dummy_states(self):
         """Create sorted lists of dummy states required to reduce `self` to an equivalent first-order model.
