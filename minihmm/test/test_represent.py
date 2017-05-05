@@ -274,14 +274,6 @@ class TestModelReducer():
                 f_found    = model.remap_emission_factors(factors)
                 yield check_list_equal, f_found, f_expected
 
-    @unittest.skip
-    def test_remap_state_priors(self):
-        assert False
-
-    @unittest.skip
-    def test_remap_transitions(self):
-        assert False
-
     def check_get_stateseq_tuples(self, model_order):
         # n.b. test assumes _get_dummy_states is working
         model = self.models[(model_order, 6)]
@@ -381,4 +373,15 @@ class TestModelReducer():
                     to_state   = model.low_states_to_high[y]
 
                     yield check_tuple_equal, from_state[1:], to_state[:-1]
-       
+
+    def test_viterbi(self):
+        assert False
+
+    def test_posterior_decode(self):
+        assert False
+
+    def test_sample(self):
+        assert False
+
+    def test_generate(self):
+        assert False
