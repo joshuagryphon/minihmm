@@ -21,6 +21,9 @@ from nose.tools import (
 from numpy.testing import assert_array_equal
 
 
+def check_equal(a, b, msg=None):
+    assert_equal(a, b, msg)
+
 def check_list_equal(a, b, msg=None):
     assert_list_equal(a, b, msg)
 
@@ -244,13 +247,27 @@ class TestModelReducer():
         assert len(set(vals)) == len(vals)
         return { v : k for (k,v) in d.items() }
 
-    def test_transcode_sequences(self):
+    def test_transcode_sequence(self):
         testseq  = ["A","B","C","D","E"]
         expected = numpy.arange(5)
         dtmp = {K : V for K,V in zip(testseq, expected)}
         
-        found = ModelReducer.transcode_sequences([testseq], dtmp)
-        yield check_array_equal, found[0], expected
+        found = ModelReducer.transcode_sequence(testseq, dtmp)
+        yield check_array_equal, found, expected
+
+    def test_transcode_sequences(self):
+        testseqs = [["A","B","C","D","E"],
+                    ["D","B","A","A"]]
+
+        expected = [numpy.arange(5),
+                    numpy.array([3,1,0,0])]
+
+        dtmp = {K : V for K,V in zip(testseqs[0], expected[0])}
+        
+        found = ModelReducer.transcode_sequences(testseqs, dtmp)
+        yield check_equal, len(found), len(expected)
+        for my_found, my_expected in zip(found, expected):
+            yield check_array_equal, my_found, my_expected
 
     def test_get_dummy_states(self):
         for num_states in range(2, self.max_states):
