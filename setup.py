@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-import os
-import minihmm
 
 with open("README.rst") as f:
     long_description = f.read()
 
 
-config_info = { "version"      : minihmm.__version__,
+config_info = { "version"      : 0.1.1,
                 "packages"     : find_packages(),
               }
 
@@ -32,8 +30,8 @@ setup(
     long_description = long_description,
     license   = "BSD 3-Clause",
     keywords  = "HMM hidden Markov model machine learning modeling statistics",
-    url       = "",
-    platforms = "POSIX", # windows, 
+    url       = "http://github.com/joshuagryphon/minihmm",
+    platforms = "POSIX",
     
     tests_require=["nose>=1.0"],
     #test_suite = "nose.collector",

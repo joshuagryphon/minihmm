@@ -9,7 +9,10 @@ prepended the era to the version number.
 
 
 Unreleased
-----------
+-------------------
+
+Added
+......
 
  - Methods for reducing high-order models to first-order models, and
    for converting state sequences between orders
@@ -17,8 +20,9 @@ Unreleased
  - Yet more unit tests
 
 
-0.1.1
------
+
+v0.1.1
+------
 
 Added
 .....
