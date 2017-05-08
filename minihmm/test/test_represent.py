@@ -6,7 +6,11 @@ import warnings
 import itertools
 import numpy
 
-from minihmm.represent import ModelReducer
+from minihmm.represent import (
+    ModelReducer,
+    matrix_to_dict,
+    matrix_from_dict,
+)
 from nose.tools import (
     assert_equal,
     assert_greater,
@@ -39,6 +43,47 @@ def check_tuple_equal(a, b, msg=None):
 def check_raises(cls, callable_, *args):
     assert_raises(cls, callable_, *args)
 
+
+#===============================================================================
+# Tests for helper functions
+#===============================================================================
+
+class TestSerialization():
+
+    @classmethod
+    def setUpClass(cls):
+        cls.testmat = numpy.array(
+            [0.62372267,  0.69672543,  0.5465455 ,  0.        ,  0.32971244,
+             0.        ,  0.45617063,  0.        ,  0.10920329,  0.56855817,
+             0.91924974,  0.61475372,  0.        ,  0.        ,  0.56096722]).reshape((5,3))
+
+        cls.testdict = {
+            "shape" : tuple(cls.testmat.shape),
+            "row"   : list(cls.testmat.nonzero()[0]),
+            "col"   : list(cls.testmat.nonzero()[1]),
+            "data"  : list(cls.testmat[cls.testmat.nonzero()]),
+
+        }
+
+    def test_matrix_to_dict(self):
+        found = matrix_to_dict(self.testmat)
+        yield check_list_equal, found["row"], list(self.testmat.nonzero()[0])
+        yield check_list_equal, found["col"], list(self.testmat.nonzero()[1])
+        yield check_array_equal, found["data"], list(self.testmat[self.testmat.nonzero()])
+
+    def test_matrix_from_dict_sparse(self):
+        found = matrix_from_dict(self.testdict, dense=False)
+        yield check_list_equal, self.testdict["row"], list(found.row)
+        yield check_list_equal, self.testdict["col"], list(found.col)
+        yield check_array_equal, self.testdict["data"], found.data
+
+    def test_matrix_from_dict_dense(self):
+        assert_array_equal(matrix_from_dict(self.testdict, dense=True), self.testmat)
+
+
+#===============================================================================
+# Tests for ModelReducer
+#===============================================================================
 
 class TestModelReducer():
 
@@ -391,6 +436,9 @@ class TestModelReducer():
 
                     yield check_tuple_equal, from_state[1:], to_state[:-1]
 
+    # Gold standard would be to create a high order HMM, generate sequences from it
+    # in high order space, save results, create an equivalent low-order HMM, and 
+    # run the unit tests below
     def test_viterbi(self):
         assert False
 

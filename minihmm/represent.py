@@ -94,6 +94,81 @@ from scipy.sparse import (
 )
 
 
+#===============================================================================
+# Serialization / deserialization of matrices
+#===============================================================================
+
+def matrix_to_dict(mat):
+    """Convert a matrix or array `mat` to a dictionary.
+    This is intende to be useful for serializing large, sparse matrices of
+    high-order hidden Markov models.
+
+    Parameters
+    ----------
+    mat : :class:`numpy.ndarray`, or something like it
+
+
+    Returns
+    -------
+    dict
+        Dictionary with the following properties:
+
+        `shape`
+            A tuple of matrix dimensions
+
+        `row`
+            A list of row coordinates
+
+        `col`
+            A list of column coordinates
+
+        `data`
+            A list of values
+
+    See also
+    --------
+    matrix_from_dict
+    """
+    coomat = coo_matrix(mat)
+    dout = {
+        "shape" : tuple(coomat.shape),
+        "row"   : list(coomat.row.astype(int)),
+        "col"   : list(coomat.col.astype(int)),
+        "data"  : list(coomat.data.astype(float)),
+    }
+    return dout
+
+def matrix_from_dict(dtmp, dense=False):
+    """Reconstruct a matrix from a dictionary made e.g. by :func:`matrix_to_dict`
+
+
+    Parameters
+    ----------
+    dict : dict
+        Dictionary with keys `shape`, `row`, `col`, and `data`
+
+    dense : bool, optional
+        Whether or not to return a dense matrix
+
+
+    Returns
+    -------
+    :class:`scipy.sparse.coo_matrix` if `dense` is `False`, otherwise :class:`numpy.Matrix`
+
+
+    See also
+    --------
+    matrix_to_dict
+    """
+    coomat = coo_matrix((dtmp["data"], (dtmp["row"],dtmp["col"])), shape=dtmp["shape"])
+    return coomat.todense() if dense is True else coomat
+
+
+
+#===============================================================================
+# Model translation
+#===============================================================================
+
 class ModelReducer(object):
     """Utility class for reducing high-order HMMs to equivalent first-order HMMs.
 
@@ -328,30 +403,26 @@ class ModelReducer(object):
         
         return ltmp
 
-    # TODO: unit test
     def viterbi(self, emissions):
         self._check_hmm()
         raw = self.hmm.viterbi(emissions)["viterbi_states"]
-        high = self.raise_stateseq_orders(self, [raw])
+        high = self.raise_stateseq_orders(self, [raw])[0]
         return high
 
-    # TODO: test
     def posterior_decode(self, emissions):
         self._check_hmm()
         raw, _ = self.hmm.posterior_decode(emissions)
-        return self.raise_stateseq_orders(self, [raw])
+        return self.raise_stateseq_orders(self, [raw])[0]
 
-    # TODO: test
     def sample(self, emissions, num_samples):
         self._check_hmm()
         raw_paths = self.hmm.sample(emissions, num_samples=num_samples)
         return self.raise_stateseq_orders(self, raw_paths)
 
-    # TODO: test
     def generate(self, length):
         self._check_hmm()
         raw_path, obs, logprob = self.hmm.generate(length)
-        high_path = self.raise_stateseq_orders(self, [raw_path])
+        high_path = self.raise_stateseq_orders(self, [raw_path])[0]
         return high_path, obs, logprob
 
     def remap_emission_factors(self, emission_probs):
@@ -378,11 +449,8 @@ class ModelReducer(object):
 
         return ltmp
  
-    # potential unit tests
-    #     - row sums ot num_states high space
-    #     - column sums depend on number of dummy states contained in duple
-    #     - convert to csr or csc before computations depending on which needed
-    #     - serialize coomat as coomat.row, coomat.col, coomat.data
+    # convert to csr, csc, or dense before computations depending on which needed
+    # serialize coomat as coomat.row, coomat.col, coomat.data
     def get_pseudocount_array(self):
         """Return a valid pseudocount array for transition tables in first-order space,
         where *valid* stipulates that cells corresponding transitions that
