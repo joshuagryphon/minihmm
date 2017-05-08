@@ -8,7 +8,7 @@ described in `PEP440 <https://www.python.org/dev/peps/pep-0440/>`_ and
 prepended the era to the version number.
 
 
-Unreleased
+v0.1.2 = [2017-05-08]
 ---------------------
 
 Added
