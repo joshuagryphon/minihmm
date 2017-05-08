@@ -47,7 +47,7 @@ References
 import numpy
 import copy
 from minihmm.factors import AbstractGenerativeFactor, AbstractTableFactor
-
+from minihmm.util import matrix_to_dict, matrix_from_dict
 
 class FirstOrderHMM(AbstractGenerativeFactor):
     """First-order homogeneous Hidden Markov Model.
@@ -89,6 +89,46 @@ class FirstOrderHMM(AbstractGenerativeFactor):
     def __repr__(self):
         return "<%s parameters:[%s]>" % (self.__class__.__name__,
                                          self.serialize())
+    def to_dict(self):
+        """Return a dictionary describing `self`, which can be serialized as JSON
+
+        Warning
+        -------
+        Emission factors are not yet serialized! Find a way to save those by yourselves
+        """
+        dtmp = {
+            "state_priors"   : matrix_to_dict(self.state_priors),
+            "trans_probs"    : matrix_to_dict(self.trans_probs),
+            "emission_probs" : [], # FIXME: implement later
+        }
+        return dtmp
+
+    @staticmethod
+    def from_dict(self, dtmp, emission_probs=None):
+        """
+        Parameters
+        ----------
+        dtmp : dict
+            Dictionary containing dict representations of state priors and
+            transition probabilities from
+            :func:`minihmm.represent.matrix_to_dict`
+
+        emission_probs : list-like
+            List of emission probabilities. This parameter will probably go
+            away once we have figured out how to serialize emission
+            probabilities as dicts
+
+
+        Returns
+        -------
+        :class:`~minihmm.hmm.FirstOrderHMM`
+        """
+        my_dict["trans_probs"]    = matrix_from_dict(dtmp["trans_probs"],  dense=True)
+        my_dict["state_priors"]   = matrix_from_dict(dtmp["state_priors"], dense=True)
+        my_dict["emission_probs"] = emission_probs
+
+        return FirstOrderHMM(**my_dict)
+        
     
     def serialize(self):
         ltmp = ["state_priors",

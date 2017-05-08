@@ -14,6 +14,8 @@ Unreleased
 Added
 ......
 
+ - Methods for serializing and deserializing large matrices to JSON
+
  - Methods for reducing high-order models to first-order models, and
    for converting state sequences between orders
 

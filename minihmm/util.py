@@ -30,7 +30,7 @@ class NullWriter(object):
 
 
 #===============================================================================
-# Building transition tables
+# Building tables when state paths are known
 #===============================================================================
 
 def build_transition_table(num_states,
