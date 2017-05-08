@@ -6,11 +6,8 @@ import warnings
 import itertools
 import numpy
 
-from minihmm.represent import (
-    ModelReducer,
-    matrix_to_dict,
-    matrix_from_dict,
-)
+from minihmm.represent import ModelReducer
+
 from nose.tools import (
     assert_equal,
     assert_greater,
@@ -24,61 +21,9 @@ from nose.tools import (
 
 from numpy.testing import assert_array_equal
 
-
-def check_equal(a, b, msg=None):
-    assert_equal(a, b, msg)
-
-def check_list_equal(a, b, msg=None):
-    assert_list_equal(a, b, msg)
-
-def check_dict_equal(a, b, msg=None):
-    assert_dict_equal(a, b, msg)
-
-def check_array_equal(a, b, msg=None):
-    assert_array_equal(a, b, msg)
-
-def check_tuple_equal(a, b, msg=None):
-    assert_tuple_equal(a, b, msg)
-
-def check_raises(cls, callable_, *args):
-    assert_raises(cls, callable_, *args)
+from minihmm.test.common import *
 
 
-#===============================================================================
-# Tests for helper functions
-#===============================================================================
-
-class TestSerialization():
-
-    @classmethod
-    def setUpClass(cls):
-        cls.testmat = numpy.array(
-            [0.62372267,  0.69672543,  0.5465455 ,  0.        ,  0.32971244,
-             0.        ,  0.45617063,  0.        ,  0.10920329,  0.56855817,
-             0.91924974,  0.61475372,  0.        ,  0.        ,  0.56096722]).reshape((5,3))
-
-        cls.testdict = {
-            "shape" : tuple(cls.testmat.shape),
-            "row"   : list(cls.testmat.nonzero()[0]),
-            "col"   : list(cls.testmat.nonzero()[1]),
-            "data"  : list(cls.testmat[cls.testmat.nonzero()]),
-
-        }
-
-    def test_matrix_to_dict(self):
-        found = matrix_to_dict(self.testmat)
-        yield check_list_equal, found["row"], list(self.testmat.nonzero()[0])
-        yield check_list_equal, found["col"], list(self.testmat.nonzero()[1])
-        yield check_array_equal, found["data"], list(self.testmat[self.testmat.nonzero()])
-
-    def test_matrix_from_dict_sparse(self):
-        found = matrix_from_dict(self.testdict, dense=False)
-        yield check_list_equal, self.testdict["row"], list(found.row)
-        yield check_list_equal, self.testdict["col"], list(found.col)
-        yield check_array_equal, self.testdict["data"], found.data
-
-    def test_matrix_from_dict_dense(self):
-        assert_array_equal(matrix_from_dict(self.testdict, dense=True), self.testmat)
 
 
 #===============================================================================
