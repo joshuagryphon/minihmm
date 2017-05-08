@@ -85,6 +85,17 @@ class TestBuildTransitionTable():
             yield check_array_equal, found_counts, expected_counts
             yield check_array_equal, found_freqs, expected_freqs
 
+    def test_no_weights_array_pseudocounts(self):
+        pmat = numpy.random.randint(0, high=255, size=(self.num_states, self.num_states))
+        expected_counts = sum(self.mats) + pmat
+        expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
+        found_counts = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=pmat, normalize=False)
+        found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=pmat, normalize=True)
+
+        yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
+        yield check_array_equal, found_counts, expected_counts
+        yield check_array_equal, found_freqs, expected_freqs
+
     def test_weights_no_pseudocounts(self):
         expected_counts = 0
         for mat, weight in zip(self.mats, self.test_weights):
@@ -113,7 +124,21 @@ class TestBuildTransitionTable():
             yield check_array_equal, found_counts, expected_counts
             yield check_array_equal, found_freqs, expected_freqs
 
-        
+    def test_weights_array_pseudocounts(self):
+        pmat = numpy.random.randint(0, high=255, size=(self.num_states, self.num_states))
+        expected_counts = 0
+        for mat, weight in zip(self.mats, self.test_weights):
+            expected_counts += weight*mat
+
+        expected_counts += pmat
+        expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
+        found_counts = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=pmat, normalize=False)
+        found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=pmat, normalize=True)
+
+        yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
+        yield check_array_equal, found_counts, expected_counts
+        yield check_array_equal, found_freqs, expected_freqs
+
 
 #===============================================================================
 # Tests for serialization

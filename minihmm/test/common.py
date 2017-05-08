@@ -18,8 +18,8 @@ def check_list_equal(a, b, msg=None):
 def check_dict_equal(a, b, msg=None):
     assert_dict_equal(a, b, msg)
 
-def check_array_equal(a, b, msg=None):
-    assert_array_equal(a, b, msg)
+def check_array_equal(a, b, **kwargs):
+    assert_array_equal(a, b, **kwargs)
 
 def check_tuple_equal(a, b, msg=None):
     assert_tuple_equal(a, b, msg)
