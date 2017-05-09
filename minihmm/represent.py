@@ -163,6 +163,21 @@ class ModelReducer(object):
         self.hmm = hmm
 
     @staticmethod
+    def from_dict(dtmp, emission_probs=None):
+        hmm = FirstOrderHMM.from_dict(dtmp["first_order_hmm"], emission_probs=emission_probs) if "first_order_hmm" in dtmp else None
+        return ModelReducer(dtmp["starting_order"], dtmp["high_order_states"], hmm=hmm)
+
+    def to_dict(self):
+        dtmp = {
+            "starting_order"    : self.starting_order,
+            "high_order_states" : self.num_states,
+        }
+        if self.hmm is not None:
+            dtmp["first_order_hmm"] = self.hmm.to_dict()
+
+        return dtmp
+
+    @staticmethod
     def transcode_sequence(sequence, alphadict):
         """Transcode a single sequence from one alphabet to another
         

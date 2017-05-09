@@ -44,8 +44,9 @@ References
 [WikipediaViterbi]
     http://en.wikipedia.org/wiki/Viterbi_algorithm
 """
-import numpy
+import warnings
 import copy
+import numpy
 from minihmm.factors import AbstractGenerativeFactor, AbstractTableFactor
 from minihmm.util import matrix_to_dict, matrix_from_dict
 
@@ -101,6 +102,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             "trans_probs"    : matrix_to_dict(self.trans_probs),
             "emission_probs" : [], # FIXME: implement later
         }
+        warnings.warn("For the time being emission probabilities are not serialized. We'll fix this in the future!", UserWarning)
         return dtmp
 
     @staticmethod

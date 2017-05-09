@@ -395,3 +395,9 @@ class TestModelReducer():
 
     def test_generate(self):
         assert False
+
+    def test_to_dict(self):
+        assert False
+
+    def test_from_dict(self):
+        assert False
