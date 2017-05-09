@@ -33,16 +33,18 @@ class NullWriter(object):
 # Building tables when state paths are known
 #===============================================================================
 
-def build_transition_table(num_states,
-                           state_sequences,
-                           weights          = None,
-                           pseudocounts     = 0,
-                           normalize        = True,
-                           initializer      = numpy.zeros,
-                           ):
-    """Build a set of transition tables from sequences of known states.  This
-    in contrast to *training*, in which parameters for transition tables are
-    estimated from msequences of observations and unknown states.
+def build_hmm_tables(num_states,
+                     state_sequences,
+                     weights          = None,
+                     state_prior_pseudocounts = 0,
+                     transition_pseudocounts  = 0,
+                     normalize        = True,
+                     initializer      = numpy.zeros,
+                     ):
+    """Build a set of state prior and transition tables from sequences of known
+    states.  This in contrast to *training*, in which parameters for transition
+    tables are estimated from msequences of observations and unknown states.
+
     
     Parameters
     ----------
@@ -56,7 +58,12 @@ def build_transition_table(num_states,
         Weight to apply to each sequence. If `None`, each sequence will be
         weighted equally (Default: `None`)
 
-    pseudocounts : int or matrix-like
+    staet_prior_pseudocounts : int or matrix-like
+        Pseudocounts to add to count table. If `int`, same value will be added to every
+        cell in the table. If matrix or array-like, that matrix will be added to the 
+        count matrix (Default: `0`)
+
+    transition_pseudocounts : int or matrix-like
         Pseudocounts to add to count table. If `int`, same value will be added to every
         cell in the table. If matrix or array-like, that matrix will be added to the 
         count matrix (Default: `0`)
@@ -66,24 +73,42 @@ def build_transition_table(num_states,
         table (Default: `True`)
 
     initializer : callable
-        Initializer. Must accept (shape, dtype) as parameters. By default, this would be
-        :func:`numpy.zeros`, to create a dense matrix. Another good option would be
+        Initializer for transition table. Must accept (shape, dtype) as
+        parameters. By default, this would be :func:`numpy.zeros`, to create a
+        dense matrix. Another good option would be
         :class:`scipy.spares.dok_matrix` to create a sparse matrix
+
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Array of state priors
+
+    `initializer`
+        Table[i,j] of transition probabilities from state `i` to state `j`
     """
     tmat = initializer((num_states, num_states), dtype=int)
+    state_priors = numpy.zeros(num_states, dtype=int)
+    
     if weights is None:
-        weights = [1] * len(state_sequences)
+            weights = [1] * len(state_sequences)
 
     for my_seq, my_weight in zip(state_sequences, weights):
+        state_priors[my_seq[0]] += my_weight
+
         for i in range(len(my_seq) - 1):
             from_seq, to_seq = my_seq[i:i+2]
             tmat[from_seq, to_seq] += my_weight
 
-    tmat += pseudocounts
+    state_priors += state_prior_pseudocounts
+    tmat += transition_pseudocounts
+
     if normalize == True:
         tmat = (1.0 * tmat.T / tmat.sum(1)).T
+        state_priors = state_priors.astype(float) / state_priors.sum()
 
-    return tmat
+    return state_priors, tmat
+
 
 
 #===============================================================================

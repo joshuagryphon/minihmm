@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import unittest
 import numpy
 import scipy.sparse
 
@@ -11,7 +12,7 @@ from minihmm.test.common import (
 from minihmm.util import (
     matrix_to_dict,
     matrix_from_dict,
-    build_transition_table
+    build_hmm_tables,
 )
 
 
@@ -20,7 +21,7 @@ from minihmm.util import (
 #===============================================================================
 
 
-class TestBuildTransitionTable():
+class TestBuildHMMTables():
 
     @classmethod
     def setUpClass(cls):
@@ -65,89 +66,185 @@ class TestBuildTransitionTable():
 
         cls.test_weights = [10, 20, 5]
 
-    def test_no_weights_no_pseudocounts(self):
-        expected_counts = sum(self.mats)
-        expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
-        found_counts = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=0, normalize=False)
-        found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=0, normalize=True)
+    def test_transitions_no_weights_no_pseudocounts(self):
+        expected_transition_counts = sum(self.mats)
+        expected_transition_freqs = (1.0 * expected_transition_counts.T / expected_transition_counts.sum(1)).T
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=0, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=0, normalize=True)
 
-        yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
-        yield check_array_equal, found_counts, expected_counts
-        yield check_array_equal, found_freqs, expected_freqs
+        yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
+        yield check_array_equal, found_transition_counts, expected_transition_counts
+        yield check_array_equal, found_transition_freqs, expected_transition_freqs
 
-    def test_no_weights_int_pseudocounts(self):
+    def test_transitions_no_weights_int_pseudocounts(self):
         for pcounts in (1,2,3):
-            expected_counts = sum(self.mats) + pcounts
-            expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
-            found_counts = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=pcounts, normalize=False)
-            found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=pcounts, normalize=True)
+            expected_transition_counts = sum(self.mats) + pcounts
+            expected_transition_freqs = (1.0 * expected_transition_counts.T / expected_transition_counts.sum(1)).T
+            found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=pcounts, normalize=False)
+            found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=pcounts, normalize=True)
 
-            yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
-            yield check_array_equal, found_counts, expected_counts
-            yield check_array_equal, found_freqs, expected_freqs
+            yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
+            yield check_array_equal, found_transition_counts, expected_transition_counts
+            yield check_array_equal, found_transition_freqs, expected_transition_freqs
 
-    def test_no_weights_array_pseudocounts(self):
+    def test_transitions_no_weights_array_pseudocounts(self):
         pmat = numpy.random.randint(0, high=255, size=(self.num_states, self.num_states))
-        expected_counts = sum(self.mats) + pmat
-        expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
-        found_counts = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=pmat, normalize=False)
-        found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=None, pseudocounts=pmat, normalize=True)
+        expected_transition_counts = sum(self.mats) + pmat
+        expected_transition_freqs = (1.0 * expected_transition_counts.T / expected_transition_counts.sum(1)).T
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=pmat, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=pmat, normalize=True)
 
-        yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
-        yield check_array_equal, found_counts, expected_counts
-        yield check_array_equal, found_freqs, expected_freqs
+        yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
+        yield check_array_equal, found_transition_counts, expected_transition_counts
+        yield check_array_equal, found_transition_freqs, expected_transition_freqs
 
-    def test_weights_no_pseudocounts(self):
-        expected_counts = 0
+    def test_transitions_weights_no_pseudocounts(self):
+        expected_transition_counts = 0
         for mat, weight in zip(self.mats, self.test_weights):
-            expected_counts += weight*mat
+            expected_transition_counts += weight*mat
 
-        expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
-        found_counts = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=0, normalize=False)
-        found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=0, normalize=True)
+        expected_transition_freqs = (1.0 * expected_transition_counts.T / expected_transition_counts.sum(1)).T
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, transition_pseudocounts=0, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, transition_pseudocounts=0, normalize=True)
 
-        yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
-        yield check_array_equal, found_counts, expected_counts
-        yield check_array_equal, found_freqs, expected_freqs
+        yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
+        yield check_array_equal, found_transition_counts, expected_transition_counts
+        yield check_array_equal, found_transition_freqs, expected_transition_freqs
 
-    def test_weights_int_pseudocounts(self):
+    def test_transitions_weights_int_pseudocounts(self):
         my_counts = 0
         for mat, weight in zip(self.mats, self.test_weights):
             my_counts += weight*mat
 
         for pcounts in (1,2,3):
-            expected_counts = my_counts + pcounts
-            expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
-            found_counts = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=pcounts, normalize=False)
-            found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=pcounts, normalize=True)
+            expected_transition_counts = my_counts + pcounts
+            expected_transition_freqs = (1.0 * expected_transition_counts.T / expected_transition_counts.sum(1)).T
+            found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, transition_pseudocounts=pcounts, normalize=False)
+            found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, transition_pseudocounts=pcounts, normalize=True)
 
-            yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
-            yield check_array_equal, found_counts, expected_counts
-            yield check_array_equal, found_freqs, expected_freqs
+            yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
+            yield check_array_equal, found_transition_counts, expected_transition_counts
+            yield check_array_equal, found_transition_freqs, expected_transition_freqs
 
-    def test_weights_array_pseudocounts(self):
+    def test_transitions_weights_array_pseudocounts(self):
         pmat = numpy.random.randint(0, high=255, size=(self.num_states, self.num_states))
-        expected_counts = 0
+        expected_transition_counts = 0
         for mat, weight in zip(self.mats, self.test_weights):
-            expected_counts += weight*mat
+            expected_transition_counts += weight*mat
 
-        expected_counts += pmat
-        expected_freqs = (1.0 * expected_counts.T / expected_counts.sum(1)).T
-        found_counts = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=pmat, normalize=False)
-        found_freqs = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, pseudocounts=pmat, normalize=True)
+        expected_transition_counts += pmat
+        expected_transition_freqs = (1.0 * expected_transition_counts.T / expected_transition_counts.sum(1)).T
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, transition_pseudocounts=pmat, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, transition_pseudocounts=pmat, normalize=True)
 
-        yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
-        yield check_array_equal, found_counts, expected_counts
-        yield check_array_equal, found_freqs, expected_freqs
+        yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
+        yield check_array_equal, found_transition_counts, expected_transition_counts
+        yield check_array_equal, found_transition_freqs, expected_transition_freqs
 
-    def test_alternate_initializer(self):
-        expected_counts = 0
+    def test_transitions_alternate_initializer(self):
+        expected_transition_counts = 0
         for mat, weight in zip(self.mats, self.test_weights):
-            expected_counts += weight*mat
-            found_counts = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, normalize=False, initializer=scipy.sparse.dok_matrix)
+            expected_transition_counts += weight*mat
+            found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, normalize=False, initializer=scipy.sparse.dok_matrix)
 
-        found_dense = found_counts.todense()
-        assert_array_equal(found_dense, expected_counts)
+        found_dense = found_transition_counts.todense()
+        assert_array_equal(found_dense, expected_transition_counts)
+
+#---------------------------------------------------
+
+    def test_state_priors_no_weights_no_pseudocounts(self):
+        expected_prior_counts = numpy.zeros(self.num_states)
+        for my_seq in self.test_seqs:
+            expected_prior_counts[my_seq[0]] += 1
+
+        expected_prior_freqs = (1.0 * expected_prior_counts) / expected_prior_counts.sum()
+
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=0, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=None, transition_pseudocounts=0, normalize=True)
+
+        yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
+        yield check_array_equal, found_prior_counts, expected_prior_counts
+        yield check_array_equal, found_prior_freqs, expected_prior_freqs
+
+    def test_state_priors_no_weights_int_pseudocounts(self):
+        my_counts = numpy.zeros(self.num_states)
+        for my_seq in self.test_seqs:
+            my_counts[my_seq[0]] += 1
+
+        for pcounts in (1,2,3):
+            expected_prior_counts = my_counts + pcounts
+            expected_prior_freqs = (1.0 * expected_prior_counts) / expected_prior_counts.sum()
+
+            found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=None, state_prior_pseudocounts=pcounts, normalize=False)
+            found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=None, state_prior_pseudocounts=pcounts, normalize=True)
+
+            yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
+            yield check_array_equal, found_prior_counts, expected_prior_counts
+            yield check_array_equal, found_prior_freqs, expected_prior_freqs
+
+    def test_state_priors_no_weights_array_pseudocounts(self):
+        pmat = numpy.random.randint(0, high=255, size=(self.num_states, ))
+        my_counts = 0
+        my_counts = numpy.zeros(self.num_states)
+        for my_seq in self.test_seqs:
+            my_counts[my_seq[0]] += 1
+
+        expected_prior_counts = my_counts + pmat
+        expected_prior_freqs = (1.0 * expected_prior_counts) / expected_prior_counts.sum()
+            
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=None, state_prior_pseudocounts=pmat, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=None, state_prior_pseudocounts=pmat, normalize=True)
+
+        yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
+        yield check_array_equal, found_prior_counts, expected_prior_counts
+        yield check_array_equal, found_prior_freqs, expected_prior_freqs
+
+    def test_state_priors_weights_no_pseudocounts(self):
+        expected_prior_counts = numpy.zeros(self.num_states)
+        for (my_seq, my_weight) in zip(self.test_seqs, self.test_weights):
+            expected_prior_counts[my_seq[0]] += my_weight
+    
+        expected_prior_freqs = (1.0 * expected_prior_counts) / expected_prior_counts.sum()
+
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, normalize=True)
+
+        yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
+        yield check_array_equal, found_prior_counts, expected_prior_counts
+        yield check_array_equal, found_prior_freqs, expected_prior_freqs
+
+    def test_state_priors_weights_int_pseudocounts(self):
+        my_counts = numpy.zeros(self.num_states)
+        for (my_seq, my_weight) in zip(self.test_seqs, self.test_weights):
+            my_counts[my_seq[0]] += my_weight
+
+        for pcounts in (1,2,3):
+            expected_prior_counts = my_counts + pcounts
+            expected_prior_freqs = (1.0 * expected_prior_counts) / expected_prior_counts.sum()
+
+            found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, state_prior_pseudocounts=pcounts, normalize=False)
+            found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, state_prior_pseudocounts=pcounts, normalize=True)
+
+            yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
+            yield check_array_equal, found_prior_counts, expected_prior_counts
+            yield check_array_equal, found_prior_freqs, expected_prior_freqs
+
+    def test_state_priors_weights_array_pseudocounts(self):
+        pmat = numpy.random.randint(0, high=255, size=(self.num_states, ))
+        my_counts = numpy.zeros(self.num_states)
+        for my_seq, my_weight in zip(self.test_seqs, self.test_weights):
+            my_counts[my_seq[0]] += my_weight
+
+        expected_prior_counts = my_counts + pmat
+        expected_prior_freqs = (1.0 * expected_prior_counts) / expected_prior_counts.sum()
+ 
+        found_prior_counts, found_transition_counts = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, state_prior_pseudocounts=pmat, normalize=False)
+        found_prior_freqs, found_transition_freqs = build_hmm_tables(self.num_states, self.test_seqs, weights=self.test_weights, state_prior_pseudocounts=pmat, normalize=True)
+
+        yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
+        yield check_array_equal, found_prior_counts, expected_prior_counts
+        yield check_array_equal, found_prior_freqs, expected_prior_freqs
+
 
 
 #===============================================================================
