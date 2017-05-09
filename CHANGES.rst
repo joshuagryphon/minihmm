@@ -8,7 +8,7 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
-Unreleased
+v0.1.3 = [2017-05-09]
 ---------------------
 
  - Model reduction tested and working, even though unit tests not yet 
