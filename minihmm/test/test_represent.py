@@ -369,17 +369,31 @@ class TestModelReducer():
             assert_dict_equal(model.high_states_to_low, expected)
             assert_dict_equal(model.low_states_to_high, self.revdict(expected))
 
-    def test_pseudocount_array(self):
+    def test_transition_pseudocount_arrays(self):
         for num_states in range(2, self.max_states):
             for starting_order in range(1, self.max_order):
                 model = self.models[(starting_order, num_states)]
-                pmat = model.get_pseudocount_array()
+                _, pmat = model.get_pseudocount_arrays()
 
                 for (x, y, v) in zip (pmat.row, pmat.col, pmat.data):
                     from_state = model.low_states_to_high[x]
                     to_state   = model.low_states_to_high[y]
 
                     yield check_tuple_equal, from_state[1:], to_state[:-1]
+
+    def test_state_prior_pseudocount_arrays(self):
+        for num_states in range(2, self.max_states):
+            for starting_order in range(1, self.max_order):
+                model = self.models[(starting_order, num_states)]
+                dummies = model._dummy_states
+                found, _ = model.get_pseudocount_arrays()
+                expected = numpy.zeros(model.low_order_states)
+                for i in range(model.high_order_states):
+                    k = tuple(dummies + [i])
+                    v = model.high_states_to_low[k]
+                    expected[v] = 1
+
+                yield check_array_equal, found, expected
 
     # Gold standard would be to create a high order HMM, generate sequences from it
     # in high order space, save results, create an equivalent low-order HMM, and 

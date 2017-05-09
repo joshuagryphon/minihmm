@@ -398,15 +398,24 @@ class ModelReducer(object):
  
     # convert to csr, csc, or dense before computations depending on which needed
     # serialize coomat as coomat.row, coomat.col, coomat.data
-    def get_pseudocount_array(self):
-        """Return a valid pseudocount array for transition tables in first-order space,
-        where *valid* stipulates that cells corresponding transitions that
-        cannot exist in high-order space are set to zero.
+    def get_pseudocount_arrays(self):
+        """Return a valid pseudocount array for state priors and for transition
+        tables in first-order space, where *valid* stipulates that cells
+        corresponding transitions that cannot exist in high-order space are set
+        to zero.
 
         Returns
         -------
+        :class:`numpy.ndarray`
+            Array of state prior pseudocounts
+
         :class:`scipy.sparse.coo_matrix`
+            Sparse matrix of transition pseudocounts
         """
+        state_priors = numpy.zeros(self.low_order_states)
+        for i in range(self.high_order_states):
+            state_priors[self.high_states_to_low[tuple(self._dummy_states + [i])]] = 1
+
         row_ords = []
         col_ords = []
         for lstate, hseq in self.low_states_to_high.iteritems():
@@ -418,7 +427,7 @@ class ModelReducer(object):
 
         vals = [1] * len(row_ords)
 
-        return coo_matrix((vals, (row_ords, col_ords)))
+        return state_priors, coo_matrix((vals, (row_ords, col_ords)))
 
 
  
