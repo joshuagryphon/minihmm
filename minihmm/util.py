@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Utilities used by multiple functions / across the library
 """
+import warnings
 import numpy
 from scipy.sparse import coo_matrix
 
@@ -87,8 +88,8 @@ def build_hmm_tables(num_states,
     `initializer`
         Table[i,j] of transition probabilities from state `i` to state `j`
     """
-    tmat = initializer((num_states, num_states), dtype=int)
-    state_priors = numpy.zeros(num_states, dtype=int)
+    tmat = initializer((num_states, num_states), dtype=float)
+    state_priors = numpy.zeros(num_states, dtype=float)
     
     if weights is None:
             weights = [1] * len(state_sequences)
@@ -102,6 +103,9 @@ def build_hmm_tables(num_states,
 
     state_priors += state_prior_pseudocounts
     tmat += transition_pseudocounts
+
+    if (tmat.sum(1) == 0).any():
+        warnings.warn("There are all-zero rows in the transition table! These may yield nonsensical probabilities! Consider adding pseudocounts", UserWarning)
 
     if normalize == True:
         tmat = (1.0 * tmat.T / tmat.sum(1)).T
