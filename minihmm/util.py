@@ -37,7 +37,9 @@ def build_transition_table(num_states,
                            state_sequences,
                            weights          = None,
                            pseudocounts     = 0,
-                           normalize        = True):
+                           normalize        = True,
+                           initializer      = numpy.zeros,
+                           ):
     """Build a set of transition tables from sequences of known states.  This
     in contrast to *training*, in which parameters for transition tables are
     estimated from msequences of observations and unknown states.
@@ -62,8 +64,13 @@ def build_transition_table(num_states,
     normalize : bool, optional
         If `True`, return a row-normalized transition table. If `False`, return a count
         table (Default: `True`)
+
+    initializer : callable
+        Initializer. Must accept (shape, dtype) as parameters. By default, this would be
+        :func:`numpy.zeros`, to create a dense matrix. Another good option would be
+        :class:`scipy.spares.dok_matrix` to create a sparse matrix
     """
-    tmat = numpy.zeros((num_states, num_states), dtype=int)
+    tmat = initializer((num_states, num_states), dtype=int)
     if weights is None:
         weights = [1] * len(state_sequences)
 

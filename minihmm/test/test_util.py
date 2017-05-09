@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy
+import scipy.sparse
 
 from numpy.testing import assert_array_equal
 from minihmm.test.common import (
@@ -138,6 +139,15 @@ class TestBuildTransitionTable():
         yield check_tuple_equal, found_counts.shape, (self.num_states, self.num_states)
         yield check_array_equal, found_counts, expected_counts
         yield check_array_equal, found_freqs, expected_freqs
+
+    def test_alternate_initializer(self):
+        expected_counts = 0
+        for mat, weight in zip(self.mats, self.test_weights):
+            expected_counts += weight*mat
+            found_counts = build_transition_table(self.num_states, self.test_seqs, weights=self.test_weights, normalize=False, initializer=scipy.sparse.dok_matrix)
+
+        found_dense = found_counts.todense()
+        assert_array_equal(found_dense, expected_counts)
 
 
 #===============================================================================
