@@ -2,10 +2,26 @@ Change Log
 ==========
 Changes to ``minihmm`` are documented here.
 
-Version numbers follow a scheme of ERA.MAJOR.MINOR, following the conventions
-described in `PEP440 <https://www.python.org/dev/peps/pep-0440/>`_ and 
-`Semantic versioning <http://semver.org/>`_, with the exception that we have
-prepended the era to the version number.
+Version numbers follow following the conventions described in `PEP440
+<https://www.python.org/dev/peps/pep-0440/>`_ and `Semantic versioning
+<http://semver.org/>`_. Because we're still below v1, minor updates might
+break backward compatibility.
+
+
+Unreleased
+---------------------
+
+ - Model reduction tested and working, even though unit tests not yet 
+   flushed out
+
+ - Valid pseudocount arrays now generated for state priors in high order space
+   (before was only for transition tables)
+
+ - Added warnings in places where unexpected side effects could be caused by
+   valid calculations (e.g. uncaught `nan`)
+
+ - Serialization sketched out for FirstOrderHMMs
+
 
 
 v0.1.2 = [2017-05-08]
