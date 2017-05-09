@@ -111,6 +111,9 @@ class ModelReducer(object):
     high_order_states : int
         Number of states, in high-order space
 
+    low_order_states : int
+        Number of states, in fist-order space
+
     high_states_to_low : dict
         Dictionary mapping high-order states to tuples of low-order states
 
@@ -135,6 +138,7 @@ class ModelReducer(object):
         self.high_order_states = num_states
         self._dummy_states     = self._get_dummy_states()
         self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
+        self.low_order_states  = len(self.low_states_to_high)
 
         self.hmm = hmm
 
@@ -351,23 +355,23 @@ class ModelReducer(object):
     def viterbi(self, emissions):
         self._check_hmm()
         raw = self.hmm.viterbi(emissions)["viterbi_states"]
-        high = self.raise_stateseq_orders(self, [raw])[0]
+        high = self.raise_stateseq_orders([raw])[0]
         return high
 
     def posterior_decode(self, emissions):
         self._check_hmm()
         raw, _ = self.hmm.posterior_decode(emissions)
-        return self.raise_stateseq_orders(self, [raw])[0]
+        return self.raise_stateseq_orders([raw])[0]
 
     def sample(self, emissions, num_samples):
         self._check_hmm()
         raw_paths = self.hmm.sample(emissions, num_samples=num_samples)
-        return self.raise_stateseq_orders(self, raw_paths)
+        return self.raise_stateseq_orders(raw_paths)
 
     def generate(self, length):
         self._check_hmm()
         raw_path, obs, logprob = self.hmm.generate(length)
-        high_path = self.raise_stateseq_orders(self, [raw_path])[0]
+        high_path = self.raise_stateseq_orders([raw_path])[0]
         return high_path, obs, logprob
 
     def remap_emission_factors(self, emission_probs):
@@ -383,13 +387,11 @@ class ModelReducer(object):
         list
             list of Factors, indexed by states in equivalent first-order
         """
-        reverse_state_map = self.low_states_to_high
-
         # make empty list length of new states
-        ltmp = [None] * len(reverse_state_map)
+        ltmp = [None] * len(self.low_states_to_high)
 
         # populate list
-        for newstate, state_tuple in reverse_state_map.items():
+        for newstate, state_tuple in self.low_states_to_high.items():
             ltmp[newstate] = emission_probs[state_tuple[-1]]
 
         return ltmp
