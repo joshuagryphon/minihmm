@@ -512,7 +512,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         paths = []
         for n in range(num_samples):
-            my_path = numpy.full(len(emissions), -1)
+            my_path = numpy.full(len(emissions), -1, dtype=int)
 
             # because probabilty at all steps is scaled to one, we can just 
             # examine cumsum of final step to start

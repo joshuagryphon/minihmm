@@ -375,7 +375,7 @@ class TestCFourPoisson(_BaseExample):
 
             },
             "naive"      : {
-                "trans_probs"    : MatrixFactor(numpy.full((4,4),1.0/16)),
+                "trans_probs"    : MatrixFactor(numpy.full((4,4), 1.0/16), dtype=float),
                 "state_priors"   : ArrayFactor([0.25,0.25,0.25,0.25]),
                 "emission_probs" : [
                       ScipyDistributionFactor(scipy.stats.poisson,3),
