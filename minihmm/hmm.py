@@ -456,8 +456,34 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         return numpy.array(states).astype(int), numpy.array(emissions), logprob
 
     # TODO: test
+    def joint_path_logprob(self, path, emissions):
+        """Return log P(path, emissions) evaluated under this model
+
+        Parameters
+        ----------
+        path : list-like
+            Sequence of states
+
+        emissions : list-like
+            Sequence of observations
+
+        Returns
+        -------
+        float
+            Log probability of P(path, emissions)
+        """
+        T = self._logT
+        joint_logprob = self.state_priors.logprob(states[0])
+        joint_logprob += self.emission_probs[states[0]].logprob(emissions[0])
+
+        for i in range(1,len(emissions)):
+            joint_logprob += T[states[i-1],states[i]] + self.emission_probs[states[i]].logprob(emissions[i])
+
+        return joint_logprob
+
+    # TODO: test
     def conditional_path_logprob(self, path, emissions):
-        """Return P(path | emissions) evaluated under this model
+        """Return log P(path | emissions) evaluated under this model
 
         Parameters
         ----------

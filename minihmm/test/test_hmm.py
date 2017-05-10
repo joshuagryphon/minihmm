@@ -113,27 +113,6 @@ class _BaseExample():
             cls.expected_forward_logprobs.append(dp_prob)
             cls.expected_joint_logprobs.append(paths)
 
-#         # evaluate probabilities of generated observations by brute force
-#         # to compare against forward algorithm calculations later
-#         print("    Calculating probabilities ...")
-#         for obs_seq in cls.test_obs_seqs:
-#             state_paths = itertools.product(list(range(cls.generating_hmm.num_states)),
-#                                             repeat=len(obs))
-#             total_prob  = 0
-#             for my_path in state_paths:
-#                 my_logprob = []
-#                 last_state = my_path[0]
-#                 my_logprob.append(cls.generating_hmm.state_priors.logprob(last_state))
-#                 my_logprob.append(cls.generating_hmm.emission_probs[last_state].logprob(obs[0]))
-#                 for my_state, my_obs in zip(my_path, obs)[1:]:
-#                     my_logprob.append(cls.generating_hmm.trans_probs.logprob(last_state,my_state))
-#                     my_logprob.append(cls.generating_hmm.emission_probs[my_state].logprob(my_obs))
-#                     last_state = my_state
-#                 
-#                 total_prob += numpy.exp(numpy.nansum(my_logprob))
-#             
-#            cls.expected_forward_logprobs.append(numpy.log(total_prob))
-
         # Generate test cases for Viterbi and posterior decoding            
         cls.decode_tests = [hmm.generate(1000) for _ in range(10)]
             
@@ -247,7 +226,12 @@ class _BaseExample():
                                                                                                 )
             yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
 
-    @unittest.skip
+    def test_joint_path_logprob(self):
+        assert False
+
+    def test_conditional_path_logprob(self):
+        assert False
+
     def test_forward_backward_backward(self):
         # TODO: test backward component of forward-backward algorithm
         assert False
