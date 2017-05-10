@@ -95,11 +95,12 @@ def build_hmm_tables(num_states,
             weights = [1] * len(state_sequences)
 
     for my_seq, my_weight in zip(state_sequences, weights):
-        state_priors[my_seq[0]] += my_weight
+        if not numpy.isnan(my_weight):
+            state_priors[my_seq[0]] += my_weight
 
-        for i in range(len(my_seq) - 1):
-            from_seq, to_seq = my_seq[i:i+2]
-            tmat[from_seq, to_seq] += my_weight
+            for i in range(len(my_seq) - 1):
+                from_seq, to_seq = my_seq[i:i+2]
+                tmat[from_seq, to_seq] += my_weight
 
     state_priors += state_prior_pseudocounts
     tmat += transition_pseudocounts
