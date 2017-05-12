@@ -1,23 +1,38 @@
 #!/usr/bin/env python
+import os
 from setuptools import setup, find_packages
+from Cython.Distutils import build_ext
+from Cython.Distutils.extension import Extension
+from Cython.Build import cythonize
+
 
 with open("README.rst") as f:
     long_description = f.read()
 
 
-config_info = { "version"      : 0.1.3,
+config_info = { "version"      : "0.1.3",
                 "packages"     : find_packages(),
               }
 
+ext_modules = [Extension("minihmm.cytest", [os.path.join("minihmm", "cytest.pyx")], language="c")]
 
 setup(
     name = "minihmm",
+    build_requires = [
+        "cython",
+        "numpy>=1.5",
+    ],
     install_requires = [
+                        "cython",
     	                "numpy>=1.5",
                         "scipy>=0.12.0",
                         "matplotlib>=1.3.0",
                         ],
 
+    ext_modules = ext_modules,
+    cmdclass = {
+        "build_ext" : build_ext,
+    },
     zip_safe = True,
 
     # metadata for upload to PyPI
