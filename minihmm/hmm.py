@@ -890,37 +890,46 @@ class DiscreteFirstOrderHMM(FirstOrderHMM):
 
         return paths
 
-    def viterbi(self, emissions, start=0, end=None):
-        T = self._logt
-        E = self._loge
-
-        state_dict = { K : [K] for K in range(self.num_states) }
-        prev_probs = numpy.array([self.state_priors.logprob(X) + E[X, emissions[start]]  for X in range(self.num_states)])
-
-        for x in emissions[start+1:end]:
-            new_state_dict = {}
-            emission_logprobs = E[:, x]
-            current_probs     = T + emission_logprobs[None,:] + prev_probs[:,None]
+    def viterbi(self, emissions):
+            T = self._logt
+            E = self._loge
+            num_states = self.num_states
+            l = list(range(num_states))
             
-            new_probs = current_probs.max(0)
+            # allocate two holders for data to prevent repeated reallocation
+            state_paths_1 = numpy.full((num_states, len(emissions)), numpy.nan)
+            state_paths_2 = numpy.full((num_states, len(emissions)), numpy.nan)
+            
+            state_paths     = state_paths_1
+            new_state_paths = state_paths_2
+            state_paths[:,0] = l
+            
+            prev_probs = numpy.array([self.state_priors.logprob(X) + E[X, emissions[0]] for X in l])
 
-            # TODO: consider making two arrays rather than dict alloc/realloc/dealloc
-            new_state_dict = { X : state_dict[current_probs[:,X].argmax()] + [X] for X in range(self.num_states) }
+            for j, x in enumerate(emissions[1:]):
+                emission_logprobs = E[:, x]
+                current_probs     = T + emission_logprobs[None,:] + prev_probs[:,None]
+                
+                new_probs = current_probs.max(0)
 
-            prev_probs = new_probs
-            state_dict = new_state_dict
-        
-        final_label   = prev_probs.argmax()
-        total_logprob = prev_probs.max()
-        states = numpy.array(state_dict[final_label])
-        
-        dtmp = {
-            "viterbi_states"  : states,
-            "state_paths"     : state_dict,
-            "logprob"         : total_logprob,
-        }
-        return dtmp
+                for i in l:
+                    new_state_paths[i,:]  = state_paths[current_probs[:,i].argmax(), :]
+                    new_state_paths[i, j + 1] = i
 
+                prev_probs  = new_probs
+                state_paths = new_state_paths
+                new_state_paths = state_paths_1 if j % 2 == 0 else state_paths_2
+            
+            final_label   = prev_probs.argmax()
+            total_logprob = prev_probs.max()
+            states = numpy.array(state_paths[final_label, :])
+            
+            dtmp = {
+                "viterbi_states"  : states,
+                "state_paths"     : state_paths,
+                "logprob"         : total_logprob,
+            }
+            return dtmp
 
 
 class FirstOrderMM(AbstractGenerativeFactor):
