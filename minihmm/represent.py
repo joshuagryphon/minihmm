@@ -143,7 +143,7 @@ class ModelReducer(object):
         self.hmm = hmm
 
     def __str__(self):
-        return "<%s order=2 high_states=%s hmm=%s>" % (self.__class__.__name__, self.high_order_states, self.hmm is not None)
+        return "<%s order=%s high_states=%s hmm=%s>" % (self.__class__.__name__, self.starting_order, self.high_order_states, self.hmm is not None)
 
     def __repr__(self):
         return str(self)
