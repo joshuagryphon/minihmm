@@ -15,7 +15,7 @@ from numpy.testing import (assert_array_equal,
                            assert_array_almost_equal,
                            assert_almost_equal)
 
-from minihmm.hmm import FirstOrderHMM
+from minihmm.hmm import FirstOrderHMM, DiscreteFirstOrderHMM
 from minihmm.estimators import (UnivariateGaussianEmissionEstimator,
                                 DiscreteStatePriorEstimator,
                                 DiscreteEmissionEstimator,
@@ -36,6 +36,8 @@ _TRAINING_SEED = 134067
 
 
 class _BaseExample():
+
+    model_class = FirstOrderHMM
 
     # define these variables in this method in subclasses    
     @classmethod
@@ -75,7 +77,7 @@ class _BaseExample():
 
         print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
-        hmm = FirstOrderHMM(**cls.models["generating"])
+        hmm = cls.model_class(**cls.models["generating"])
         cls.generating_hmm = hmm
         cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
 
@@ -291,6 +293,107 @@ class TestACoin(_BaseExample):
                                       ArrayFactor([0.5,0.5])],
              }
         }
+
+
+
+class TestA2DiscreteCoin(TestACoin):
+
+    model_class = DiscreteFirstOrderHMM
+
+    @classmethod
+    def do_subclass_setup(cls):
+        cls.name = "Coin example"
+        cls.min_frac_equal = 0.69
+
+        cls.state_prior_estimator = DiscreteStatePriorEstimator()
+        cls.transition_estimator  = DiscreteTransitionEstimator()
+        cls.emission_estimator    = DiscreteEmissionEstimator(2)
+ 
+#        cls.transition_estimator = PseudocountTransitionEstimator(numpy.array([
+#            [ 0 ,  0,  1,  1],
+#            [ 0, 1.0,  0,  0],
+#            [ 0,   0,  1,  1],
+#            [ 0,   0,  1,  1]
+#            ]))
+
+        cls.models = {
+            "generating" : {
+                "state_priors"     : ArrayFactor([0.005,0.995]),
+                "trans_probs"      : MatrixFactor(numpy.array([
+                                                    [0.8, 0.2],
+                                                    [0.3, 0.7]])),
+                "emission_probs"   : MatrixFactor(numpy.array([[0.6,0.4],
+                                                              [0.15,0.85]])),
+            },
+            "naive"      : {
+                "state_priors"     : ArrayFactor([0.48,0.52]),
+                "trans_probs"      : MatrixFactor(numpy.array([
+                                                    [0.5, 0.5],
+                                                    [0.5, 0.5]])),
+                "emission_probs"   : MatrixFactor(numpy.array([[0.5,0.5],
+                                                               [0.5,0.5]])),
+             }
+        }
+
+    @classmethod
+    def setUpClass(cls):
+        cls.seq_lengths = [5,10] #,20]
+
+        cls.test_obs_seqs   = []    # test observation sequences
+        cls.test_state_seqs = []    # state paths through test observation seqs. not currently used
+        cls.decode_tests    = []    # tests for Viterbi and posterior decoding
+
+        cls.expected_forward_logprobs = [] # log probabilities for cls.test_obs_seqs
+        cls.found_forward_logprobs    = []
+        cls.found_forward_scalefactors      = []
+        cls.found_forward_scaled_forward_matrices = []
+
+        cls.expected_joint_logprobs = [] # expected joint probabilities for states and observations
+
+        print("Setting up class %s" % cls.__name__)
+        cls.do_subclass_setup()
+        hmm = cls.model_class(**cls.models["generating"])
+        cls.generating_hmm = hmm
+        cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
+
+        numpy.random.seed(_TRAINING_SEED)
+
+        for x in cls.seq_lengths:
+            states, obs, _ = hmm.generate(x)
+            cls.test_state_seqs.append(states)
+            cls.test_obs_seqs.append(obs)
+
+        # precalculate useful quantities on observation sequences
+        for obs in cls.test_obs_seqs:
+            # run forward algorithm; we'll use their results for tests below
+            logprob, scaled_forward, scaled_backward, scale_factors, ksi = hmm.forward_backward(obs)
+            cls.found_forward_logprobs.append(logprob)
+            cls.found_forward_scalefactors.append(scale_factors)
+            cls.found_forward_scaled_forward_matrices.append(scaled_forward)
+
+            # manually calculate probabilities of generated observations via dynamic programming
+            # the forward probability of an observation sequence is equal to the sum of its joint 
+            # probabilities with all possible state paths. We calculate each joint probability here,
+            # then sum these to find the total expected probability
+            my_states = list(range(hmm.num_states))
+            paths = { (X,) : hmm.state_priors.logprob(X) + hmm._loge[X,obs[0]] for X in my_states }
+
+            for my_obs in obs[1:]:
+                new_paths = {}
+                for partial, prob in paths.items():
+                    for new_state in my_states:
+                        new_paths[ tuple(list(partial) + [new_state])] = prob + hmm.trans_probs.logprob(partial[-1], new_state) + hmm._loge[new_state,my_obs]
+                        
+                paths = new_paths
+
+            dp_prob = numpy.log(numpy.exp(paths.values()).sum())
+            cls.expected_forward_logprobs.append(dp_prob)
+            cls.expected_joint_logprobs.append(paths)
+
+        # Generate test cases for Viterbi and posterior decoding            
+        cls.decode_tests = [hmm.generate(1000) for _ in range(10)]
+            
+        print("Set up class %s" % cls.__name__)
 
 
 

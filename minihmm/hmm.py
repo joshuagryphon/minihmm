@@ -96,10 +96,16 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         Warning
         -------
         Emission factors are not yet serialized! Find a way to save those by yourselves
+
+
+        Returns
+        -------
+        dict
+            Dictionary representation of `self`
         """
         dtmp = {
-            "state_priors"   : matrix_to_dict(self.state_priors),
-            "trans_probs"    : matrix_to_dict(self.trans_probs),
+            "state_priors"   : matrix_to_dict(self.state_priors.data),
+            "trans_probs"    : matrix_to_dict(self.trans_probs.data),
             "emission_probs" : [], # FIXME: implement later
         }
         warnings.warn("For the time being emission probabilities are not serialized. We'll fix this in the future!", UserWarning)
@@ -321,7 +327,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         # probability sequence indexed by timeslice. columns are end states
         scaled_forward = numpy.tile(numpy.nan,(len(emissions),self.num_states))
         scale_factors  = numpy.ones(len(emissions))
-        T = numpy.array(self.trans_probs.data)
+        T = self.trans_probs.data
         O = []
     
         # initialize as prior + likelihood of emissions
@@ -472,7 +478,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         float
             Log probability of P(path, emissions)
         """
-        T = self._logT
+        T = self._logt
         joint_logprob = self.state_priors.logprob(states[0])
         joint_logprob += self.emission_probs[states[0]].logprob(emissions[0])
 
@@ -501,19 +507,12 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         # calculate conditional pat logprob as P(path, emissions) - P(emissions)
         # P(emissions) from fast_forward
         obs_logprob = self.fast_forward(emissions)
-
-        # joint log probability
-        T = self._logT
-        joint_logprob = self.state_priors.logprob(states[0])
-        joint_logprob += self.emission_probs[states[0]].logprob(emissions[0])
-
-        for i in range(1,len(emissions)):
-            joint_logprob += T[states[i-1],states[i]] + self.emission_probs[states[i]].logprob(emissions[i])
+        joint_logprob = self.joint_path_logprob(path, emissions)
 
         return joint_logprob - obs_logprob
 
     # TODO: return probability P(path | emissions)?
-    def sample(self, emissions, num_samples=1):
+    def sample_old(self, emissions, num_samples=1):
         """Sample state sequences from the distribution P(states | emissions),
         by tracing backward through the matrix of forward probabilities. 
         See Durbin1997 ch 4.3, section "Probabilistic sampling of aligments"
@@ -553,6 +552,38 @@ class FirstOrderHMM(AbstractGenerativeFactor):
                        * scaled_forward[-i-1,:] \
                        / scaled_forward[-i,last_state] \
                        / scale_factors[-i]
+
+                last_state = (pvec.cumsum() >= randos[n, i]).argmax()
+                my_path[-i-1] = last_state
+
+            paths.append(my_path)
+
+        return paths
+
+    def sample(self, emissions, num_samples=1):
+        T = self.trans_probs.data
+        L = len(emissions)
+        total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions, calc_backward=False)
+        randos = numpy.random.random(size=(num_samples,L))
+
+        # precalculate some quantities to reduce repeat calcs - need to watch out for underflows
+        # only getting 5% speed increase from these right now
+        final_state_cumsums = scaled_forward[-1,:].cumsum()
+        rescaled = (scaled_forward.T * scale_factors).T
+
+        paths = []
+        for n in range(num_samples):
+            my_path = numpy.full(len(emissions), -1, dtype=int)
+
+            # because probabilty at all steps is scaled to one, we can just 
+            # examine cumsum of final step to start
+            last_state = (final_state_cumsums >= randos[n, 0]).argmax()
+            my_path[-1] = last_state
+            
+            for i in range(1, L):
+                pvec = T[:,last_state] \
+                       * self.emission_probs[last_state].probability(emissions[-i]) \
+                       * scaled_forward[-i-1,:] / rescaled[-i, last_state]
 
                 last_state = (pvec.cumsum() >= randos[n, i]).argmax()
                 my_path[-i-1] = last_state
@@ -673,6 +704,223 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             "logprob"         : total_logprob,
         }
         return dtmp
+
+
+class DiscreteFirstOrderHMM(FirstOrderHMM):
+    """First order HMM that contains optimizations for when emissions are discrete or categorical
+    """
+    def __init__(self,
+                 state_priors   = None,
+                 emission_probs = None,
+                 trans_probs    = None):
+        """Create a |FirstOrderHMM|.
+        
+        Parameters
+        ----------
+        state_priors : |ArrayFactor|
+            Probabilities of starting in any state
+                                 
+        emission_probs  : |MatrixFactor|
+            Probability distributions describing the probabilities of observing
+            any emission in each state. Must be discrete.
+
+        trans_probs : |MatrixFactor|
+            |MatrixFactor| describing transition probabilities from each state
+            (first index) to each other state (second index).
+        """
+        assert len(state_priors) == emission_probs.data.shape[0]
+        assert len(state_priors) == len(trans_probs)
+        self.num_states = len(state_priors)
+        self.state_priors   = state_priors
+        self.emission_probs = emission_probs
+        self.trans_probs    = trans_probs
+        self._logt = numpy.log(trans_probs.data)
+        self._loge = numpy.log(emission_probs.data)
+
+
+    def to_dict(self):
+        """Return a dictionary describing `self`, which can be serialized as JSON
+
+        Warning
+        -------
+        Emission factors are not yet serialized! Find a way to save those by yourselves
+
+
+        Returns
+        -------
+        dict
+            Dictionary representation of `self`
+        """
+        dtmp = {
+            "state_priors" : matrix_to_dict(self.state_priors.data),
+            "trans_probs"  : matrix_to_dict(self.trans_probs.data),
+            "emission_probs" : matrix_to_dict(self.emission_probs.data)
+        }
+        return dtmp
+
+    @staticmethod
+    def from_dict(self, dtmp):
+        """
+        Parameters
+        ----------
+        dtmp : dict
+            Dictionary containing dict representations of state priors and
+            transition probabilities from
+            :func:`minihmm.represent.matrix_to_dict`
+
+        emission_probs : list-like
+            List of emission probabilities. This parameter will probably go
+            away once we have figured out how to serialize emission
+            probabilities as dicts
+
+
+        Returns
+        -------
+        :class:`~minihmm.hmm.DiscreteFirstOrderHMM`
+        """
+        my_dict["trans_probs"]    = matrix_from_dict(dtmp["trans_probs"],  dense=True)
+        my_dict["state_priors"]   = matrix_from_dict(dtmp["state_priors"], dense=True)
+        my_dict["emission_probs"] = matrix_from_dict(dtmp["emission_probs"], dense=True)
+
+        return DiscreteFirstOrderHMM(**my_dict)
+
+    def fast_forward(self, emissions):
+        return self.forward_backward(emissions, calc_backward=False)[0]
+
+    def forward_backward(self, emissions, calc_backward=True):
+        scaled_forward = numpy.tile(numpy.nan, (len(emissions), self.num_states))
+        scale_factors  = numpy.ones(len(emissions))
+        T = self.trans_probs.data
+        O = []
+
+        # this line might be slow; test
+        O = numpy.vstack([self.emission_probs.data[:,X] for X in emissions])
+
+        scaled_forward[0,:] = self.state_priors.data.dot(numpy.diag(O[0,:]))
+        
+        for t in range(1,len(emissions)):
+            f = scaled_forward[t-1,:].dot(T.dot(numpy.diag(O[t,:])))
+            c = f.sum()
+            scaled_forward[t,:] = f / c
+            scale_factors[t] = c
+        
+        if calc_backward is True:
+            # backward calc    
+            scaled_backward = numpy.zeros((len(emissions), self.num_states))
+            scaled_backward[-1,:] = 1.0 / scale_factors[-1] # <---- Wikipedia says not to scale final timestep; Rabiner & Durbin say to
+            for t in range(len(emissions)-1)[::-1]:
+                scaled_backward[t,:] = T.dot(numpy.diag(O[t+1,:]).dot(scaled_backward[t+1,:])) / scale_factors[t]
+
+            ksi = scaled_forward[:-1,:,None]*scaled_backward[1:,None,:]*T[None,:,:]*O[1:,None,:]
+
+        else:
+            scaled_backward = None
+            ksi = None
+
+        if numpy.isnan(scale_factors).any():
+            total_logprob = -numpy.Inf
+        else:  
+            total_logprob = numpy.log(scale_factors).sum()
+
+        return total_logprob, scaled_forward, scaled_backward, scale_factors, ksi    
+
+    def generate(self, length):
+        states    = []
+        emissions = []
+        
+        states.append(self.state_priors.generate())
+        emissions.append(self.emission_probs.generate(states[0]))
+        
+        logprob  = self.state_priors.logprob(states[0]) 
+        logprob += self._loge[states[0],emissions[0]]
+        
+        for i in range(1,length):
+            new_state = self.trans_probs.generate(states[i-1])
+            new_obs   = self.emission_probs.generate(new_state)
+            
+            states.append(new_state)
+            emissions.append(new_obs)
+            
+            logprob += self._logt[states[-1], new_state]
+            logprob += self._loge[new_state, new_obs]
+        
+        return numpy.array(states).astype(int), numpy.array(emissions), logprob
+
+    def joint_path_logprob(self, path, emissions):
+        T = self._logt
+        E = self._loge
+        joint_logprob = self.state_priors.logprob(states[0])
+        joint_logprob += E[states[0],emissions[0]]
+
+        for i in range(1,len(emissions)):
+            joint_logprob += T[states[i-1],states[i]] + E[states[i], emissions[i]]
+
+        return joint_logprob
+
+    def sample(self, emissions, num_samples=1):
+        T = self.trans_probs.data
+        E = self.emission_probs.data
+        L = len(emissions)
+        total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions, calc_backward=False)
+        randos = numpy.random.random(size=(num_samples,L))
+
+        # precalculate some quantities to reduce repeat calcs - need to watch out for underflows
+        # only getting 5% speed increase from these right now
+        final_state_cumsums = scaled_forward[-1,:].cumsum()
+        rescaled = (scaled_forward.T * scale_factors).T
+
+        paths = []
+        for n in range(num_samples):
+            my_path = numpy.full(len(emissions), -1, dtype=int)
+
+            # because probabilty at all steps is scaled to one, we can just 
+            # examine cumsum of final step to start
+            last_state = (final_state_cumsums >= randos[n, 0]).argmax()
+            my_path[-1] = last_state
+            
+            for i in range(1, L):
+                pvec = T[:,last_state] \
+                       * E[last_state, emissions[-i]] \
+                       * scaled_forward[-i-1,:] / rescaled[-i, last_state]
+
+                last_state = (pvec.cumsum() >= randos[n, i]).argmax()
+                my_path[-i-1] = last_state
+
+            paths.append(my_path)
+
+        return paths
+
+    def viterbi(self, emissions, start=0, end=None):
+        T = self._logt
+        E = self._loge
+
+        state_dict = { K : [K] for K in range(self.num_states) }
+        prev_probs = numpy.array([self.state_priors.logprob(X) + E[X, emissions[start]]  for X in range(self.num_states)])
+
+        for x in emissions[start+1:end]:
+            new_state_dict = {}
+            emission_logprobs = E[:, x]
+            current_probs     = T + emission_logprobs[None,:] + prev_probs[:,None]
+            
+            new_probs = current_probs.max(0)
+
+            # TODO: consider making two arrays rather than dict alloc/realloc/dealloc
+            new_state_dict = { X : state_dict[current_probs[:,X].argmax()] + [X] for X in range(self.num_states) }
+
+            prev_probs = new_probs
+            state_dict = new_state_dict
+        
+        final_label   = prev_probs.argmax()
+        total_logprob = prev_probs.max()
+        states = numpy.array(state_dict[final_label])
+        
+        dtmp = {
+            "viterbi_states"  : states,
+            "state_paths"     : state_dict,
+            "logprob"         : total_logprob,
+        }
+        return dtmp
+
 
 
 class FirstOrderMM(AbstractGenerativeFactor):

@@ -102,7 +102,6 @@ from scipy.sparse import (
 class ModelReducer(object):
     """Utility class for reducing high-order HMMs to equivalent first-order HMMs.
 
-
     Attributes
     ----------
     starting_order : int
@@ -430,7 +429,80 @@ class ModelReducer(object):
         return state_priors, coo_matrix((vals, (row_ords, col_ords)))
 
 
- 
+class DiscreteModelReducer(ModelReducer):
+    """Utility class for reducing high-order HMMs with discrete emissions to equivalent first-order HMMs
+
+    Attributes
+    ----------
+    starting_order : int
+        Order of starting model
+
+    high_order_states : int
+        Number of states, in high-order space
+
+    low_order_states : int
+        Number of states, in fist-order space
+
+    high_states_to_low : dict
+        Dictionary mapping high-order states to tuples of low-order states
+
+    low_states_to_high : dict
+        Dicitonary mapping tuples of low-order states to high-order states
+
+    hmm : :class:`minihmm.hmm.FirstOrderHMM`
+        Associated first-order HMM. At the moment, this must be constructed by
+        the user.. Will be used for sampling, decoding, et c
+    """
+
+    def set_hmm(self, hmm):
+        """Associate a discrete, first-order hmm with the :class:`ModelReducer`
+
+        Parameters
+        ----------
+        hmm : :class:`minihmm.hmm.DiscreteFirstOrderHMM`
+           First-order representation of high-order model 
+        """
+        if not isinstance(hmm, DiscreteFirstOrderHMM):
+            raise ValueError("`hmm` must be a valid DiscreteFirstOrderHMM. Instead got type '%s'" % (type(hmm)))
+        
+        self.hmm = hmm
+
+    @staticmethod
+    def from_dict(dtmp):
+        hmm = DiscreteFirstOrderHMM.from_dict(dtmp["discrete_first_order_hmm"] if "discrete_first_order_hmm" in dtmp else None)
+        return DiscreteModelReducer(dtmp["starting_order"], dtmp["high_order_states"], hmm=hmm)
+
+    def to_dict(self):
+        dtmp = {
+            "starting_order"    : self.starting_order,
+            "high_order_states" : self.num_states,
+        }
+        if self.hmm is not None:
+            dtmp["discrete_first_order_hmm"] = self.hmm.to_dict()
+
+        return dtmp
+
+    def remap_emission_factors(self, matrix_factor):
+        """Map emission probabilities from high-order space to equivalent reduced space
+
+        Parameters
+        ----------
+        matrix_factor : :class:`~minihmm.factors.MatrixFactor`
+            MatrixFactor in which rows represent states and columns represent discrete emissions
+
+        Returns
+        -------
+        :class:`~minihmm.factors.MatrixFactor`
+            MatrixFactor for equivalent first-order HMM
+        """
+        alpha_size = matrix_factor.data.shape[1]
+        new_mat = numpy.full(numpy.nan, (self.low_order_states, alpha_size))
+
+        for newstate, state_tuple in self.low_states_to_high.items():
+            new_mat[newstate, :] = matrix_factor.data[state_tuple[-1],:]
+
+        return MatrixFactor(new_mat)
+
 
 #TODO :  implement and test
 #def lower_parameter_order(states,
