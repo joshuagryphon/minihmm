@@ -148,8 +148,9 @@ class _BaseExample():
                 found[n]    = samples.get(k,0)
 
             m, b, r, p, std = scipy.stats.linregress(expected,found)
-            assert_less_equal(abs(m - 1), 0.05, "Slope '%s' further from 1.0 than expected." % (m))
+            assert_less_equal(abs(m - 1), 0.02, "Slope '%s' further from 1.0 than expected." % (m))
             assert_less_equal(abs(b), 1.0, "Intercept '%s' further from 0.0 than expected." % (b))
+            assert_greater_equal(r, 0.95, "r '%s' less than 0.95 than expected." % r)
         
     def test_viterbi(self):
         # make sure viterbi calls are above accuracy threshold listed above 

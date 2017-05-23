@@ -536,6 +536,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions, calc_backward=False)
         randos = numpy.random.random(size=(num_samples,L))
+        final_state_cumsums = scaled_forward[-1,:].cumsum()
 
         paths = []
         for n in range(num_samples):
@@ -543,7 +544,8 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
             # because probabilty at all steps is scaled to one, we can just 
             # examine cumsum of final step to start
-            last_state = (scaled_forward[-1,:].cumsum() >= randos[n,0]).argmax()
+	    last_state = final_state_cumsums.searchsorted(randos[n, 0], side="right")
+            #last_state = (scaled_forward[-1,:].cumsum() >= randos[n,0]).argmax()
             my_path[-1] = last_state
             
             for i in range(1, L):
@@ -553,7 +555,8 @@ class FirstOrderHMM(AbstractGenerativeFactor):
                        / scaled_forward[-i,last_state] \
                        / scale_factors[-i]
 
-                last_state = (pvec.cumsum() >= randos[n, i]).argmax()
+                #last_state = (pvec.cumsum() >= randos[n, i]).argmax()
+                last_state = pvec.cumsum().searchsorted(randos[n, i], side="right")
                 my_path[-i-1] = last_state
 
             paths.append(my_path)
