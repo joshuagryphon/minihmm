@@ -96,10 +96,16 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         Warning
         -------
         Emission factors are not yet serialized! Find a way to save those by yourselves
+
+
+        Returns
+        -------
+        dict
+            Dictionary representation of `self`
         """
         dtmp = {
-            "state_priors"   : matrix_to_dict(self.state_priors),
-            "trans_probs"    : matrix_to_dict(self.trans_probs),
+            "state_priors"   : matrix_to_dict(self.state_priors.data),
+            "trans_probs"    : matrix_to_dict(self.trans_probs.data),
             "emission_probs" : [], # FIXME: implement later
         }
         warnings.warn("For the time being emission probabilities are not serialized. We'll fix this in the future!", UserWarning)
@@ -321,7 +327,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         # probability sequence indexed by timeslice. columns are end states
         scaled_forward = numpy.tile(numpy.nan,(len(emissions),self.num_states))
         scale_factors  = numpy.ones(len(emissions))
-        T = numpy.array(self.trans_probs.data)
+        T = self.trans_probs.data
         O = []
     
         # initialize as prior + likelihood of emissions
@@ -472,7 +478,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         float
             Log probability of P(path, emissions)
         """
-        T = self._logT
+        T = self._logt
         joint_logprob = self.state_priors.logprob(states[0])
         joint_logprob += self.emission_probs[states[0]].logprob(emissions[0])
 
@@ -501,14 +507,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         # calculate conditional pat logprob as P(path, emissions) - P(emissions)
         # P(emissions) from fast_forward
         obs_logprob = self.fast_forward(emissions)
-
-        # joint log probability
-        T = self._logT
-        joint_logprob = self.state_priors.logprob(states[0])
-        joint_logprob += self.emission_probs[states[0]].logprob(emissions[0])
-
-        for i in range(1,len(emissions)):
-            joint_logprob += T[states[i-1],states[i]] + self.emission_probs[states[i]].logprob(emissions[i])
+        joint_logprob = self.joint_path_logprob(path, emissions)
 
         return joint_logprob - obs_logprob
 
@@ -537,6 +536,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions, calc_backward=False)
         randos = numpy.random.random(size=(num_samples,L))
+        final_state_cumsums = scaled_forward[-1,:].cumsum()
 
         paths = []
         for n in range(num_samples):
@@ -544,7 +544,8 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
             # because probabilty at all steps is scaled to one, we can just 
             # examine cumsum of final step to start
-            last_state = (scaled_forward[-1,:].cumsum() >= randos[n,0]).argmax()
+	    last_state = final_state_cumsums.searchsorted(randos[n, 0], side="right")
+            #last_state = (scaled_forward[-1,:].cumsum() >= randos[n,0]).argmax()
             my_path[-1] = last_state
             
             for i in range(1, L):
@@ -554,7 +555,8 @@ class FirstOrderHMM(AbstractGenerativeFactor):
                        / scaled_forward[-i,last_state] \
                        / scale_factors[-i]
 
-                last_state = (pvec.cumsum() >= randos[n, i]).argmax()
+                #last_state = (pvec.cumsum() >= randos[n, i]).argmax()
+                last_state = pvec.cumsum().searchsorted(randos[n, i], side="right")
                 my_path[-i-1] = last_state
 
             paths.append(my_path)
