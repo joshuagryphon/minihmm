@@ -92,7 +92,7 @@ def build_hmm_tables(num_states,
     state_priors = numpy.zeros(num_states, dtype=float)
     
     if weights is None:
-            weights = [1] * len(state_sequences)
+        weights = [1] * len(state_sequences)
 
     for my_seq, my_weight in zip(state_sequences, weights):
         if not numpy.isnan(my_weight):

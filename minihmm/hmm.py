@@ -448,7 +448,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         logprob  = self.state_priors.logprob(states[0]) 
         logprob += self.emission_probs[states[0]].logprob(emissions[0])
         
-        
         for i in range(1,length):
             new_state = self.trans_probs.generate(states[i-1])
             new_obs   = self.emission_probs[new_state].generate()

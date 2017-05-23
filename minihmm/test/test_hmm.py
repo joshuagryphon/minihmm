@@ -81,7 +81,7 @@ class _BaseExample():
         cls.generating_hmm = hmm
         cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
 
-        numpy.random.seed(_TRAINING_SEED)
+#        numpy.random.seed(_TRAINING_SEED)
 
         for x in cls.seq_lengths:
             states, obs, _ = hmm.generate(x)
@@ -150,7 +150,7 @@ class _BaseExample():
             m, b, r, p, std = scipy.stats.linregress(expected,found)
             assert_less_equal(abs(m - 1), 0.02, "Slope '%s' further from 1.0 than expected." % (m))
             assert_less_equal(abs(b), 1.0, "Intercept '%s' further from 0.0 than expected." % (b))
-            assert_greater_equal(r, 0.95, "r '%s' less than 0.95 than expected." % r)
+            assert_greater_equal(r, 0.97, "r '%s' less than 0.97." % r)
         
     def test_viterbi(self):
         # make sure viterbi calls are above accuracy threshold listed above 
@@ -170,7 +170,7 @@ class _BaseExample():
 
     def test_forward_logprob(self):
         # make sure vectorized forward probability calculations match those calced by brute force
-        numpy.random.seed(_FORWARD_SEED)
+#        numpy.random.seed(_FORWARD_SEED)
         for n, (expected, found) in enumerate(zip(self.expected_forward_logprobs, self.found_forward_logprobs)):
             msg = "Failed forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
                                                                                                   self.name,
@@ -182,7 +182,7 @@ class _BaseExample():
 
     def test_fast_forward(self):
         # make sure fast forward probability calculations match those calced by brute force
-        numpy.random.seed(_FORWARD_SEED)
+#        numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected) in enumerate(zip(self.test_obs_seqs, self.expected_forward_logprobs)):
             found = self.generating_hmm.fast_forward(obs)
             msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (n,
@@ -214,7 +214,7 @@ class _BaseExample():
     def test_forward_backward_logprob(self):
         # test forward algorithm portion of forward_backward
         
-        numpy.random.seed(_FORWARD_SEED)
+#        numpy.random.seed(_FORWARD_SEED)
         for n, (obs, expected_logprob) in enumerate(zip(self.test_obs_seqs, self.expected_forward_logprobs)):
             (found_logprob,
              scaled_forward,
@@ -229,12 +229,15 @@ class _BaseExample():
                                                                                                 )
             yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
 
+    @unittest.skip
     def test_joint_path_logprob(self):
         assert False
 
+    @unittest.skip
     def test_conditional_path_logprob(self):
         assert False
 
+    @unittest.skip
     def test_forward_backward_backward(self):
         # TODO: test backward component of forward-backward algorithm
         assert False
@@ -357,7 +360,7 @@ class TestA2DiscreteCoin(TestACoin):
         cls.generating_hmm = hmm
         cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
 
-        numpy.random.seed(_TRAINING_SEED)
+#        numpy.random.seed(_TRAINING_SEED)
 
         for x in cls.seq_lengths:
             states, obs, _ = hmm.generate(x)

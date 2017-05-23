@@ -8,6 +8,7 @@ from minihmm.test.common import (
     check_list_equal,
     check_array_equal,
     check_tuple_equal,
+    check_equal,
 )
 from minihmm.util import (
     matrix_to_dict,
@@ -75,6 +76,8 @@ class TestBuildHMMTables():
         yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
         yield check_array_equal, found_transition_counts, expected_transition_counts
         yield check_array_equal, found_transition_freqs, expected_transition_freqs
+        yield check_array_equal, found_transition_freqs.sum(1), 1.0
+        yield check_equal, found_transition_counts.sum(), sum([len(X) - 1 for X in self.test_seqs]) 
 
     def test_transitions_no_weights_int_pseudocounts(self):
         for pcounts in (1,2,3):
@@ -86,6 +89,7 @@ class TestBuildHMMTables():
             yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
             yield check_array_equal, found_transition_counts, expected_transition_counts
             yield check_array_equal, found_transition_freqs, expected_transition_freqs
+            yield check_array_equal, found_transition_freqs.sum(1), 1.0
 
     def test_transitions_no_weights_array_pseudocounts(self):
         pmat = numpy.random.randint(0, high=255, size=(self.num_states, self.num_states))
@@ -97,6 +101,7 @@ class TestBuildHMMTables():
         yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
         yield check_array_equal, found_transition_counts, expected_transition_counts
         yield check_array_equal, found_transition_freqs, expected_transition_freqs
+        yield check_array_equal, found_transition_freqs.sum(1), 1.0
 
     def test_transitions_weights_no_pseudocounts(self):
         expected_transition_counts = 0
@@ -110,6 +115,7 @@ class TestBuildHMMTables():
         yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
         yield check_array_equal, found_transition_counts, expected_transition_counts
         yield check_array_equal, found_transition_freqs, expected_transition_freqs
+        yield check_array_equal, found_transition_freqs.sum(1), 1.0
 
     def test_transitions_weights_int_pseudocounts(self):
         my_counts = 0
@@ -125,6 +131,7 @@ class TestBuildHMMTables():
             yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
             yield check_array_equal, found_transition_counts, expected_transition_counts
             yield check_array_equal, found_transition_freqs, expected_transition_freqs
+            yield check_array_equal, found_transition_freqs.sum(1), 1.0
 
     def test_transitions_weights_array_pseudocounts(self):
         pmat = numpy.random.randint(0, high=255, size=(self.num_states, self.num_states))
@@ -140,6 +147,7 @@ class TestBuildHMMTables():
         yield check_tuple_equal, found_transition_counts.shape, (self.num_states, self.num_states)
         yield check_array_equal, found_transition_counts, expected_transition_counts
         yield check_array_equal, found_transition_freqs, expected_transition_freqs
+        yield check_array_equal, 1.0, found_transition_freqs.sum(1)
 
     def test_transitions_alternate_initializer(self):
         expected_transition_counts = 0
@@ -149,8 +157,6 @@ class TestBuildHMMTables():
 
         found_dense = found_transition_counts.todense()
         assert_array_equal(found_dense, expected_transition_counts)
-
-#---------------------------------------------------
 
     def test_state_priors_no_weights_no_pseudocounts(self):
         expected_prior_counts = numpy.zeros(self.num_states)
@@ -165,6 +171,7 @@ class TestBuildHMMTables():
         yield check_tuple_equal, found_prior_counts.shape, (self.num_states, )
         yield check_array_equal, found_prior_counts, expected_prior_counts
         yield check_array_equal, found_prior_freqs, expected_prior_freqs
+        yield check_equal, found_prior_freqs.sum(), 1
 
     def test_state_priors_no_weights_int_pseudocounts(self):
         my_counts = numpy.zeros(self.num_states)
