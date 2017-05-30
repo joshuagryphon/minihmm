@@ -47,7 +47,12 @@ References
 import warnings
 import copy
 import numpy
-from minihmm.factors import AbstractGenerativeFactor, AbstractTableFactor
+from minihmm.factors import (
+    AbstractGenerativeFactor,
+    AbstractTableFactor,
+    ArrayFactor,
+    MatrixFactor
+)
 from minihmm.util import matrix_to_dict, matrix_from_dict
 
 class FirstOrderHMM(AbstractGenerativeFactor):
@@ -76,8 +81,12 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             |MatrixFactor| describing transition probabilities from each state
             (first index) to each other state (second index).
         """
-        assert len(state_priors) == len(emission_probs)
-        assert len(state_priors) == len(trans_probs)
+        splen = len(state_priors)
+        tlen  = len(trans_probs)
+        elen  = len(emission_probs)
+        if splen != tlen or splen != elen:
+            raise ValueError("State priors, transition probabilities, and emission factors must have same length. Found %s, %s, %s instead." % (splen, tlen, elen))
+
         self.num_states = len(state_priors)
         self.state_priors   = state_priors
         self.emission_probs = emission_probs
@@ -112,7 +121,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         return dtmp
 
     @staticmethod
-    def from_dict(self, dtmp, emission_probs=None):
+    def from_dict(dtmp, emission_probs=None):
         """
         Parameters
         ----------
@@ -131,9 +140,15 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         -------
         :class:`~minihmm.hmm.FirstOrderHMM`
         """
-        my_dict["trans_probs"]    = matrix_from_dict(dtmp["trans_probs"],  dense=True)
-        my_dict["state_priors"]   = matrix_from_dict(dtmp["state_priors"], dense=True)
-        my_dict["emission_probs"] = emission_probs
+        if emission_probs is None:
+            raise ValueError("Need to supply emission probabilities, as these are not presently serialized")
+
+        sp = numpy.array(matrix_from_dict(dtmp["state_priors"], dense=True))
+        my_dict = {
+            "trans_probs"    : MatrixFactor(numpy.array(matrix_from_dict(dtmp["trans_probs"],  dense=True))),
+            "state_priors"   : ArrayFactor(sp.reshape(sp.shape[1])),
+            "emission_probs" : emission_probs,
+        }
 
         return FirstOrderHMM(**my_dict)
         

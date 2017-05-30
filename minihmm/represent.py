@@ -168,13 +168,38 @@ class ModelReducer(object):
 
     @staticmethod
     def from_dict(dtmp, emission_probs=None):
+        """Revive a model from a dictionary
+
+        Parameters
+        ----------
+        dtmp : dict
+            Dictionary representation of
+            :class:`~minihmm.represent.ModelReducer`, made by
+            :meth:`ModelReducer.to_dict`
+
+        emission_probs : list
+            List of emission factors to include in revived HMM (at present
+            these are not saved by :meth:`ModelReducer.to_dict`)
+
+        Returns
+        -------
+        :class:`~minihmm.represent.ModelReducer`
+            Revived model
+        """
         hmm = FirstOrderHMM.from_dict(dtmp["first_order_hmm"], emission_probs=emission_probs) if "first_order_hmm" in dtmp else None
         return ModelReducer(dtmp["starting_order"], dtmp["high_order_states"], hmm=hmm)
 
     def to_dict(self):
+        """Convert `self` to a dict (e.g. for JSON dumps)
+
+        Returns
+        -------
+        dict
+            Dictionary representation of `self`
+        """
         dtmp = {
             "starting_order"    : self.starting_order,
-            "high_order_states" : self.num_states,
+            "high_order_states" : self.high_order_states,
         }
         if self.hmm is not None:
             dtmp["first_order_hmm"] = self.hmm.to_dict()
