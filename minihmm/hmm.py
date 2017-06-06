@@ -479,7 +479,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         
         return numpy.array(states).astype(int), numpy.array(emissions), logprob
 
-    # TODO: test
     def joint_path_logprob(self, path, emissions):
         """Return log P(path, emissions) evaluated under this model
 
@@ -505,7 +504,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         return joint_logprob
 
-    # TODO: test
     def conditional_path_logprob(self, path, emissions):
         """Return log P(path | emissions) evaluated under this model
 
@@ -529,7 +527,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
         return joint_logprob - obs_logprob
 
-    # TODO: return probability P(path | emissions)?
     def sample(self, emissions, num_samples=1):
         """Sample state sequences from the distribution P(states | emissions),
         by tracing backward through the matrix of forward probabilities. 

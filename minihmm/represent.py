@@ -198,6 +198,7 @@ class ModelReducer(object):
             Dictionary representation of `self`
         """
         dtmp = {
+            "model_class"       : "minihmm.represent.ModelReducer",
             "starting_order"    : self.starting_order,
             "high_order_states" : self.high_order_states,
         }
