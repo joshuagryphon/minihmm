@@ -91,11 +91,13 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         self.state_priors   = state_priors
         self.emission_probs = emission_probs
         self.trans_probs    = trans_probs
-        self._logt = numpy.log(trans_probs.data)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+            self._logt = numpy.log(trans_probs.data)
     
     def __str__(self):
         return repr(self)
-   
+    
     def __repr__(self):
         return "<%s parameters:[%s]>" % (self.__class__.__name__,
                                          self.serialize())
@@ -113,6 +115,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             Dictionary representation of `self`
         """
         dtmp = {
+            "model_class"    : "minihmm.hmm.FirstOrderHMM",
             "state_priors"   : matrix_to_dict(self.state_priors.data),
             "trans_probs"    : matrix_to_dict(self.trans_probs.data),
             "emission_probs" : [], # FIXME: implement later
