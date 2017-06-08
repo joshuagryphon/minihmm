@@ -10,7 +10,12 @@ import numpy
 import scipy.stats
 
 from collections import Counter
-from nose.tools import assert_greater_equal, assert_less_equal
+from nose.tools import (
+    assert_greater_equal,
+    assert_less_equal,
+    assert_dict_equal,
+    assert_list_equal,
+)
 from numpy.testing import (assert_array_equal,
                            assert_array_almost_equal,
                            assert_almost_equal)
@@ -42,6 +47,7 @@ class _BaseExample():
     def do_subclass_setup(cls):
         cls.name = ""
         cls.min_frac_equal = 0.8
+        cls.hmm_dict = None
         cls.state_prior_estimator = None
         cls.transition_estimator  = None
         cls.emission_estimator    = None
@@ -237,6 +243,19 @@ class _BaseExample():
         # TODO: test backward component of forward-backward algorithm
         assert False
 
+    def test_to_dict(self):
+        found_dict = self.generating_hmm.to_dict()
+        for k in ("state_priors", "trans_probs"):
+            assert_dict_equal(found_dict[k], self.hmm_dict[k])
+
+        assert_list_equal(found_dict["emission_probs"], self.hmm_dict["emission_probs"])
+
+    def test_from_dict(self):
+        dummy_emissions = [None] * self.hmm.num_states
+        found_model = FirstOrderHMM.from_dict(self.hmm_dict, emission_probs=dummy_emissions)
+
+
+
 #     def test_train(self):
 #         mdict = train_baum_welch(self.naive_hmm,
 #                                  self.observations,
@@ -293,6 +312,23 @@ class TestACoin(_BaseExample):
              }
         }
 
+        cls.hmm_dict = {
+            "emission_probs" : [],
+            "state_priors"   : {
+                "shape" : (1, 2),
+                "row"   : [0, 0],
+                "col"   : [0, 1],
+                "data"  : [0.005, 0.995],
+
+            },
+            "trans_probs"    : {
+                "shape" : (2, 2),
+                "row"   : [0, 0, 1, 1],
+                "col"   : [0, 1, 0, 1],
+                "data"  : [0.8, 0.2, 0.3, 0.7],
+            }
+        }
+
 
 
 class TestBTwoGaussian(_BaseExample):
@@ -326,7 +362,22 @@ class TestBTwoGaussian(_BaseExample):
             }
         }
 
-    
+        cls.hmm_dict = {
+            "emission_probs" : [],
+            "state_priors"   : {
+                "shape" : (1, 2),
+                "row"   : [0, 0],
+                "col"   : [0, 1],
+                "data"  : [0.8, 0.2],
+
+            },
+            "trans_probs"    : {
+                "shape" : (2, 2),
+                "row"   : [0, 0, 1, 1],
+                "col"   : [0, 1, 0, 1],
+                "data"  : [0.9, 0.1, 0.25, 0.75],
+            }
+        } 
 
 class TestCFourPoisson(_BaseExample):
 
@@ -370,3 +421,20 @@ class TestCFourPoisson(_BaseExample):
                  ]
             }
         }
+
+        cls.hmm_dict = {
+            "emission_probs" : [],
+            "state_priors"   : {
+                "shape" : (1, 4),
+                "row"   : [0, 0, 0, 0],
+                "col"   : [0, 1, 2, 3],
+                "data"  : [0.7, 0.05, 0.15, 0.10],
+
+            },
+            "trans_probs"    : {
+                "shape" : (4, 4),
+                "row"   : [0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+                "col"   : [0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3],
+                "data"  : [0.8,0.05,0.05,0.1,  0.2,0.6,0.1,0.1, 0.01,0.97,0.01,0.01, 0.45,0.01,0.04,0.5],
+            }
+        } 
