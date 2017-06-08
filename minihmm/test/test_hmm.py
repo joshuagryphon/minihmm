@@ -8,6 +8,7 @@ import unittest
 import itertools
 import numpy
 import scipy.stats
+import warnings
 
 from collections import Counter
 from nose.tools import (
@@ -15,6 +16,7 @@ from nose.tools import (
     assert_less_equal,
     assert_dict_equal,
     assert_list_equal,
+    assert_almost_equal,
 )
 from numpy.testing import (assert_array_equal,
                            assert_array_almost_equal,
@@ -234,17 +236,27 @@ class _BaseExample():
             yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
 
     def test_joint_path_logprob(self):
-        assert False
+        for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs, self.expected_joint_logprobs)):
+            for path, path_prob in expected_joint_probs.items():
+                found_joint_prob = self.generating_hmm.joint_path_logprob(path, obs)
+                assert_almost_equal(found_joint_prob, path_prob)
 
     def test_conditional_path_logprob(self):
-        assert False
+        for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs, self.expected_joint_logprobs)):
+            total_logprob = self.generating_hmm.fast_forward(obs)
+            for path, path_prob in expected_joint_probs.items():
+                found_cond_prob = self.generating_hmm.conditional_path_logprob(path, obs)
+                assert_almost_equal(found_cond_prob, path_prob - total_logprob)
 
     def test_forward_backward_backward(self):
         # TODO: test backward component of forward-backward algorithm
         assert False
 
     def test_to_dict(self):
-        found_dict = self.generating_hmm.to_dict()
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            found_dict = self.generating_hmm.to_dict()
+
         for k in ("state_priors", "trans_probs"):
             assert_dict_equal(found_dict[k], self.hmm_dict[k])
 

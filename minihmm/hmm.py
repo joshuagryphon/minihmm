@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Contains classes that represent Hidden Markov Models.
+"""Contains classes that represent first-order Hidden Markov Models.
 These encapsulate methods for:
 
     #. Assigning state labels to sequences of observations, decoding via
@@ -14,17 +14,14 @@ All classes here support multivariate and univariate emissions (observation
 sequences) that can be continuous or discrete. 
 
 Training utilities for estimating model parameters may be found
-in :py:mod:`minihmm.training`
+in :py:mod:`minihmm.training`. Utilities for manipulating higher-order models
+may be found in :mod:`minihmm.represent`
 
 
 Important classes
 -----------------
 |FirstOrderHMM|
     A First-Order HMM using ordinary precision math, suitable for most purposes
-
-|HighPrecisionFirstOrderHMM|
-    An arbitrary-precision HMM built upon the :py:obj:`mpmath` library.
-    Far, far slower than |FirstOrderHMM|, but accurate in emergencies
 
 
 References
@@ -154,7 +151,6 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         }
 
         return FirstOrderHMM(**my_dict)
-        
     
     def serialize(self):
         ltmp = ["state_priors",
@@ -401,8 +397,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         of emissions, using posterior decoding. Note, this objective is distinct
         from finding the most probable sequence of states for all emissions, as
         is given in Viterbi decoding. This alternative may be more appropriate
-        when multiple paths have similar probabilities, making the most likely
-        path dubious.
+        when multiple paths have similar probabilities.
         
         Parameters
         ----------
@@ -496,11 +491,11 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             Log probability of P(path, emissions)
         """
         T = self._logt
-        joint_logprob = self.state_priors.logprob(states[0])
-        joint_logprob += self.emission_probs[states[0]].logprob(emissions[0])
+        joint_logprob = self.state_priors.logprob(path[0])
+        joint_logprob += self.emission_probs[path[0]].logprob(emissions[0])
 
         for i in range(1,len(emissions)):
-            joint_logprob += T[states[i-1],states[i]] + self.emission_probs[states[i]].logprob(emissions[i])
+            joint_logprob += T[path[i-1],path[i]] + self.emission_probs[path[i]].logprob(emissions[i])
 
         return joint_logprob
 
