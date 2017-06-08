@@ -88,10 +88,28 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         self.state_priors   = state_priors
         self.emission_probs = emission_probs
         self.trans_probs    = trans_probs
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-            self._logt = numpy.log(trans_probs.data)
-    
+        self.__logt = None
+
+    @property
+    def _logt(self):
+        # lazily evaluate log of transition probabilities on first use
+        if self.__logt is None:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
+                self.__logt = numpy.log(self.trans_probs.data)
+
+        return self.__logt
+
+    @property
+    def trans_probs(self):
+        return self._trans_probs
+
+    @trans_probs.setter
+    def trans_probs(self, value):
+        self._trans_probs = value
+        # maintain synchrony with log form used in many calculations
+        self.__logt = None
+
     def __str__(self):
         return repr(self)
     
