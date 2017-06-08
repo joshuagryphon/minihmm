@@ -8,7 +8,7 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
-Unreleased
+v0.1.4 = [2017-06-08]
 ---------------------
 
  - Some class properties are now manged, saving me from myself
