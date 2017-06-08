@@ -140,31 +140,28 @@ class ModelReducer(object):
         self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
         self.low_order_states  = len(self.low_states_to_high)
 
-        self.hmm = hmm
+        self._hmm = hmm
+
+    @property
+    def hmm(self):
+       if self._hmm is None:
+            cname = self.__class__.__name__
+            raise ValueError("No HMM associated with %s. Please set `this.hmm` to something." % (cname, cname))
+
+       return self._hmm
+
+    @hmm.setter
+    def hmm(self, value):
+        if not isinstance(value, FirstOrderHMM):
+            raise ValueError("`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" % (type(value)))
+        
+        self._hmm = value
 
     def __str__(self):
-        return "<%s order=%s high_states=%s hmm=%s>" % (self.__class__.__name__, self.starting_order, self.high_order_states, self.hmm is not None)
+        return "<%s order=%s high_states=%s hmm=%s>" % (self.__class__.__name__, self.starting_order, self.high_order_states, self._hmm is not None)
 
     def __repr__(self):
         return str(self)
-
-    def _check_hmm(self):
-        if self.hmm is None:
-            cname = self.__class__.__name__
-            raise ValueError("No HMM associated with %s. See %s.set_hmm()" % (cname, cname))
-
-    def set_hmm(self, hmm):
-        """Associate a first-order hmm with the :class:`ModelReducer`
-
-        Parameters
-        ----------
-        hmm : :class:`minihmm.hmm.FirstOrderHMM`
-           First-order representation of high-order model 
-        """
-        if not isinstance(hmm, FirstOrderHMM):
-            raise ValueError("`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" % (type(hmm)))
-        
-        self.hmm = hmm
 
     @staticmethod
     def from_dict(dtmp, emission_probs=None):
@@ -379,26 +376,123 @@ class ModelReducer(object):
         return ltmp
 
     def viterbi(self, emissions):
-        self._check_hmm()
+        """Finds the most likely state sequence underlying a set of emissions
+        using the Viterbi algorithm.
+
+        See http://en.wikipedia.org/wiki/Viterbi_algorithm
+        
+        Parameters
+        ----------
+        emissions : numpy.ndarray
+            Sequence of observations
+
+        Returns
+        -------
+        `viterbi_states`
+            :class:`numpy.ndarray`. Decoded labels for each position in
+            emissions[start:end]
+        """        
         raw = self.hmm.viterbi(emissions)["viterbi_states"]
         high = self.raise_stateseq_orders([raw])[0]
         return high
 
     def posterior_decode(self, emissions):
-        self._check_hmm()
+        """Find the most probable state for each individual state in the sequence
+        of emissions, using posterior decoding. Note, this objective is distinct
+        from finding the most probable sequence of states for all emissions, as
+        is given in Viterbi decoding. This alternative may be more appropriate
+        when multiple paths have similar probabilities.
+
+        Parameters
+        ----------
+        emissions : numpy.ndarray
+            Sequence of observations
+
+        
+        Returns
+        -------
+        numpy.ndarray
+            An array of dimension [t x 1] of the most likely states at each point t
+        """
         raw, _ = self.hmm.posterior_decode(emissions)
         return self.raise_stateseq_orders([raw])[0]
 
     def sample(self, emissions, num_samples):
-        self._check_hmm()
+        """Sample state sequences from the distribution P(states | emissions),
+        by tracing backward through the matrix of forward probabilities. 
+        See Durbin1997 ch 4.3, section "Probabilistic sampling of aligments"
+
+        Parameters
+        ----------
+        emissions : numpy.ndarray
+            Sequence of observations
+
+        num_samples : int, optional
+            Number of state paths to generate (Default: 1)
+
+
+        Returns
+        -------
+        list
+            List of state paths
+        """
         raw_paths = self.hmm.sample(emissions, num_samples=num_samples)
         return self.raise_stateseq_orders(raw_paths)
 
     def generate(self, length):
-        self._check_hmm()
+        """Generates a random sequence of states and emissions from the HMM
+        
+        Parameters
+        ----------
+        length : int
+            Length of sequence to generate
+        
+        
+        Returns
+        -------
+        numpy.ndarray
+            Array of dimension [t x 1] indicating the HMM state at each timestep
+        
+        numpy.ndarray
+            Array of dimension [t x Q] indicating the observation at each timestep.
+            Q = 1 for univariate HMMs, or more than 1 if observations are multivariate.
+            
+        float
+            Joint log probability of generated state and observation sequence.
+            **Note**: this is different from the log probability of the observation
+            sequence alone, which would be the sum of its joint probabilities
+            with all possible state sequences.
+        
+        
+        Notes
+        -----
+        The HMM can only generate sequences if all of its EmissionFactors
+        are generative. I.e. if using |FunctionFactor| or |LogFunctionFactor| s,
+        generator functions must be specified at their instantiation. See the
+        documentation for |FunctionFactor| and |LogFunctionFactor| for help.
+        """
         raw_path, obs, logprob = self.hmm.generate(length)
         high_path = self.raise_stateseq_orders([raw_path])[0]
         return high_path, obs, logprob
+
+    def joint_path_logprob(self, path, emissions):
+        """Return log P(path, emissions) evaluated under this model
+
+        Parameters
+        ----------
+        path : list-like
+            Sequence of states
+
+        emissions : list-like
+            Sequence of observations
+
+        Returns
+        -------
+        float
+            Log probability of P(path, emissions)
+        """
+        lower_path = self.lower_stateseq_orders([path])[0]
+        return self.hmm.joint_path_loprob(lower_path, emissions)
 
     def remap_emission_factors(self, emission_probs):
         """Map emission probabilities from high-order space to equivalent reduced space
@@ -455,7 +549,7 @@ class ModelReducer(object):
 
         return state_priors, coo_matrix((vals, (row_ords, col_ords)))
 
-
+    
  
 
 #TODO :  implement and test

@@ -92,6 +92,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
 
     @property
     def _logt(self):
+        """Log of transition probability matrix"""
         # lazily evaluate log of transition probabilities on first use
         if self.__logt is None:
             with warnings.catch_warnings():
