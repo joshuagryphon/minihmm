@@ -8,11 +8,30 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
+Unreleased
+---------------------
+
+ - Some class properties are now manged, saving me from myself
+
+ - ``to_dict()`` and ``from_dict()`` methods specified for serializing models as
+   JSON blobs
+
+ - Convenience methods for building HMM tables from known observations,
+   optionally with weights
+
+ - Speed improvements under the hood
+
+ - Suppression of non-useful warnings, and ccreation of useful ones
+
+ - Unit tests for key features
+
+
+
 v0.1.3 = [2017-05-09]
 ---------------------
 
  - Model reduction tested and working, even though unit tests not yet 
-   flushed out
+   fleshed out
 
  - Valid pseudocount arrays now generated for state priors in high order space
    (before was only for transition tables)
