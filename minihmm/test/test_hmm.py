@@ -251,8 +251,13 @@ class _BaseExample():
         assert_list_equal(found_dict["emission_probs"], self.hmm_dict["emission_probs"])
 
     def test_from_dict(self):
-        dummy_emissions = [None] * self.hmm.num_states
+        expected_hmm = self.generating_hmm
+        dummy_emissions = [None] * expected_hmm.num_states
         found_model = FirstOrderHMM.from_dict(self.hmm_dict, emission_probs=dummy_emissions)
+
+        assert_list_equal(found_model.emission_probs, dummy_emissions)
+        assert_array_equal(found_model.trans_probs.data, expected_hmm.trans_probs.data)
+        assert_array_equal(found_model.state_priors.data, expected_hmm.state_priors.data)
 
 
 
