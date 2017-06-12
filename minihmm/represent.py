@@ -139,21 +139,20 @@ class ModelReducer(object):
         self._dummy_states     = self._get_dummy_states()
         self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
         self.low_order_states  = len(self.low_states_to_high)
-
-        self._hmm = hmm
+        self.hmm = hmm
 
     @property
     def hmm(self):
        if self._hmm is None:
             cname = self.__class__.__name__
-            raise ValueError("No HMM associated with %s. Please set `this.hmm` to something." % (cname, cname))
+            raise ValueError("No HMM associated with %s. Please set `this.hmm` to something." % cname)
 
        return self._hmm
 
     @hmm.setter
     def hmm(self, value):
-        if not isinstance(value, FirstOrderHMM):
-            raise ValueError("`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" % (type(value)))
+        if not isinstance(value, FirstOrderHMM) and value is not None:
+            raise ValueError("`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" % (type(value).__name__))
         
         self._hmm = value
 
