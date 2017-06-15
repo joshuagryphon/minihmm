@@ -298,8 +298,7 @@ def train_baum_welch(model,
                      start_iteration         = 0,
                      processes               = 4,
                      chunksize               = None,
-                     logfile                 = NullWriter(),
-                     printer                 = NullWriter(),
+                     logfunc                 = None,
                     ):
     """Train an HMM using the Baum-Welch algorithm on one or more unlabeled observation sequences.
     
@@ -364,11 +363,15 @@ def train_baum_welch(model,
     chunksize : int, optional
         Number of observation sequences to send to each process at a time
         (Default: calculated from ``len(obs)`` and ``processes``)
-                          
-    printer : file-like
-        An open filehandle or object implementing a ``write()`` method,
-        to which parameter values and the current likelihood will be passed
-        at each iteration of training (Default: *|NullWriter|*)
+
+    logfunc : callable, optional
+        Logging function. Should accept a model as a first argument, and allow
+        arbitrary keywords to pass through.  At present, the following keywords
+        are passed: ``iteration``, ``counted``, ``delta``,
+        ``weighted_logprob``, ``unweighted_logprob``,
+        ``weighted_logprob_per_obs``, ``unweighted_logprob_per_obs``,
+        ``weighted_length``, ``unweighted_length``.
+
     
     Returns
     -------
@@ -498,29 +501,42 @@ def train_baum_welch(model,
             last_total_logprob = new_total_logprob
 
 
-            print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                                        new_total_logprob,
-                                                        logprob_per_obs,
-                                                        counted,
-                                                        c,
-                                                        model.serialize())
-            print("%s\n" % print_message)
+#            print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
+#                                                        new_total_logprob,
+#                                                        logprob_per_obs,
+#                                                        counted,
+#                                                        c,
+#                                                        model.serialize())
+
+            if logfunc is not None:
+                logfunc(model,
+                        iteration = c,
+                        counted   = counted,
+                        delta     = delta,
+
+                        weighted_logprob   = new_total_logprob,
+                        unweighted_logprob = unweight_total_logprob,
+                        weighted_logprob_per_obs   = logprob_per_obs,
+                        unweighted_logprob_per_obs = unweight_logprob_per_obs,
+
+                        weighted_length    = total_obs_length,
+                        unweieghted_length = unweight_total_length)
                 
 
             # M-step of Expectation-Maximization:
             # Update parameters for next model
             state_priors = state_prior_estimator.construct_factors(model,
                                                                    pi_parts,
-                                                                   noise_weight,
-                                                                   pseudocounts)
+                                                                   noise_weight       = noise_weight,
+                                                                   pseudocount_weight = pseudocounts)
             trans_probs = transition_estimator.construct_factors(model,
                                                                  A_parts,
-                                                                 noise_weight,
-                                                                 pseudocounts)
+                                                                 noise_weight       = noise_weight,
+                                                                 pseudocount_weight = pseudocounts)
             emission_factors = emission_estimator.construct_factors(model,
                                                                     E_parts,
-                                                                    noise_weight,
-                                                                    pseudocounts)
+                                                                    noise_weight       = noise_weight,
+                                                                    pseudocount_weight = pseudocounts)
             
             c += 1
 
