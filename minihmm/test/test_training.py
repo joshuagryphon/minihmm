@@ -73,7 +73,7 @@ class _BaseExample:
         found    = self.training_results["best_model"].state_priors.data
         expected = self.generating_hmm.state_priors.data
         sse = (found - expected)**2
-        assert_array_less(sse, 1e-3)
+        assert_array_less(sse, 2e-3)
 
     def test_transition_probs_trained(self):
         found    = self.training_results["best_model"].trans_probs.data
@@ -179,5 +179,5 @@ class TestGaussian(_BaseExample):
         for found, expected in zip(self.training_results["best_model"].emission_probs,
                                    self.generating_hmm.emission_probs):
             for k in expected.dist_kwargs.keys():
-                assert_almost_equal(found.dist_kwargs[k], expected.dist_kwargs[k])
+                yield check_almost_equal, found.dist_kwargs[k], expected.dist_kwargs[k], { "decimal" : 3 }
 
