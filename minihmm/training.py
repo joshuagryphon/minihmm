@@ -499,11 +499,11 @@ def train_baum_welch(model,
 
 
             print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                                 new_total_logprob,
-                                                 logprob_per_obs,
-                                                 counted,
-                                                 c,
-                                                 model.serialize()
+                                                        new_total_logprob,
+                                                        logprob_per_obs,
+                                                        counted,
+                                                        c,
+                                                        model.serialize())
             print("%s\n" % print_message)
                 
 
