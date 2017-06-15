@@ -50,20 +50,13 @@ class _BaseExample():
         cls.name = ""
         cls.min_frac_equal = 0.8
         cls.hmm_dict = None
-        cls.state_prior_estimator = None
-        cls.transition_estimator  = None
-        cls.emission_estimator    = None
         cls.models = {
             "generating" : {
                 "trans_probs"      : None,
                 "state_priors"     : None,
                 "emission_probs"   : None,
             },
-            "naive"      : {
-                "trans_probs"      : None,
-                "state_priors"     : None,
-                "emission_probs"   : None,
-            }
+
         }
 
     @classmethod
@@ -85,8 +78,6 @@ class _BaseExample():
         cls.do_subclass_setup()
         hmm = FirstOrderHMM(**cls.models["generating"])
         cls.generating_hmm = hmm
-        cls.naive_hmm      = FirstOrderHMM(**cls.models["naive"])
-
         numpy.random.seed(_TRAINING_SEED)
 
         for x in cls.seq_lengths:
@@ -273,43 +264,13 @@ class _BaseExample():
 
 
 
-#     def test_train(self):
-#         mdict = train_baum_welch(self.naive_hmm,
-#                                  self.observations,
-#                                  state_prior_estimator = self.state_prior_estimator,
-#                                  transition_estimator = self.transition_estimator,
-#                                  emission_estimator   = self.emission_estimator,
-#                                  noise_weights = neg_exp_noise_gen(),
-# #                                 miniter = 200,
-# #                                 pseudocount_weights  = iter([0]),
-#                                  )
-#         new_model = mdict["best_model"]
-#         print(mdict)
-# 
-#         yield assert_array_almost_equal, self.generating_hmm.trans_probs.data, new_model.trans_probs.data
-#         for expected, found in zip(self.generating_hmm.emission_probs, new_model.emission_probs):
-#             if expected is not None:
-#                 yield assert_array_almost_equal, expected.data, found.data
-
-
 class TestACoin(_BaseExample):
 
     @classmethod
     def do_subclass_setup(cls):
         cls.name = "Coin example"
         cls.min_frac_equal = 0.69
-
-        cls.state_prior_estimator = DiscreteStatePriorEstimator()
-        cls.transition_estimator  = DiscreteTransitionEstimator()
-        cls.emission_estimator    = DiscreteEmissionEstimator(2)
  
-#        cls.transition_estimator = PseudocountTransitionEstimator(numpy.array([
-#            [ 0 ,  0,  1,  1],
-#            [ 0, 1.0,  0,  0],
-#            [ 0,   0,  1,  1],
-#            [ 0,   0,  1,  1]
-#            ]))
-
         cls.models = {
             "generating" : {
                 "state_priors"     : ArrayFactor([0.005,0.995]),
@@ -319,14 +280,7 @@ class TestACoin(_BaseExample):
                 "emission_probs"   : [ArrayFactor([0.6,0.4]),
                                       ArrayFactor([0.15,0.85])],
             },
-            "naive"      : {
-                "state_priors"     : ArrayFactor([0.48,0.52]),
-                "trans_probs"      : MatrixFactor(numpy.array([
-                                                    [0.5, 0.5],
-                                                    [0.5, 0.5]])),
-                "emission_probs"   : [ArrayFactor([0.5,0.5]),
-                                      ArrayFactor([0.5,0.5])],
-             }
+
         }
 
         cls.hmm_dict = {
@@ -354,11 +308,6 @@ class TestBTwoGaussian(_BaseExample):
     def do_subclass_setup(cls):
         cls.name = "Two gaussian example"
         cls.min_frac_equal = 0.7
-
-        cls.state_prior_estimator = DiscreteStatePriorEstimator()
-        cls.transition_estimator  = DiscreteTransitionEstimator()
-        cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
-
         transitions = numpy.matrix([[0.9,0.1],
                                     [0.25,0.75]])
 
@@ -369,14 +318,7 @@ class TestBTwoGaussian(_BaseExample):
                 "emission_probs" : [ScipyDistributionFactor(scipy.stats.norm,loc=0,scale=0.5),
                                     ScipyDistributionFactor(scipy.stats.norm,loc=5,scale=10)],
             },
-            "naive"      : {
-                "emission_probs" : [ScipyDistributionFactor(scipy.stats.norm,loc=0,scale=0.6),
-                                    ScipyDistributionFactor(scipy.stats.norm,loc=2,scale=1),
-                                   ],
-                "state_priors"   : ArrayFactor([0.48,0.52]),
-                "trans_probs"    : MatrixFactor([[0.5, 0.5], 
-                                                 [0.5, 0.5]]),
-            }
+
         }
 
         cls.hmm_dict = {
@@ -402,13 +344,6 @@ class TestCFourPoisson(_BaseExample):
     def do_subclass_setup(cls):
         cls.name = "Four-state Poisson example"
         cls.min_frac_equal = 0.7
-
-        cls.state_prior_estimator = DiscreteStatePriorEstimator()
-        cls.transition_estimator  = DiscreteTransitionEstimator()
-        
-        # FIXME
-        cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
-
         transitions = numpy.matrix([[0.8,0.05,0.05,0.1],
                                     [0.2,0.6,0.1,0.1],
                                     [0.01,0.97,0.01,0.01],
@@ -427,16 +362,6 @@ class TestCFourPoisson(_BaseExample):
                  ]
 
             },
-            "naive"      : {
-                "trans_probs"    : MatrixFactor(numpy.full((4,4), 1.0/16, dtype=float)),
-                "state_priors"   : ArrayFactor([0.25,0.25,0.25,0.25]),
-                "emission_probs" : [
-                      ScipyDistributionFactor(scipy.stats.poisson,3),
-                      ScipyDistributionFactor(scipy.stats.poisson,2),
-                      ScipyDistributionFactor(scipy.stats.poisson,1),
-                      ScipyDistributionFactor(scipy.stats.poisson,4),
-                 ]
-            }
         }
 
         cls.hmm_dict = {

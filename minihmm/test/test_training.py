@@ -1,6 +1,6 @@
 #!/usr/bin/env vpython
 import numpy
-import functools
+import scipy.stats
 
 from numpy.testing import (
     assert_almost_equal,
@@ -24,7 +24,6 @@ from minihmm.training import (
 from minihmm.factors import (
     ArrayFactor,
     MatrixFactor,
-    LogFunctionFactor,
     ScipyDistributionFactor
 )
 
@@ -46,7 +45,7 @@ class _BaseExample:
 
 
         # generate 100 training examples
-        cls.training_examples = [cls.generating_hmm.generate(200)[1] for _ in range(100)]
+        cls.training_examples = [cls.generating_hmm.generate(cls.example_len)[1] for _ in range(cls.num_examples)]
 
         # retrain
         cls.training_results = train_baum_welch(cls.naive_hmm,
@@ -54,7 +53,7 @@ class _BaseExample:
                                                 state_prior_estimator = cls.state_prior_estimator,
                                                 transition_estimator  = cls.transition_estimator,
                                                 emission_estimator    = cls.emission_estimator,
-                                                miniter               = 100,
+                                                miniter               = 80,
                                                 maxiter               = 1000,
                                                 processes             = 1
                                                )
@@ -63,7 +62,9 @@ class _BaseExample:
     def do_subclass_setup(cls):
         # must define the following in subclasses
         cls.test_name = None
-        cls.arrays            = {}
+        cls.arrays       = {}
+        cls.example_len  = 200
+        cls.num_examples = 100
         cls.state_prior_estimator = None
         cls.transition_estimator  = None
         cls.emission_estimator    = None
@@ -84,8 +85,12 @@ class _BaseExample:
         delta = numpy.convolve([1, -1], self.training_results["weight_logprobs"], mode="valid")
         assert_greater_equal((delta >= 0).sum() / len(delta), 0.9)
 
+    # override this method in subclass
+    def test_emission_probs_trained(self):
+        assert False
 
-class TestCasinoTraining(_BaseExample):
+
+class TestCasino(_BaseExample):
     """Test re-training on a two-state HMM with discrete emissions"""
 
     @classmethod
@@ -99,6 +104,8 @@ class TestCasinoTraining(_BaseExample):
     @classmethod
     def do_subclass_setup(cls):
         cls.test_name = "DiscreteCasino"
+        cls.example_len  = 200
+        cls.num_examples = 100
         cls.state_prior_estimator = DiscreteStatePriorEstimator()
         cls.transition_estimator  = DiscreteTransitionEstimator()
         cls.emission_estimator    = DiscreteEmissionEstimator(6)
@@ -126,21 +133,51 @@ class TestCasinoTraining(_BaseExample):
             sse = (found.data - expected.data)**2
             assert_array_less(sse, 1e-4)
 
-def get_casino(hmm_type=FirstOrderHMM):
-    """Construct a two-state HMM over discrete values for testing purposes.
-    
-    This also implicitly tests ArrayFactor and MatrixFactor
-    @param hmm_type          Type of HMM to instantiate (must be FirstOrderHMM
-                              or a subclass)
-    """
-    state_priors = ArrayFactor(numpy.array([0.99,0.01]))
-    fair   = ArrayFactor(1.0 * numpy.ones(6) / 6.0)
-    unfair = ArrayFactor(numpy.array([0.1,0.1,0.1,0.1,0.1,0.5]))
-    #unfair = ArrayFactor(numpy.array([0.01,0.01,0.01,0.01,0.01,0.95]))
-    emission_probs = [fair,unfair]
-    transition_probs = MatrixFactor(numpy.array([[0.95,0.05],
-                                                 [0.1,0.9]]))
-    casino_hmm = hmm_type(state_priors,
-                          emission_probs,
-                          transition_probs)
-    return casino_hmm
+
+class TestGaussian(_BaseExample):
+    """Test re-training on a three-state HMM with continuous emissions"""
+
+    @classmethod
+    def get_emission_probs(cls):
+        return [
+                ScipyDistributionFactor(scipy.stats.norm, loc=0, scale=0.5),
+                ScipyDistributionFactor(scipy.stats.norm, loc=5, scale=10),
+                ScipyDistributionFactor(scipy.stats.norm, loc=-2, scale=1)
+            ]
+
+    @classmethod
+    def get_naive_emission_probs(cls):
+        return [
+                ScipyDistributionFactor(scipy.stats.norm, loc=0, scale=1),
+                ScipyDistributionFactor(scipy.stats.norm, loc=0, scale=1),
+                ScipyDistributionFactor(scipy.stats.norm, loc=0, scale=1),
+            ]
+
+    @classmethod
+    def do_subclass_setup(cls):
+        cls.test_name = "ContinuousGaussian"
+        cls.example_len  = 500
+        cls.num_examples = 100
+        cls.state_prior_estimator = DiscreteStatePriorEstimator()
+        cls.transition_estimator  = DiscreteTransitionEstimator()
+        cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
+
+        cls.arrays = {
+            "state_priors"       : numpy.array([0.8, 0.05, 0.15]),
+            "naive_state_priors" : numpy.array([0.6, 0.2, 0.2]),
+            "transition_probs"   : numpy.array([[0.9, 0.05, 0.05],
+                                                [0.1, 0.6,  0.3],
+                                                [0.2, 0.1,  0.7],
+                                                ]),
+            "naive_transition_probs" : numpy.array([[0.4, 0.3, 0.3],
+                                                    [0.3, 0.3, 0.3],
+                                                    [0.33, 0.33, 0.33],
+                                                    ]),
+        }
+
+    def test_emission_probs_trained(self):
+        for found, expected in zip(self.training_results["best_model"].emission_probs,
+                                   self.generating_hmm.emission_probs):
+            for k in expected.dist_kwargs.keys():
+                assert_almost_equal(found.dist_kwargs[k], expected.dist_kwargs[k])
+
