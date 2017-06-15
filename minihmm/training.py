@@ -179,110 +179,110 @@ def format_for_logging(x, fmt="%.8f"):
 
 
 
-def train_baum_welch2(model,
-                      obs,
-                      state_prior_estimator   = DiscreteStatePriorEstimator(),
-                      transition_estimator    = DiscreteTransitionEstimator(),
-                      emission_estimator      = None,
-                      weights                 = None,
-                      pseudocount_weights     = iter([1e-10]),
-                      observation_weights     = None,
-                      noise_weights           = iter([0.0]),
-                      log_func                = None,
-                      learning_threshold      = 1e-5,
-                      miniter                 = 10,
-                      maxiter                 = 1000,
-                      start_iteration         = 0,
-                      processes               = 4,
-                      chunksize               = None,
-                      logfile                 = NullWriter(),
-                      printer                 = NullWriter(),
-                      freeze                  = None,
-                     ):
-
-
-    expectation_func = functools.partial(bw_worker,
-                                         model,
-                                         state_prior_estimator = state_prior_estimator,
-                                         emission_estimator    = emission_estimator,
-                                         transition_estimator  = transition_estimator
-                                        )        
-
-    def validation_func(obs_stats):
-        """
-        Must return bool
-        """
-        return not any([transition_estimator.is_invalid(obs_stats[0]),
-                        emission_estimator.is_invalid(obs_stats[1]),
-                        state_prior_estimator.is_invalid(obs_stats[2]),
-                       ])
-
-    def maximization_func(obs_stats,
-                          obs_weights,
-                          last_model,
-                          noise_weight        = 0,
-                          pseudocount_weights = None,
-                          pseudocount_model   = None,
-                          freeze              = None):
-        """
-        Must return new model
-        """
-        if freeze is None:
-            freeze = set()
-
-        A_parts, E_Parts, pi_parts = zip(*obs_stats)
-
-        if "state_priors" in freeze:
-            new_state_priors = last_model.state_priors
-        else:
-            new_state_priors = state_prior_estimator.construct_factors(last_model,
-                                                                       pi_parts,
-                                                                       noise_weight,
-                                                                       pseudocounts)
-
-        if "trans_probs" in freeze:
-            new_trans_probs = last_model.trans_probs
-        else:
-            new_trans_probs = transition_estimator.construct_factors(last_model,
-                                                                     A_parts,
-                                                                     noise_weight,
-                                                                     pseudocounts)
-
-        if "emission_probs" in freeze:
-            new_emission_probs = last_model.emission_probs
-        else:
-            new_emission_probs = emission_estimator.construct_factors(model,
-                                                                      E_parts,
-                                                                      noise_weight,
-                                                                      pseudocounts)
-
-        return FirstOrderHMM(state_priors   = new_state_priors,
-                             trans_probs    = new_trans_probs,
-                             emission_probs = new_emission_probs)
-
-    return train_em(model,
-                    obs,
-                    expectation_func  = expectation_func,
-                    validation_func   = validation_func,
-                    maximization_func = maximization_func,
-                    log_func          = log_func,
-
-                    pseudocount_model   = None,
-
-                    pseudocount_weights = pseudocount_weights,
-                    noise_weights       = noise_weights,
-                    observation_weights = observtaion_weights,
-
-                    freeze              = freeze,
-
-                    learning_threshold  = learning_threshold,
-                    miniter             = miniter,
-                    maxiter             = maxiter,
-                    start_iteration     = start_iteration,
-
-                    processes           = processes,
-                    chunksize           = chunksize)
- 
+#def train_baum_welch2(model,
+#                      obs,
+#                      state_prior_estimator   = DiscreteStatePriorEstimator(),
+#                      transition_estimator    = DiscreteTransitionEstimator(),
+#                      emission_estimator      = None,
+#                      weights                 = None,
+#                      pseudocount_weights     = 0,
+#                      observation_weights     = None,
+#                      noise_weights           = 0,
+#                      log_func                = None,
+#                      learning_threshold      = 1e-5,
+#                      miniter                 = 10,
+#                      maxiter                 = 1000,
+#                      start_iteration         = 0,
+#                      processes               = 4,
+#                      chunksize               = None,
+#                      logfile                 = NullWriter(),
+#                      printer                 = NullWriter(),
+#                      freeze                  = None,
+#                     ):
+#
+#    model_type = type(model)
+#    expectation_func = functools.partial(bw_worker,
+#                                         model,
+#                                         state_prior_estimator = state_prior_estimator,
+#                                         emission_estimator    = emission_estimator,
+#                                         transition_estimator  = transition_estimator
+#                                        )        
+#
+#    def validation_func(obs_stats):
+#        """
+#        Must return bool
+#        """
+#        return not any([transition_estimator.is_invalid(obs_stats[0]),
+#                        emission_estimator.is_invalid(obs_stats[1]),
+#                        state_prior_estimator.is_invalid(obs_stats[2]),
+#                       ])
+#
+#    def maximization_func(obs_stats,
+#                          obs_weights,
+#                          last_model,
+#                          noise_weight        = 0,
+#                          pseudocount_weights = None,
+#                          pseudocount_model   = None,
+#                          freeze              = None):
+#        """
+#        Must return new model
+#        """
+#        if freeze is None:
+#            freeze = set()
+#
+#        A_parts, E_Parts, pi_parts = zip(*obs_stats)
+#
+#        if "state_priors" in freeze:
+#            new_state_priors = last_model.state_priors
+#        else:
+#            new_state_priors = state_prior_estimator.construct_factors(last_model,
+#                                                                       pi_parts,
+#                                                                       noise_weight,
+#                                                                       pseudocounts)
+#
+#        if "trans_probs" in freeze:
+#            new_trans_probs = last_model.trans_probs
+#        else:
+#            new_trans_probs = transition_estimator.construct_factors(last_model,
+#                                                                     A_parts,
+#                                                                     noise_weight,
+#                                                                     pseudocounts)
+#
+#        if "emission_probs" in freeze:
+#            new_emission_probs = last_model.emission_probs
+#        else:
+#            new_emission_probs = emission_estimator.construct_factors(model,
+#                                                                      E_parts,
+#                                                                      noise_weight,
+#                                                                      pseudocounts)
+#
+#        return model_type(state_priors   = new_state_priors,
+#                          trans_probs    = new_trans_probs,
+#                          emission_probs = new_emission_probs)
+#
+#    return train_em(model,
+#                    obs,
+#                    expectation_func  = expectation_func,
+#                    validation_func   = validation_func,
+#                    maximization_func = maximization_func,
+#                    log_func          = log_func,
+#
+#                    pseudocount_model   = None,
+#
+#                    pseudocount_weights = pseudocount_weights,
+#                    noise_weights       = noise_weights,
+#                    observation_weights = observtaion_weights,
+#
+#                    freeze              = freeze,
+#
+#                    learning_threshold  = learning_threshold,
+#                    miniter             = miniter,
+#                    maxiter             = maxiter,
+#                    start_iteration     = start_iteration,
+#
+#                    processes           = processes,
+#                    chunksize           = chunksize)
+# 
 
 def train_baum_welch(model,
                      obs,
@@ -497,24 +497,13 @@ def train_baum_welch(model,
             delta              = new_total_logprob - last_total_logprob
             last_total_logprob = new_total_logprob
 
-           
-            # record parameters & test convergence
-    #         log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
-    #                                                  new_total_logprob,
-    #                                                  logprob_per_obs,
-    #                                                  counted,
-    #                                                  c,
-    #                                                  "\t".join([format_for_logging(X) for X in params])
-    #                                                  )
+
             print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
                                                  new_total_logprob,
                                                  logprob_per_obs,
                                                  counted,
                                                  c,
                                                  model.serialize()
-    #                                             "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
-                                                 )
-    #         logfile.write("%s\n" % log_message)
             print("%s\n" % print_message)
                 
 
