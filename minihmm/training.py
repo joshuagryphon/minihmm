@@ -202,6 +202,7 @@ def train_baum_welch2(model,
 
 
     expectation_func = functools.partial(bw_worker,
+                                         model,
                                          state_prior_estimator = state_prior_estimator,
                                          emission_estimator    = emission_estimator,
                                          transition_estimator  = transition_estimator
@@ -283,9 +284,6 @@ def train_baum_welch2(model,
                     chunksize           = chunksize)
  
 
-
-
-# TODO: catch KeyboardInterrupt
 def train_baum_welch(model,
                      obs,
                      state_prior_estimator   = DiscreteStatePriorEstimator(),
@@ -423,123 +421,122 @@ def train_baum_welch(model,
         observation_weights = [1.0]*len(obs)
         
     weighted_obs = zip(obs, observation_weights)
-    new_model = model
 
-    #try:
-    while c < maxiter and (delta > learning_threshold or c < miniter) and not oopsie:
-        model = model_type(state_priors,emission_factors, trans_probs)
-        try:
-            noise_weight = noise_weights.next()
-        except StopIteration:
-            noise_weight = 0
+    try:
+        while c < maxiter and (delta > learning_threshold or c < miniter) and not oopsie:
+            model = model_type(state_priors,emission_factors, trans_probs)
+            try:
+                noise_weight = noise_weights.next()
+            except StopIteration:
+                noise_weight = 0
 
-        try:
-            pseudocounts = pseudocount_weights.next()
-        except StopIteration:
-            pseudocounts = 1e-12
+            try:
+                pseudocounts = pseudocount_weights.next()
+            except StopIteration:
+                pseudocounts = 1e-12
 
 
-        # E-step of Expectation-Maximization
-        training_func = functools.partial(bw_worker,
-                                          model,
-                                          state_prior_estimator=state_prior_estimator,
-                                          emission_estimator=emission_estimator,
-                                          transition_estimator=transition_estimator
-                                          )        
-        if processes == 1:
-            pool_results = (training_func(X) for X in weighted_obs)
-        else:
-
-            pool = multiprocessing.Pool(processes=processes)
-            pool_results = pool.map(training_func, weighted_obs, chunksize)
-            pool.close()
-            pool.join()
-
-        results      = []
-        anti_results = []
-        for my_result in pool_results:
-            if any([numpy.isnan(my_result[0]),
-                    numpy.isinf(my_result[0]),
-                    transition_estimator.is_invalid(my_result[-1][0]),
-                    emission_estimator.is_invalid(my_result[-1][1]),
-                    state_prior_estimator.is_invalid(my_result[-1][2]),
-                    ]):
-                anti_results.append(my_result)
+            # E-step of Expectation-Maximization
+            training_func = functools.partial(bw_worker,
+                                              model,
+                                              state_prior_estimator=state_prior_estimator,
+                                              emission_estimator=emission_estimator,
+                                              transition_estimator=transition_estimator
+                                              )        
+            if processes == 1:
+                pool_results = (training_func(X) for X in weighted_obs)
             else:
-                results.append(my_result)
-        
-        counted = len(results)
-        if counted == 0:
-            oopsie = True
-            break
 
-        obs_logprobs, obs_lengths, obs_weights, obs_stats = zip(*results)
-        A_parts, E_parts, pi_parts = zip(*obs_stats)
+                pool = multiprocessing.Pool(processes=processes)
+                pool_results = pool.map(training_func, weighted_obs, chunksize)
+                pool.close()
+                pool.join()
 
-        obs_weights  = numpy.array(obs_weights)
-        obs_lengths  = numpy.array(obs_lengths)
-        obs_logprobs = numpy.array(obs_logprobs)
-
-        weight_logprobs = obs_weights * obs_logprobs
-        weight_lengths  = obs_weights * obs_lengths
-
-        new_total_logprob = weight_logprobs.sum()
-        total_obs_length  = weight_lengths.sum()        
-        logprob_per_obs = new_total_logprob / total_obs_length
-        logprobs_per_length.append(logprob_per_obs)
-
-        unweight_total_logprob = obs_logprobs.sum()
-        unweight_total_length  = obs_lengths.sum()
-        unweight_logprob_per_obs = unweight_total_logprob / unweight_total_length
-        unweight_logprobs_per_length.append(unweight_logprob_per_obs)
-
-        models.append(model)
-        logprobs.append(new_total_logprob)
-        unweight_logprobs.append(unweight_total_logprob)
-
-        delta              = new_total_logprob - last_total_logprob
-        last_total_logprob = new_total_logprob
-
-       
-        # record parameters & test convergence
-#         log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
-#                                                  new_total_logprob,
-#                                                  logprob_per_obs,
-#                                                  counted,
-#                                                  c,
-#                                                  "\t".join([format_for_logging(X) for X in params])
-#                                                  )
-        print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
-                                             new_total_logprob,
-                                             logprob_per_obs,
-                                             counted,
-                                             c,
-                                             model.serialize()
-#                                             "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
-                                             )
-#         logfile.write("%s\n" % log_message)
-        print("%s\n" % print_message)
+            results      = []
+            anti_results = []
+            for my_result in pool_results:
+                if any([numpy.isnan(my_result[0]),
+                        numpy.isinf(my_result[0]),
+                        transition_estimator.is_invalid(my_result[-1][0]),
+                        emission_estimator.is_invalid(my_result[-1][1]),
+                        state_prior_estimator.is_invalid(my_result[-1][2]),
+                        ]):
+                    anti_results.append(my_result)
+                else:
+                    results.append(my_result)
             
+            counted = len(results)
+            if counted == 0:
+                oopsie = True
+                break
 
-        # M-step of Expectation-Maximization:
-        # Update parameters for next model
-        state_priors = state_prior_estimator.construct_factors(model,
-                                                               pi_parts,
-                                                               noise_weight,
-                                                               pseudocounts)
-        trans_probs = transition_estimator.construct_factors(model,
-                                                             A_parts,
-                                                             noise_weight,
-                                                             pseudocounts)
-        emission_factors = emission_estimator.construct_factors(model,
-                                                                E_parts,
-                                                                noise_weight,
-                                                                pseudocounts)
-        
-        c += 1
+            obs_logprobs, obs_lengths, obs_weights, obs_stats = zip(*results)
+            A_parts, E_parts, pi_parts = zip(*obs_stats)
 
-#    except KeyboardInterrupt:
-#        halted = True
+            obs_weights  = numpy.array(obs_weights)
+            obs_lengths  = numpy.array(obs_lengths)
+            obs_logprobs = numpy.array(obs_logprobs)
+
+            weight_logprobs = obs_weights * obs_logprobs
+            weight_lengths  = obs_weights * obs_lengths
+
+            new_total_logprob = weight_logprobs.sum()
+            total_obs_length  = weight_lengths.sum()        
+            logprob_per_obs = new_total_logprob / total_obs_length
+            logprobs_per_length.append(logprob_per_obs)
+
+            unweight_total_logprob = obs_logprobs.sum()
+            unweight_total_length  = obs_lengths.sum()
+            unweight_logprob_per_obs = unweight_total_logprob / unweight_total_length
+            unweight_logprobs_per_length.append(unweight_logprob_per_obs)
+
+            models.append(model)
+            logprobs.append(new_total_logprob)
+            unweight_logprobs.append(unweight_total_logprob)
+
+            delta              = new_total_logprob - last_total_logprob
+            last_total_logprob = new_total_logprob
+
+           
+            # record parameters & test convergence
+    #         log_message = "%s\t%.10f\t%.6e\t%s\t%s\t%s" % (datetime.datetime.now(),
+    #                                                  new_total_logprob,
+    #                                                  logprob_per_obs,
+    #                                                  counted,
+    #                                                  c,
+    #                                                  "\t".join([format_for_logging(X) for X in params])
+    #                                                  )
+            print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
+                                                 new_total_logprob,
+                                                 logprob_per_obs,
+                                                 counted,
+                                                 c,
+                                                 model.serialize()
+    #                                             "\t".join([format_for_logging(X,fmt="%.4f") for X in params])
+                                                 )
+    #         logfile.write("%s\n" % log_message)
+            print("%s\n" % print_message)
+                
+
+            # M-step of Expectation-Maximization:
+            # Update parameters for next model
+            state_priors = state_prior_estimator.construct_factors(model,
+                                                                   pi_parts,
+                                                                   noise_weight,
+                                                                   pseudocounts)
+            trans_probs = transition_estimator.construct_factors(model,
+                                                                 A_parts,
+                                                                 noise_weight,
+                                                                 pseudocounts)
+            emission_factors = emission_estimator.construct_factors(model,
+                                                                    E_parts,
+                                                                    noise_weight,
+                                                                    pseudocounts)
+            
+            c += 1
+
+    except KeyboardInterrupt:
+        halted = True
 
         
     # report why training stopped
