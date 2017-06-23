@@ -198,7 +198,7 @@ class ModelReducer(object):
             "starting_order"    : self.starting_order,
             "high_order_states" : self.high_order_states,
         }
-        if self.hmm is not None:
+        if self._hmm is not None:
             dtmp["first_order_hmm"] = self.hmm.to_dict()
 
         return dtmp

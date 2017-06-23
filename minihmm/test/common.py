@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from numpy.testing import (
     assert_array_equal,
     assert_almost_equal,
@@ -6,12 +7,11 @@ from numpy.testing import (
 from nose.tools import (
     assert_equal,
     assert_true,
-#    assert_almost_equal,
     assert_dict_equal,
     assert_list_equal,
     assert_tuple_equal,
     assert_raises,
-    )
+)
 
 def check_equal(a, b, msg=None):
     assert_equal(a, b, msg)
@@ -39,4 +39,3 @@ def check_tuple_equal(a, b, msg=None):
 
 def check_raises(cls, callable_, *args):
     assert_raises(cls, callable_, *args)
-
