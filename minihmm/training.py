@@ -519,8 +519,8 @@ def train_baum_welch(model,
                         weighted_logprob_per_obs   = logprob_per_obs,
                         unweighted_logprob_per_obs = unweight_logprob_per_obs,
 
-                        weighted_length    = total_obs_length,
-                        unweieghted_length = unweight_total_length)
+                        weighted_length   = total_obs_length,
+                        unweighted_length = unweight_total_length)
                 
 
             # M-step of Expectation-Maximization:
