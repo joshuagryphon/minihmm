@@ -8,6 +8,18 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
+
+Unreleased
+---------------------
+
+ - ``train_baum_welch()`` can now weight individual observations
+
+ - changed logging in ``train_baum_welch()``. This led to some
+   backward-incompatible changes
+
+ - Unit tests for ``train_baum_welch()``
+
+
 v0.1.4 = [2017-06-08]
 ---------------------
 
@@ -21,7 +33,7 @@ v0.1.4 = [2017-06-08]
 
  - Speed improvements under the hood
 
- - Suppression of non-useful warnings, and ccreation of useful ones
+ - Suppression of non-useful warnings, and creation of useful ones
 
  - Unit tests for key features
 
