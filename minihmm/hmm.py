@@ -134,9 +134,9 @@ class FirstOrderHMM(AbstractGenerativeFactor):
             "model_class"    : "minihmm.hmm.FirstOrderHMM",
             "state_priors"   : matrix_to_dict(self.state_priors.data),
             "trans_probs"    : matrix_to_dict(self.trans_probs.data),
-            "emission_probs" : [], # FIXME: implement later
+            "emission_probs" : [X.to_dict() for X in self.emission_probs], 
         }
-        warnings.warn("For the time being emission probabilities are not serialized. We'll fix this in the future!", UserWarning)
+        warnings.warn("For the time being not all emission probabilities are not serialized. We'll fix this in the future!", UserWarning)
         return dtmp
 
     @staticmethod
@@ -166,8 +166,11 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         my_dict = {
             "trans_probs"    : MatrixFactor(numpy.array(matrix_from_dict(dtmp["trans_probs"],  dense=True))),
             "state_priors"   : ArrayFactor(sp.reshape(sp.shape[1])),
-            "emission_probs" : emission_probs,
+            "emission_probs" : emission_probs, #TODO: implement revival of emission probabilities
         }
+
+        #if emission_probs is not None:
+        #    my_dict["emission_probs"] = emission_probs
 
         return FirstOrderHMM(**my_dict)
     
