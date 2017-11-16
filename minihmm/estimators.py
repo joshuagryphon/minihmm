@@ -397,7 +397,6 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         """
         E  = sum(reduced_data)
         E_sum = E.sum()
-        print(E)
         E += get_model_noise(E, noise_weight)
         E += (pseudocount_weight * E_sum / len(E.ravel()))
         E_normed  = (E.T / E.sum(1)).T
