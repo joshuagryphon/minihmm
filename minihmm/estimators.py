@@ -319,7 +319,7 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
     """Estimate discrete emissions from observation sequences in Baum-Welch training,
     modeling these as a series of ArrayFactos
     """
-    def __init__(self,num_symbols):
+    def __init__(self, num_symbols):
         """Create a DiscreteEmissionEstimator
         
         Parameters
@@ -330,7 +330,7 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         self.num_symbols = num_symbols
         _DiscreteParameterEstimator.__init__(self)
 
-    def reduce_data(self,my_obs,obs_logprob,forward,backward,scale_factors,ksi):
+    def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction
         
@@ -361,16 +361,16 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         """
         num_states  = ksi.shape[1] # ksi is time x states x states
 
-        my_E  = numpy.zeros((num_states,self.num_symbols))
-        postprob = forward*backward
-        tmp = postprob*scale_factors[:,None]
+        my_E  = numpy.zeros((num_states, self.num_symbols), dtype=float)
+        postprob = forward * backward
+        tmp = postprob * scale_factors[:,None]
         for i in range(num_states):
             for k in range(self.num_symbols):
-                my_E[i,k]+= tmp[my_obs==k,i].sum()
+                my_E[i, k] += tmp[my_obs==k, i].sum()
         
         return my_E
     
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences
         
@@ -397,12 +397,13 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         """
         E  = sum(reduced_data)
         E_sum = E.sum()
+        print(E)
         E += get_model_noise(E, noise_weight)
-        E += ( pseudocount_weight * E_sum/ len(E.ravel()) )
-        E_normed  = (E.T/E.sum(1)).T
+        E += (pseudocount_weight * E_sum / len(E.ravel()))
+        E_normed  = (E.T / E.sum(1)).T
         emission_factors = []
         for i in range(E_normed.shape[0]):
-            emission_factors.append(ArrayFactor(E_normed[i,:]))
+            emission_factors.append(ArrayFactor(E_normed[i, :]))
 
         return emission_factors
 
@@ -411,7 +412,7 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
     estimate state priors using arbitrarily distributed pseudocounts
     in Baum-Welch training
     """
-    def __init__(self,pseudocount_array):
+    def __init__(self, pseudocount_array):
         """
         model : |FirstOrderHMM|
             HMM to which this estimator will be attached
@@ -425,7 +426,7 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
         DiscreteStatePriorEstimator.__init__(self)
         
         
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete state prior factor for an HMM using reduced data from
         observation sequences
         
@@ -451,7 +452,7 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
         """
         pi  = sum(reduced_data)
         pi_sum = pi.sum()
-        pi += get_model_noise(pi,noise_weight,assymetric_weights=self.pseudocount_array)
+        pi += get_model_noise(pi, noise_weight, assymetric_weights=self.pseudocount_array)
         pi += (pseudocount_weight * pi_sum * self.pseudocount_array) / self.pseudocount_array.sum()
         pi_normed = pi / pi.sum()
         state_priors = ArrayFactor(pi_normed)
@@ -462,7 +463,7 @@ class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
     estimate state transitions using arbitrarily distributed pseudocounts
     in Baum-Welch training
     """
-    def __init__(self,pseudocount_array):
+    def __init__(self, pseudocount_array):
         """
         pseudocount_array : float or numpy.ndarray
             Scalar (if evenly applying pseudocounts) or numpy array
@@ -472,7 +473,7 @@ class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
         self.pseudocount_array = copy.deepcopy(pseudocount_array)
         DiscreteTransitionEstimator.__init__(self)
             
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete transition factor for an HMM using reduced data from
         observation sequences
         
@@ -498,9 +499,9 @@ class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
         """
         A = sum(reduced_data)
         A_sum = A.sum()
-        A += get_model_noise(A,noise_weight,assymetric_weights=self.pseudocount_array)
+        A += get_model_noise(A, noise_weight, assymetric_weights=self.pseudocount_array)
         A += (pseudocount_weight * A_sum * self.pseudocount_array) / self.pseudocount_array.sum()
-        A_normed = (A.T/A.sum(1)).T
+        A_normed = (A.T / A.sum(1)).T
         return MatrixFactor(A_normed)
 
 class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
@@ -508,7 +509,7 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
     estimate emissions using arbitrarily distributed pseudocounts
     in Baum-Welch training
     """
-    def __init__(self,model,num_symbols,pseudocount_array):
+    def __init__(self, model, num_symbols, pseudocount_array):
         """
         model : |FirstOrderHMM|
             HMM to which this estimator will be attached
@@ -519,9 +520,9 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
             to apply during estimation.
         """
         self.pseudocount_array = copy.deepcopy(pseudocount_array)
-        DiscreteEmissionEstimator.__init__(self,model,num_symbols)
+        DiscreteEmissionEstimator.__init__(self, model, num_symbols)
 
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences
         
@@ -548,12 +549,12 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
         """
         E  = sum(reduced_data)
         E_sum = E.sum()
-        E += get_model_noise(E, noise_weight,assymetric_weights=self.pseudocount_array)
-        E += (pseudocount_weight * E_sum *self.pseudocount_array) / self.pseudocount_array.sum()
-        E_normed  = (E.T/E.sum(1)).T
+        E += get_model_noise(E, noise_weight, assymetric_weights=self.pseudocount_array)
+        E += (pseudocount_weight * E_sum * self.pseudocount_array) / self.pseudocount_array.sum()
+        E_normed  = (E.T / E.sum(1)).T
         emission_factors = []
         for i in range(E_normed.shape[0]):
-            emission_factors.append(ArrayFactor(E_normed[i,:]))
+            emission_factors.append(ArrayFactor(E_normed[i, :]))
 
         return emission_factors
 
@@ -565,7 +566,7 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
         self.pseudocount_array  an array of weighted pseudocounts
         
     """
-    def __init__(self,pseudocount_array,index_map):
+    def __init__(self, pseudocount_array, index_map):
         """
         pseudocount_array : float or numpy.ndarray
             Scalar (if evenly applying pseudocounts) or numpy array
@@ -578,12 +579,12 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
         """
         self.index_map     = copy.deepcopy(index_map)
         self.index_weights = numpy.array([(self.index_map == X).sum() \
-                                          for X in range(0,1+self.index_map.max())]
+                                          for X in range(0, 1+self.index_map.max())]
                                          )
         self.pseudocount_mask = (pseudocount_array > 0)        
-        PseudocountStatePriorEstimator.__init__(self,pseudocount_array)
+        PseudocountStatePriorEstimator.__init__(self, pseudocount_array)
 
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct state prior factor for an HMM using reduced data from
         observation sequences
         
@@ -612,7 +613,7 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
         pi_sum = pi_raw.sum()
         reduced_vector = numpy.zeros(1 + max(self.index_map))
 
-        for i,val in enumerate(pi_raw):
+        for i, val in enumerate(pi_raw):
             reduced_vector[self.index_map[i]] += pi_raw[i]
 
         # add noise
@@ -624,7 +625,7 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
         reduced_vector /= self.index_weights
         
         # populate destination vector
-        pi_proc = numpy.zeros_like(pi_raw,dtype=float)
+        pi_proc = numpy.zeros_like(pi_raw, dtype=float)
         for i in range(len(pi_proc)):
             pi_proc[i] = reduced_vector[self.index_map[i]]
         
@@ -643,7 +644,7 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
     jointly estimating) comparable states (e.g. all single states, all 
     compound states).
     """
-    def __init__(self,pseudocount_array,index_map):
+    def __init__(self, pseudocount_array, index_map):
         """
         pseudocount_array : float or numpy.ndarray
             Scalar (if evenly applying pseudocounts) or numpy array
@@ -656,12 +657,12 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
         """        
         self.index_map     = copy.deepcopy(index_map)
         self.index_weights = numpy.array([(self.index_map == X).sum() \
-                                          for X in range(0,1+self.index_map.max())]
+                                          for X in range(0, 1+self.index_map.max())]
                                          )
         self.pseudocount_mask = (pseudocount_array > 0)
-        PseudocountTransitionEstimator.__init__(self,pseudocount_array)
+        PseudocountTransitionEstimator.__init__(self, pseudocount_array)
 
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct transition factor for an HMM using reduced data from
         observation sequences
         
@@ -691,7 +692,7 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
 
         for i in range(A_raw.shape[0]):
             for j in range(A_raw.shape[1]):
-                reduced_vector[self.index_map[i,j]] += A_raw[i,j]
+                reduced_vector[self.index_map[i, j]] += A_raw[i, j]
 
         # add noise
         reduced_vector += get_model_noise(reduced_vector,
@@ -702,17 +703,17 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
         reduced_vector /= self.index_weights
         
         # populate destination vector
-        A_proc = numpy.zeros_like(A_raw,dtype=float)
+        A_proc = numpy.zeros_like(A_raw, dtype=float)
         for i in range(A_proc.shape[0]):
             for j in range(A_proc.shape[1]):
-                A_proc[i,j] = reduced_vector[self.index_map[i,j]]
+                A_proc[i, j] = reduced_vector[self.index_map[i, j]]
         
         # add pseudocounts
         A_proc += (pseudocount_weight * A_sum * self.pseudocount_array) / self.pseudocount_array.sum()
         A_proc *= self.pseudocount_mask # re-zero forbidden cells that became zero via noise addition
         
         # normalize
-        A_proc = (A_proc.T/A_proc.sum(1)).T
+        A_proc = (A_proc.T / A_proc.sum(1)).T
         
         return MatrixFactor(A_proc)
 
@@ -726,10 +727,10 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
     Baum-Welch training. This implementation currently only works for single-process
     training, because ScipyDistributionFactors cannot be pickled
     """
-    def is_valid(self,reduced_data):
+    def is_valid(self, reduced_data):
         return not (numpy.isnan(reduced_data) | numpy.isinf(reduced_data)).any()
      
-    def reduce_data(self,my_obs,obs_logprob,forward,backward,scale_factors,ksi):
+    def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction
         
@@ -762,23 +763,23 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
             in each sequence
         """
         num_states  = ksi.shape[1]
-        my_E  = numpy.zeros((num_states,3))
+        my_E  = numpy.zeros((num_states, 3))
         postprob = forward*backward
-        tmp = postprob*scale_factors[:,None]
+        tmp = postprob*scale_factors[:, None]
         for i in range(num_states):
             # n counted in mean
-            num_observations = tmp[:,i].sum()
-            my_E[i,2] = num_observations
+            num_observations = tmp[:, i].sum()
+            my_E[i, 2] = num_observations
             
             # probability-weighted mean
-            my_E[i,0] = (tmp[:,i]*my_obs).sum()/num_observations  
+            my_E[i, 0] = (tmp[:, i] * my_obs).sum()/num_observations  
             
             # probability-weighted unbiased variance
-            my_E[i,1] = (tmp[:,i]*(my_obs - my_E[i,0])**2).sum()/(num_observations-1)
+            my_E[i, 1] = (tmp[:, i] * (my_obs - my_E[i, 0])**2).sum() / (num_observations-1)
         
         return my_E
 
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences.
         
@@ -809,18 +810,18 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
         E = numpy.zeros_like(reduced_data[0])
         var_pool_numerators = numpy.zeros(E.shape[0])
         for my_E in reduced_data:
-            E[:,0] += my_E[:,0]*my_E[:,2]
-            E[:,2] += my_E[:,2]
-            var_pool_numerators += my_E[:,1]*(my_E[:,2]-1)
+            E[:, 0] += my_E[:, 0]*my_E[:, 2]
+            E[:, 2] += my_E[:, 2]
+            var_pool_numerators += my_E[:, 1]*(my_E[:, 2]-1)
         
-        E[:,0] /= E[:,2]
-        E[:,1] = var_pool_numerators / (E[:,2] - len(reduced_data)) #dof-1 var correction
+        E[:, 0] /= E[:, 2]
+        E[:, 1] = var_pool_numerators / (E[:, 2] - len(reduced_data)) #dof-1 var correction
                         
         emission_factors = []
         for i in range(E.shape[0]):
-            emission_factors.append(ScipyDistributionFactor(scipy.stats.norm,
-                                                            loc=E[i,0],
-                                                            scale=E[i,1]**0.5))
+            emission_factors.append(ScipyDistributionFactor(scipy.stats.norm, 
+                                                            loc=E[i, 0], 
+                                                            scale=E[i, 1]**0.5))
         
         return emission_factors
 
@@ -831,7 +832,7 @@ class UnivariateTEmissionEstimator(UnivariateGaussianEmissionEstimator):
     Baum-Welch training. This implementation currently only works for single-process
     training, because ScipyDistributionFactors cannot be pickled
     """
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences.
         
@@ -863,19 +864,19 @@ class UnivariateTEmissionEstimator(UnivariateGaussianEmissionEstimator):
         n = numpy.zeros(E.shape[0])
         var_pool_numerators = numpy.zeros(E.shape[0])
         for my_E in reduced_data:
-            E[:,0] += my_E[:,0]*my_E[:,2]
-            E[:,2] += my_E[:,2]
-            var_pool_numerators += my_E[:,1]*(my_E[:,2]-1)
-            n += my_E[:,2]
+            E[:, 0] += my_E[:, 0]*my_E[:, 2]
+            E[:, 2] += my_E[:, 2]
+            var_pool_numerators += my_E[:, 1]*(my_E[:, 2]-1)
+            n += my_E[:, 2]
         
-        E[:,0] /= n
-        E[:,1] = var_pool_numerators / (n - len(reduced_data))
+        E[:, 0] /= n
+        E[:, 1] = var_pool_numerators / (n - len(reduced_data))
                         
         emission_factors = []
         for i in range(E.shape[0]):
             emission_factors.append(ScipyDistributionFactor(scipy.stats.t,
-                                                            n[i]-1, # dof
-                                                            loc=E[i,0],
-                                                            scale=E[i,1]**0.5))
+                                                            n[i] - 1, # dof
+                                                            loc=E[i, 0],
+                                                            scale=E[i, 1]**0.5))
         
         return emission_factors

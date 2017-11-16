@@ -54,7 +54,7 @@ def neg_exp_noise_gen(a=1.0, b=1.0, offset=0):
     offset -= 1
     while True:
         offset += 1
-        yield a*numpy.exp(-offset*b)
+        yield a*numpy.exp(-offset * b)
 
 def linear_noise_gen(m=-0.05, b=1, offset=0):
     """Generate linearly decaying noise following y = max(m*x + b,0)
@@ -78,7 +78,7 @@ def linear_noise_gen(m=-0.05, b=1, offset=0):
     offset -= 1
     while True:
         offset += 1
-        yield max(m*offset+b,0)
+        yield max(m * offset + b, 0)
 
 
 #===============================================================================
@@ -140,42 +140,11 @@ def bw_worker(my_model,
     """
     my_obs, my_weight = my_tuple
     obs_logprob, forward, backward, scale_factors, ksi = my_model.forward_backward(my_obs)
-    my_A  = transition_estimator.reduce_data(my_obs,obs_logprob,forward,backward,scale_factors,ksi)
-    my_E  = emission_estimator.reduce_data(my_obs,obs_logprob,forward,backward,scale_factors,ksi)
-    my_pi = state_prior_estimator.reduce_data(my_obs,obs_logprob,forward,backward,scale_factors,ksi)
+    my_A  = transition_estimator.reduce_data(my_obs, obs_logprob, forward, backward, scale_factors, ksi)
+    my_E  = emission_estimator.reduce_data(my_obs,   obs_logprob, forward, backward, scale_factors, ksi)
+    my_pi = state_prior_estimator.reduce_data(my_obs,obs_logprob, forward, backward, scale_factors, ksi)
 
     return obs_logprob, len(my_obs), my_weight, (my_A, my_E, my_pi)
-
-
-def format_for_logging(x, fmt="%.8f"):
-    """Format a model parameter for logging in a text file.
-    Numerical types are formatted following the 'fmt' parameter.
-    Lists and Numpy arrays are formatted as comma-separated strings.
-    Other types are printed using their str() representation.
-    
-    Parameters
-    ----------
-    x : object, float, int, str, et c
-        parameter
-    
-    fmt : str, optional
-        printf-style format used for numerical types only
-        (default: "%.32e")
-    
-    
-    Returns
-    -------
-    str
-        Formatted parameter
-    """
-    if type(x) in _number_types:
-        return fmt % x
-    if isinstance(x,type([])):
-        return ",".join([format_for_logging(X) for X in x])
-    if isinstance(x,numpy.ndarray):
-        return ",".join([format_for_logging(X) for X in x])
-    else:
-        return str(x)
 
 
 
@@ -409,19 +378,19 @@ def train_baum_welch(model,
     c                  = start_iteration
 
     if chunksize is None:
-        chunksize = len(obs) / (4*processes)
+        chunksize = len(obs) / (4 * processes)
     if chunksize < 1:
         chunksize = len(obs) / processes
     if chunksize < 1:
         chunksize = 1
 
     if isinstance(pseudocount_weights, (int, float)):
-        pseudocount_weights = itertools.repeat(1.0*pseudocount_weights)
+        pseudocount_weights = itertools.repeat(1.0 * pseudocount_weights)
     if isinstance(noise_weights, (int, float)):
-        noise_weights = itertools.repeat(1.0*noise_weights)
+        noise_weights = itertools.repeat(1.0 * noise_weights)
 
     if observation_weights is None:
-        observation_weights = [1.0]*len(obs)
+        observation_weights = [1.0] * len(obs)
         
     weighted_obs = zip(obs, observation_weights)
 
@@ -499,14 +468,6 @@ def train_baum_welch(model,
 
             delta              = new_total_logprob - last_total_logprob
             last_total_logprob = new_total_logprob
-
-
-#            print_message = "%s\t%s\t%s\t%s\t%s\t%s" % (datetime.datetime.now(),
-#                                                        new_total_logprob,
-#                                                        logprob_per_obs,
-#                                                        counted,
-#                                                        c,
-#                                                        model.serialize())
 
             if logfunc is not None:
                 logfunc(model,
