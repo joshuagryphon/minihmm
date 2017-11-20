@@ -50,9 +50,10 @@ jsonpickle.ext.numpy.register_handlers()
 
 from minihmm.factors import (
     AbstractFactor,
-    AbstractFactor,
     ArrayFactor,
-    MatrixFactor
+    MatrixFactor,
+    FunctionFactor,
+    LogFunctionFactor,
 )
 from minihmm.util import matrix_to_dict, matrix_from_dict
 
@@ -120,9 +121,32 @@ class FirstOrderHMM(AbstractFactor):
     
     def __repr__(self):
         return "<%s, %s states>" % (self.__class__.__name__, self.num_states)
+    
+    def get_header(self):
+        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        ltmp  = ["sp_%s" % X for X in self.state_priors.get_header()]
+        ltmp += ["t_%s" % X for X in self.trans_probs.get_header()]
+        for n, e_prob in enumerate(self.emission_probs):
+            ltmp += ["e%d_%s" % (n, X) for X in e_prob.get_header()]
+
+        return ltmp
+
+    def get_row(self):
+        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        ltmp  = self.state_priors.get_row()
+        ltmp += self.trans_probs.get_row()
+        for e_prob in self.emission_probs:
+            ltmp += e_prob.get_row()
+
+        return ltmp
 
     def to_json(self):
         """Return a string JSON blob encoding `self`"""
+        using_funcfactor = False
+        for factor in self.emission_probs:
+            if isinstance(factor, (FunctionFactor, LogFunctionFactor)):
+                warnings.warn("(Log)FudenctionFactors may only be successfully revived from JSON if defined in a model, or if revived before scope is lost", UserWarning)
+
         return jsonpickle.encode(self)
 
     @staticmethod
@@ -159,7 +183,7 @@ class FirstOrderHMM(AbstractFactor):
             "trans_probs"    : matrix_to_dict(self.trans_probs.data),
             "emission_probs" : [X.to_dict() for X in self.emission_probs], 
         }
-        warnings.warn("For the time being not all emission probabilities are not serialized. We'll fix this in the future!", UserWarning)
+        warnings.warn("This is deprecated! Use to_json()", UserWarning)
         return dtmp
 
     @staticmethod
@@ -194,33 +218,6 @@ class FirstOrderHMM(AbstractFactor):
 
         return FirstOrderHMM(**my_dict)
     
-    def serialize(self):
-        ltmp = ["state_priors",
-                self.state_priors.serialize(),
-                "transitions",
-                self.trans_probs.serialize(),
-                "emissions"]
-        ltmp.extend([X.serialize() for X in self.emission_probs])
-        return "\t".join(ltmp)
-
-    def deserialize(self, param_str):
-        sp = param_str.search("state_priors\t")
-        t  = param_str.search("transitions\t")
-        e  = param_str.search("emissions\t")
-        new_state_priors = self.state_priors.deserialize(param_str[sp+len("state_priors\t"):t])
-        new_trans_probs  = self.trans_probs.deserialize(param_str[t+len("transition\ts"):e])
-        remaining = param_str[e+len("emissions\t"):]
-        remaining_items = remaining.strip("\n").split("\t")
-        new_emission_probs = []
-        items_per_factor = len(remaining_items) // self.num_states
-        assert len(remaining_items) % self.num_states == 0 # this won't be true for heterogenous factors
-        for i in range(self.num_states):
-            nf_params = remaining_items[i*items_per_factor:(i+1)*items_per_factor]
-            new_factor = self.trans_probs.deserialize("\t".join(nf_params))
-            new_emission_probs.append(new_factor)
-
-        return self.__class__(new_state_priors,new_emission_probs,new_trans_probs)
-
     def probability(self, emission):
         """Compute the probability of observing a sequence of emissions.
         This number is likely to undeflow for long sequences.
@@ -753,15 +750,8 @@ class FirstOrderMM(AbstractFactor):
         return repr(self)
    
     def __repr__(self):
-        return "<%s parameters:[%s]>" % (self.__class__.__name__,
-                                         self.serialize())
+        return "<%s %s states>" % (self.__class__.__name__, self.num_states)
     
-    def serialize(self):
-        raise NotImplementedError()
-
-    def deserialize(self,param_str):
-        raise NotImplementedError()
-
     def probability(self,sequence):
         """Compute the probability of observing a sequence.
         This number is likely to undeflow for long sequences.

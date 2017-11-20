@@ -14,13 +14,13 @@ Factors must be able to:
 
     - calculate a log probability of an observation via a ``logprob()`` method
 
+    - calculate a probability of an obervation via a ``probability()`` method
+
     - calculate a log probability of a series of observations via
       a ``get_model_log_likelihood()`` method
 
-    - serialize and deserialize their parameters via ``serialize()`` and
-      ``deserialize()`` methods, respectively. At present, we are taking 
-      suggestions for a formal spec on what the serialization protocol should
-      be. Right now, it is a free-for-all.
+    - offer serialization support via pickling (we use :mod:`jsonpickle`
+      and implement ``__reduce__`` methods to make sane JSON blobs)
 
 In addition, factors may:
     - supply a ``generate(n)`` function, to generate `n` observations
@@ -44,56 +44,8 @@ from minihmm.util import matrix_from_dict, matrix_to_dict
 class AbstractFactor(object):
     """Abstract class for all probability distributions
     """
-    def __init__(self,*args,**kwargs):
-        self._args   = args
-        self._kwargs = kwargs
-        self.data  = list(args)
-        self._param_names = [""]*len(args)
-        self._pos_args    = len(args)
-        
-        for k,v in sorted(kwargs.items()):
-            self.data.append(v)
-            self._param_names.append(k) 
 
-    def serialize(self):
-        """Return parameters in some useful, serialized format
-        e.g. for reporting during successive rounds of training
-        
-        Returns
-        -------
-        str
-            Serialized parameters
-
-
-        See also
-        --------
-        deserialize
-        """
-        return "\t".join([str(X) for X in self.data])
-    
-    def deserialize(self,parameters):
-        """Return a Factor of the same class, using new parameters
-
-        Parameters
-        ----------
-        parameters : str
-            Parameters, formatted by :py:meth:`serialize`
-
-
-        Returns
-        -------
-        AbstractFactor
-            Factor of same type, deserialized
-
-
-        See Also
-        --------
-        serialize
-        """
-        data = parameters.strip("\n").split("\t")
-        return self.__class__(*data)
-
-    def probability(self,*args,**kwargs):
+    def probability(self, *args, **kwargs):
         """Return the probability of a single observation
         
         Parameters
@@ -109,9 +61,9 @@ class AbstractFactor(object):
         float
             Probability of observation
         """
-        return numpy.exp(self.logprob(*args,**kwargs))
+        return numpy.exp(self.logprob(*args, **kwargs))
     
-    def logprob(self,*args,**kwargs):
+    def logprob(self, *args, **kwargs):
         """Return the log probability of a single observation
         
         Parameters
@@ -127,9 +79,9 @@ class AbstractFactor(object):
         float
             Log probability of observation
         """
-        return numpy.log(self.probability(*args,**kwargs))
+        return numpy.log(self.probability(*args, **kwargs))
     
-    def get_model_log_likelihood(self,observations,processes=4):
+    def get_model_log_likelihood(self, observations, processes=4):
         """Return the log likelihood of a sequence of observations
        
         Parameters
@@ -150,16 +102,23 @@ class AbstractFactor(object):
             return sum((self.logprob(X) for X in observations))
         else:
             pool = multiprocessing.Pool(processes=processes)
-            pool_results = pool.map(self.logprob,observations)
+            pool_results = pool.map(self.logprob, observations)
             pool.close()
             pool.join()
             return sum(pool_results)
         
     @abstractmethod
-    def generate(self,*args,**kwargs):
+    def generate(self, *args, **kwargs):
         """Sample a random value from the distribution"""
         pass        
 
+    @abstractmethod
+    def get_header(self):
+        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+
+    @abstractmethod
+    def get_row(self):
+        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
 
 #===============================================================================
 # Helpers for unpickling / reviving from jsonpickle
@@ -238,7 +197,7 @@ class ArrayFactor(AbstractFactor):
         data : list-like
             Array of probabilities indexed by position
         """
-        self.data = copy.deepcopy(numpy.array(data))
+        self.data = numpy.array(data)
 
     def __eq__(self, other):
         return (self.data == other.data).all()
@@ -256,6 +215,14 @@ class ArrayFactor(AbstractFactor):
             "data"        : list(self.data),
         }
         return dtmp
+   
+    def get_header(self):
+        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        return [str(X) for X in range(len(self.data))]
+
+    def get_row(self):
+        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        return list(self.data)
 
     def probability(self, i):
         """Return probability in cell ``i`` of the array
@@ -266,33 +233,6 @@ class ArrayFactor(AbstractFactor):
             Index of requested probability   
         """
         return self.data[i]
-
-    def serialize(self):
-        """Return free parameters in the model (i.e. all but last cell),
-        as a tab-delimited string.
-        
-        This includes all but the final element in self.data, since
-        these must sum to 1.0
-
-        Returns
-        -------
-        str
-            String representation of parameters
-
-        See also
-        --------
-        ArrayFactor.deserialize
-        """
-        return "\t".join([str(X) for X in self.data[:-1]])
-    
-    def get_parameter_group_indices(self):
-        """Return indices that indicate which free parameters in the array
-        returned by self.serialize() must sum to one or less
-
-        @return list<(int,int)> of starting and half-open end positions
-                                of each group.
-        """
-        return [(0,len(self)-1)]
             
     def generate(self):
         """Generate a random sample from the distribution
@@ -301,39 +241,12 @@ class ArrayFactor(AbstractFactor):
         """
         return (self.data.cumsum() >= numpy.random.random()).argmax()
     
-    def deserialize(self, paramstr):
-        """Return a new ArrayFactor, using updated parameters
-        
-        Parameters
-        ----------
-        paramstr : str
-            Tab-delimited string of free parameters in the model
-            (i.e. excluding last cell).
-
-        Returns
-        -------
-        |ArrayFactor|
-            ArrayFactor with probabilities specified in ``paramstr``.            
-
-        See Also
-        --------
-        ArrayFactor.serialize
-        """
-        parameters = [float(X) for X in paramstr.strip("\n").split("\t")]
-        assert len(parameters) == len(self.serialize())
-        new_parameters = list(parameters)
-        new_parameters.append(1.0 - sum(parameters))
-        return ArrayFactor(numpy.array(new_parameters))
-
 
 class MatrixFactor(AbstractFactor):
     """Bivariate probability distribution constructed from a two-dimensional
     matrix or array. MatrixFactors can represent joint distributions *P(X,Y)*
     as well as conditional distributions *P(Y|X)*, depending upon whether
-    ``self.row_conditional`` is *True* or *False*. If *True*, the |MatrixFactor|
-    is assumed to represent a conditional distribution, and outputs from
-    :meth:`generate`, :meth:`serialize`, and :meth:`deserialize` all take this
-    into account.
+    ``self.row_conditional`` is *True* or *False*.
 
     Attributes
     ----------
@@ -364,7 +277,7 @@ class MatrixFactor(AbstractFactor):
             *P(column,row)*. (Default: *True*)
         """
         self.row_conditional = row_conditional
-        self.data = numpy.array(copy.deepcopy(data))
+        self.data = numpy.array(data)
 
     def __eq__(self, other):
         return self.row_conditional == other.row_conditional and (self.data == other.data).all()
@@ -377,6 +290,15 @@ class MatrixFactor(AbstractFactor):
 
     def __reduce__(self):
         return _get_matrixfactor_from_dict, (self.to_dict(), )
+
+    def get_header(self):
+        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        shape = self.data.shape
+        return ["%d,%d" % (X, Y) for X in range(shape[0]) for Y in range(shape[1])]
+
+    def get_row(self):
+        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        return list(self.data.ravel())
 
     def to_dict(self):
         return {
@@ -424,84 +346,6 @@ class MatrixFactor(AbstractFactor):
         else:
             #TODO: implement!
             pass
-
-    def get_parameter_group_indices(self):
-        """Return indices that indicate which free parameters in the array
-        returned by self.serialize() must sum to one or less
-       
-        Returns
-        -------
-        list
-            list of tuples of *(int,int)* of starting and end half-open
-            end positions of each group.
-        """
-        if self.row_conditional is True:
-            ltmp = []
-            for i in range(1, len(self) + 1):
-                start = (i-1) * (self.shape[1] - 1)
-                end   = i * (self.shape[1] - 1)
-                ltmp.append((start, end))
-            return ltmp
-        else:
-            return [(0, len(self) - 1)]
-    
-    def serialize(self):
-        """Return **free parameters** in the model as a tab-delimited string.
-        
-        If ``self.row_conditional`` is *True*, this includes all but the final element
-        in each row in self.data, since each row must sum to 1.0
-        
-        If ``self.row_conditional`` is *False*, this includes all but the final cell
-        in ``self.data``, since in thise case the entire matrix must sum to 1.0
-
-
-        Returns
-        -------
-        str
-            tab-delimited string of parameters in model
-
-        See also
-        --------
-        MatrixFactor.deserialize
-        """
-        if self.row_conditional is True:
-            return "\t".join([str(X) for X in self.data[:, 0:-1].ravel()])
-        else:
-            return "\t".join([str(X) for X in self.data.ravel()[:-1]])
-    
-    def deserialize(self, param_str):
-        """Returns a MatrixFactor using updated parameters and the same
-        row conditionality as this MatrixFactor
-
-        Parameters
-        ----------
-        param_str
-            A tab-delimited string of **free parameters**, as formatted by
-            :meth:`MatrixFactor.serialize`
-
-        Returns
-        -------
-        |MatrixFactor|
-            |MatrixFactor| constructed from parameters
-
-        See also
-        --------
-        MatrixFactor.serialize
-        """
-        parameters = [float(X) for X in param_str.strip("\n").split("\t")]
-        assert len(parameters) == len(self.serialize())
-        
-        if self.row_conditional is True:
-            new_matrix = numpy.zeros(self.data.shape)
-            tmp = numpy.matrix(parameters).reshape(self.data.shape[0], self.data.shape[1] - 1)
-            new_matrix[:, 0:-1] = tmp
-            new_matrix[:, -1]   = 1.0 - new_matrix.sum(1)
-        else:
-            parameters = list(parameters)
-            parameters.append(1.0 - sum(parameters))
-            new_matrix = numpy.matrix(parameters).reshape(self.data.shape)
-         
-        return MatrixFactor(new_matrix, row_conditional=self.row_conditional)
 
 
 class FunctionFactor(AbstractFactor):
@@ -560,56 +404,18 @@ class FunctionFactor(AbstractFactor):
     def __str__(self):
         return "(%s,%s)" % (self._func.func_name, ",".join([str(X) for X in self.data]))
         
-    def serialize(self):
-        """Serialize |FunctionFactor|, saving ``self.func_args`` and
-        ``self.func_kwargs`` to a tab-delimited string.
+    def get_header(self):
+        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        ltmp  = [str(X) for X in range(len(self.func_args))]
+        ltmp += sorted(self.func_kwargs.keys())
+        return ltmp
 
-        See also
-        --------
-        FunctionFactor.deserialize
-
-        Notes
-        -----
-        Serialization/deserialization formats should NOT be considered stable
-        """
-        outp   = "\t".join([str(X) for X in self.func_args])
-        outp  += "\t".join(["%s=%s" % (K, V) for K, V in sorted(self.func_kwargs.items())])
-        return outp
-
-    def deserialize(self, param_str):
-        """Create a |FunctionFactor| using the same base functions, but with
-        new parameters
-
-        Parameters
-        ----------
-        param_str : str
-            Tab-delimited string of function and keyword arguments
-
-        Returns
-        -------
-        |FunctionFactor|
-
-        See also
-        --------
-        FunctionFactor.serialize
-        """
-        args   = []
-        kwargs = {}
-        items  = param_str.strip("\n").split("\t")
-
-        for item in items:
-            if "=" not in item:
-                args.append(guess_formatter(item))
-            else:
-                key, val = item.split("=")
-                kwargs[key] = guess_formatter(val)
-
-        assert len(args)   == len(self.func_args)
-        assert len(kwargs) == len(self.func_kwargs)
-        return self.__class__(self._func,
-                              self._generator_func,
-                              *args,**kwargs)
-    
+    def get_row(self):
+        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        ltmp  = list(self.func_args)
+        ltmp += [X[1] for X in sorted(self.func_kwargs.items())]
+        return ltmp
+   
     def generate(self, *args, **kwargs):
         """Sample a random value from the distribution 
        
@@ -662,8 +468,6 @@ class LogFunctionFactor(FunctionFactor):
         self._generator = functools.partial(generator_func, *func_args, **func_kwargs)
 
 
-
-
 class ScipyDistributionFactor(AbstractFactor):
     """Probability distribution using distributions provided by :mod:`scipy.stats`
 
@@ -713,6 +517,18 @@ class ScipyDistributionFactor(AbstractFactor):
     def __eq__(self, other):
         return self.to_dict() == other.to_dict()
 
+    def get_header(self):
+        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        ltmp  = [str(X) for X in range(len(self.dist_args))]
+        ltmp += sorted(self.dist_kwargs.keys())
+        return ltmp
+
+    def get_row(self):
+        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        ltmp  = list(self.dist_args)
+        ltmp += [X[1] for X in sorted(self.dist_kwargs.items())]
+        return ltmp
+
     def to_dict(self):
         return {
             "model_class" : "minihmm.factors.ScipyDistributionFactor",
@@ -730,41 +546,6 @@ class ScipyDistributionFactor(AbstractFactor):
                                                  ",".join([str(X) for X in self.dist_args])+\
                                                  ",".join(["%s:%s" % (K, V) for K, V in self.dist_kwargs.items()]) )
 
-    def serialize(self):
-        """Serialize |FunctionFactor|, saving ``self.func_args`` and
-        ``self.func_kwargs`` to a tab-delimited string.
-
-        See also
-        --------
-        ScipyDistributionFactor.deserialize
-
-        Notes
-        -----
-        Serialization/deserialization formats should NOT be considered stable
-        """
-        outp   = "\t".join([str(X) for X in self.dist_args])
-        outp  += "\t".join(["%s=%s" % (K, V) for K, V in sorted(self.dist_kwargs.items())])
-        return outp
-
-    def deserialize(self, param_str):
-        """Create a new |ScipyDistributionFactor| from parameters
-
-        Parameters
-        ----------
-        param_str : str
-            Parameters, formatted as by :meth:`serialize`
-
-        Notes
-        -----
-        serialization/deserialization parameters should NOT be considered stable
-
-        See also
-        --------
-        ScipyDistributionFactor.serialize
-        """
-        new_args, new_kwargs = self._parse_new_parameters(parameters)
-        return ScipyDistributionFactor(self._dist_class, *new_args, **new_kwargs)
-        
     def logprob(self, *args, **kwargs):
         """Return the log probability of observing an observation
 
