@@ -1,4 +1,5 @@
 #!/usr/bin/env vpython
+import sys
 import numpy
 import scipy.stats
 
@@ -19,7 +20,8 @@ from minihmm.estimators import (
 )
 from minihmm.training import (
     train_baum_welch,
-    neg_exp_noise_gen
+    neg_exp_noise_gen,
+    DefaultLoggerFactory
 )
 from minihmm.factors import (
     ArrayFactor,
@@ -27,6 +29,12 @@ from minihmm.factors import (
     ScipyDistributionFactor
 )
 
+
+class ScreenWriter:
+
+    @staticmethod
+    def write(inp):
+        sys.stdout.write(inp + "\n")
 
 class _BaseExample:
 
@@ -55,7 +63,8 @@ class _BaseExample:
                                                 emission_estimator    = cls.emission_estimator,
                                                 miniter               = 80,
                                                 maxiter               = 1000,
-                                                processes             = 1
+                                                processes             = 1,
+                                                logfunc = DefaultLoggerFactory(ScreenWriter(), cls.naive_hmm, maxcols=5),
                                                )
 
     @classmethod

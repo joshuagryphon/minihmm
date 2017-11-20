@@ -73,17 +73,17 @@ def linear_noise_gen(m=-0.05, b=1, offset=0):
         yield max(m * offset + b, 0)
 
 
-def _format_helper(inp):
+def _format_helper(x):
     """Format input for logging, depending on type"""
     if isinstance(x, int):
         return "%d" % x
     elif isinstance(x, float):
-        return "%.32e" % x
+        return "%.16e" % x
     else:
         return str(x)
 
 
-def DefaultLoggerFactory(fh, model):
+def DefaultLoggerFactory(fh, model, maxcols=None):
     """Factory function to record likelihood and parameter changes during training
 
     Parameters
@@ -93,6 +93,14 @@ def DefaultLoggerFactory(fh, model):
 
     model : :class:`~minihmm.hmm.FirstOrderHMM`
         HMM that will be trained
+
+    maxcols : int or None, optional
+        If not `None`, only output the first `maxcols` columns of output
+
+    Returns
+    -------
+    function
+        Logging function for use with :func:`train_baum_welch`
     """
     header  = [
         "time",
@@ -107,21 +115,20 @@ def DefaultLoggerFactory(fh, model):
         "unweighted_length",
     ]
     header += model.get_header()
+    header = header[:maxcols]
     fh.write("\t".join(header) + "\n")
 
     def logfunc(model,
-                iteration = None,
-                counted   = counted,
-                delta     = delta,
-
-                weighted_logprob   = new_total_logprob,
-                unweighted_logprob = unweight_total_logprob,
-                weighted_logprob_per_obs   = logprob_per_obs,
-                unweighted_logprob_per_obs = unweight_logprob_per_obs,
-
-                weighted_length   = total_obs_length,
-                unweighted_length = unweight_total_length):
-
+                iteration                  = None,
+                counted                    = None,
+                delta                      = None,
+                weighted_logprob           = None,
+                unweighted_logprob         = None,
+                weighted_logprob_per_obs   = None,
+                unweighted_logprob_per_obs = None,
+                weighted_length            = None,
+                unweighted_length          = None,
+                ):
         ltmp = [
             datetime.datetime.now(),
             iteration,
@@ -136,6 +143,7 @@ def DefaultLoggerFactory(fh, model):
             weighted_length,
             unweighted_length,
         ] + model.get_row()
+        ltmp = ltmp[:maxcols]
         fh.write("\t".join([_format_helper(X) for X in ltmp]))
 
     return logfunc
