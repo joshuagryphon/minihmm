@@ -12,6 +12,10 @@ break backward compatibility.
 Unreleased
 ---------------------
 
+ - Migrated serialization setup to ``jsonpickle``, a practice much saner than
+   what I had been previously doing. This breaks backward compatibility with
+   v0.1.4 JSON blobs, but enables far more flexibility in what can be serialized
+
  - ``train_baum_welch()`` can now weight individual observations
 
  - changed logging in ``train_baum_welch()``. This led to some
