@@ -26,6 +26,7 @@ from numpy.testing import assert_array_equal
 
 from minihmm.test.common import (
     check_equal,
+    check_not_equal,
     check_array_equal,
     check_dict_equal,
     check_list_equal,
@@ -43,14 +44,15 @@ class TestModelReducer():
 
     @classmethod
     def setUpClass(cls):
-        cls.models = {}
+        cls.models  = {}
         cls.max_order  = 6
         cls.max_states = 7
         for num_states in range(2, cls.max_states):
             for starting_order in range(1, cls.max_order):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    cls.models[(starting_order, num_states)] = ModelReducer(starting_order, num_states)
+                    model = ModelReducer(starting_order, num_states) 
+                    cls.models[(starting_order, num_states)] = model
 
         cls.sequences = [
             [0, 2, 0, 5, 2, 2, 4, 2, 4, 1],
@@ -247,6 +249,21 @@ class TestModelReducer():
         vals = d.values()
         assert len(set(vals)) == len(vals)
         return { v : k for (k,v) in d.items() }
+
+    # skipping because need to define HMM for model reducer
+    @unittest.skip
+    def test_revive_from_json(self):
+        for k, v in self.models.items():
+            enc = v.to_json()
+            dec = ModelReducer.from_json(enc)
+            yield check_equal, v, dec
+
+    def test_eq(self):
+        for k1, k2 in itertools.combinations(self.models.keys(), r=2):
+            if k1 == k2:
+                yield check_equal, self.models[k1], self.models[k2]
+            else:
+                yield check_not_equal, self.models[k1], self.models[k2]
 
     def test_transcode_sequence(self):
         testseq  = ["A","B","C","D","E"]
