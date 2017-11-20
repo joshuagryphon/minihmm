@@ -60,6 +60,18 @@ class AbstractFactor():
 #    def test_probability_is_correct(self):
 #        assert False
 
+    def test_revive_from_pickle_equal(self):
+        # NOTE: only tested if class implements __eq__
+        for initial, revived in zip(self.factors, self.from_pickle):
+            if hasattr(initial, "__eq__"):
+                yield check_equal, initial, revived
+ 
+    def test_revive_from_json_equal(self):
+        # NOTE: only tested if class implements __eq__
+        for initial, revived in zip(self.factors, self.from_json):
+            if hasattr(initial, "__eq__"):
+                yield check_equal, initial, revived
+ 
     def test_revive_from_pickle_logprob(self):
         for initial, revived, examples in zip(self.factors, self.from_pickle, self.examples):
             for my_example in examples:

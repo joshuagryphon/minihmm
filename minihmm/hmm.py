@@ -45,14 +45,14 @@ import warnings
 import copy
 import numpy
 from minihmm.factors import (
-    AbstractGenerativeFactor,
-    AbstractTableFactor,
+    AbstractFactor,
+    AbstractFactor,
     ArrayFactor,
     MatrixFactor
 )
 from minihmm.util import matrix_to_dict, matrix_from_dict
 
-class FirstOrderHMM(AbstractGenerativeFactor):
+class FirstOrderHMM(AbstractFactor):
     """First-order homogeneous Hidden Markov Model.
     
     Observations/emissions can be multivariate
@@ -709,7 +709,7 @@ class FirstOrderHMM(AbstractGenerativeFactor):
         return dtmp
 
 
-class FirstOrderMM(AbstractGenerativeFactor):
+class FirstOrderMM(AbstractFactor):
     """Implements a first-order homogeneous Markov Model.
     """
     def __init__(self,state_priors,trans_probs):

@@ -6,20 +6,24 @@ or as models themselves. All probabilistic models in this library
 descend from |AbstractFactor|.
 
 Factors may be:
-    - continuous (e.g. |NormalFactor| ) or discete (e.g. |ArrayFactor|)
-    - univariate or multivariate
+
+    - continuous or discrete
+    - univariate or multivariate in their emissions
 
 Factors must be able to:
+
     - calculate a log probability of an observation via a ``logprob()`` method
+
     - calculate a log probability of a series of observations via
       a ``get_model_log_likelihood()`` method
+
     - serialize and deserialize their parameters via ``serialize()`` and
       ``deserialize()`` methods, respectively. At present, we are taking 
       suggestions for a formal spec on what the serialization protocol should
       be. Right now, it is a free-for-all.
 
 In addition, factors may:
-    - supply a ``generate(n)`` function, to generate *n* observations
+    - supply a ``generate(n)`` function, to generate `n` observations
       from their distribution.
 
 """
@@ -32,6 +36,10 @@ import scipy.stats
 from abc import abstractmethod
 
 from minihmm.util import matrix_from_dict, matrix_to_dict
+
+#===============================================================================
+# Abstract classes
+#===============================================================================
 
 class AbstractFactor(object):
     """Abstract class for all probability distributions
@@ -147,48 +155,67 @@ class AbstractFactor(object):
             pool.join()
             return sum(pool_results)
         
-
-class AbstractGenerativeFactor(AbstractFactor):
-    """A factor which is also generative. This must implement a :meth:`generate` function        
-    """
     @abstractmethod
     def generate(self,*args,**kwargs):
-        """Sample a random value from the distribution 
-        """
+        """Sample a random value from the distribution"""
         pass        
 
-class AbstractTableFactor(AbstractGenerativeFactor):
-    """Base class for probability distributions that are internally represented
-    as tables. These typically will have multiple free parameters that must
-    share group constraints (e.g. they must all sum to less than one)
-    """
 
-    def __repr__(self):
-        return "<%s parameters:%s>" % (self.__class__.__name__,
-                                       ",".join([str(X) for X in self.data]))
-    
-    def __str__(self):
-        return str(self.data)
-
-    @abstractmethod
-    def get_parameter_group_indices(self):
-        """Return indices that indicate which parameters in the array
-        returned by self.get_free_parameters() must sum to one or less
-
-        Returns
-        -------
-        list
-            list of *(int,int)* of starting and end half-open end positions
-            for each group of parameters
-        """
-        pass
-  
+#===============================================================================
+# Helpers for unpickling / reviving from jsonpickle
+#===============================================================================
+ 
 def _get_arrayfactor_from_dict(dtmp):
-    """Revive an :class:`ArrayFactor` from a dictionary"""
+    """Revive a :class:`ArrayFactor` from a dictionary
+
+    Parameters
+    ----------
+    dtmp : dict
+         Dictionary, created by :meth:`ArrayFactor.to_dict`
+
+    Returns
+    -------
+    ArrayFactor
+    """
     return ArrayFactor(numpy.array([float(X) for X in dtmp["data"]]))
 
+def _get_matrixfactor_from_dict(dtmp):
+    """Revive a :class:`MatrixFactor` from a dictionary
 
-class ArrayFactor(AbstractTableFactor):
+    Parameters
+    ----------
+    dtmp : dict
+         Dictionary, created by :meth:`MatrixFactor.to_dict`
+
+    Returns
+    -------
+    MatrixFactor
+    """
+    data = matrix_from_dict(dtmp["data"], dense=True)
+    return MatrixFactor(data, row_conditional = dtmp["row_conditional"])
+
+def _get_scipydistfactor_from_dict(dtmp):
+    """Revive a :class:`ScipyDistributionFactor` from a dictionary
+
+    Parameters
+    ----------
+    dtmp : dict
+        Dictionary, created by :meth:`ScipyDistributionFactor.to_dict`
+
+    Returns
+    -------
+    ScipyDistributionFactor
+    """
+    dist_class = getattr(scipy.stats.distributions, dtmp["dist_class"])
+    return ScipyDistributionFactor(dist_class(), *dtmp["dist_args"], **dtmp["dist_kwargs"])
+
+
+#===============================================================================
+# Implementable classes
+#===============================================================================
+
+
+class ArrayFactor(AbstractFactor):
     """Univariate probability distribution constructed from a 1D list or array
 
     Attributes
@@ -212,6 +239,9 @@ class ArrayFactor(AbstractTableFactor):
             Array of probabilities indexed by position
         """
         self.data = copy.deepcopy(numpy.array(data))
+
+    def __eq__(self, other):
+        return (self.data == other.data).all()
     
     def __len__(self):
         return len(self.data)
@@ -295,11 +325,8 @@ class ArrayFactor(AbstractTableFactor):
         new_parameters.append(1.0 - sum(parameters))
         return ArrayFactor(numpy.array(new_parameters))
 
-def _get_matrixfactor_from_dict(dtmp):
-    data = matrix_from_dict(dtmp["data"], dense=True)
-    return MatrixFactor(data, row_conditional = dtmp["row_conditional"])
- 
-class MatrixFactor(AbstractTableFactor):
+
+class MatrixFactor(AbstractFactor):
     """Bivariate probability distribution constructed from a two-dimensional
     matrix or array. MatrixFactors can represent joint distributions *P(X,Y)*
     as well as conditional distributions *P(Y|X)*, depending upon whether
@@ -338,6 +365,9 @@ class MatrixFactor(AbstractTableFactor):
         """
         self.row_conditional = row_conditional
         self.data = numpy.array(copy.deepcopy(data))
+
+    def __eq__(self, other):
+        return self.row_conditional == other.row_conditional and (self.data == other.data).all()
     
     def __len__(self):
         if self.row_conditional is True:
@@ -474,7 +504,7 @@ class MatrixFactor(AbstractTableFactor):
         return MatrixFactor(new_matrix, row_conditional=self.row_conditional)
 
 
-class FunctionFactor(AbstractGenerativeFactor):
+class FunctionFactor(AbstractFactor):
     """Probability distribution constructed from functions
 
     Attributes
@@ -633,25 +663,8 @@ class LogFunctionFactor(FunctionFactor):
 
 
 
-def _get_scipydistfactor_from_dict(dtmp):
-      """Rebuilt a :class:`ScipyDistributionFactor` from a dictionary.
 
-      Top-level function to enable unpickling.
-
-      Parameters
-      ----------
-      dtmp : dict
-          Dictionary, created by :meth:`ScipyDistributionFactor.to_dict`
-
-      Returns
-      -------
-      ScipyDistributionFactor
-      """
-      dist_class = getattr(scipy.stats.distributions, dtmp["dist_class"])
-      return ScipyDistributionFactor(dist_class(), *dtmp["dist_args"], **dtmp["dist_kwargs"])
-
-
-class ScipyDistributionFactor(AbstractGenerativeFactor):
+class ScipyDistributionFactor(AbstractFactor):
     """Probability distribution using distributions provided by :mod:`scipy.stats`
 
     Attributes
@@ -696,7 +709,9 @@ class ScipyDistributionFactor(AbstractGenerativeFactor):
         except AttributeError:
             self.prob_fn = self.distribution.pmf
             self.log_prob_fn = self.distribution.logpmf
-        #AbstractFactor.__init__(self,*dist_args,**dist_kwargs)
+
+    def __eq__(self, other):
+        return self.to_dict() == other.to_dict()
 
     def to_dict(self):
         return {
