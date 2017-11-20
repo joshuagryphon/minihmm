@@ -44,6 +44,10 @@ References
 import warnings
 import copy
 import numpy
+import jsonpickle
+import jsonpickle.ext.numpy
+jsonpickle.ext.numpy.register_handlers()
+
 from minihmm.factors import (
     AbstractFactor,
     AbstractFactor,
@@ -117,6 +121,25 @@ class FirstOrderHMM(AbstractFactor):
     def __repr__(self):
         return "<%s, %s states>" % (self.__class__.__name__, self.num_states)
 
+    def to_json(self):
+        """Return a string JSON blob encoding `self`"""
+        return jsonpickle.encode(self)
+
+    @staticmethod
+    def from_json(stmp):
+        """Revive a model from a JSON blob
+        
+        Parameters
+        ----------
+        stmp : str
+            JSON blob encoding an HMM
+
+        Returns
+        -------
+        :class:`FirstOrderHMM`
+        """
+        return jsonpickle.decode(stmp)
+
     def to_dict(self):
         """Return a dictionary describing `self`, which can be serialized as JSON
 
@@ -166,11 +189,8 @@ class FirstOrderHMM(AbstractFactor):
         my_dict = {
             "trans_probs"    : MatrixFactor(numpy.array(matrix_from_dict(dtmp["trans_probs"],  dense=True))),
             "state_priors"   : ArrayFactor(sp.reshape(sp.shape[1])),
-            "emission_probs" : emission_probs, #TODO: implement revival of emission probabilities
+            "emission_probs" : emission_probs,
         }
-
-        #if emission_probs is not None:
-        #    my_dict["emission_probs"] = emission_probs
 
         return FirstOrderHMM(**my_dict)
     

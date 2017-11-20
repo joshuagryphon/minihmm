@@ -6,9 +6,15 @@ the forward-backward algorithm, posterior decoding, and re-training are all test
 """
 import unittest
 import itertools
+import warnings
+import pickle
+
 import numpy
 import scipy.stats
-import warnings
+
+import jsonpickle
+import jsonpickle.ext.numpy
+jsonpickle.ext.numpy.register_handlers()
 
 from collections import Counter
 from nose.tools import (
@@ -35,7 +41,10 @@ from minihmm.factors import (ArrayFactor,
                              LogFunctionFactor,
                              ScipyDistributionFactor)
 
-
+from minihmm.test.common import (
+    check_array_equal,
+    check_equal
+)
 
 _FORWARD_SEED  = 5139284
 _TRAINING_SEED = 134067
@@ -115,6 +124,9 @@ class _BaseExample():
         # Generate test cases for Viterbi and posterior decoding            
         cls.decode_tests = [hmm.generate(1000) for _ in range(10)]
             
+        cls.from_pickle = pickle.loads(pickle.dumps(cls.generating_hmm))
+        cls.from_json = jsonpickle.decode(jsonpickle.encode(cls.generating_hmm))
+
         print("Set up class %s" % cls.__name__)
 
     @unittest.skip
@@ -125,6 +137,22 @@ class _BaseExample():
         # 2. test sampling is according to joint distribution?
         # TODO: what else?
         assert False
+
+    def test_unpickle(self):
+        gen = self.generating_hmm
+        rev = self.from_pickle
+        yield check_array_equal, gen.state_priors.data, rev.state_priors.data
+        yield check_array_equal, gen.trans_probs.data, rev.trans_probs.data
+        for i in range(gen.num_states):
+            yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
+        
+    def test_revive_from_json(self):
+        gen = self.generating_hmm
+        rev = self.from_json
+        yield check_array_equal, gen.state_priors.data, rev.state_priors.data
+        yield check_array_equal, gen.trans_probs.data, rev.trans_probs.data
+        for i in range(gen.num_states):
+            yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
 
     def test_sample(self):
         # Test sampling algorithm by checking the slope and intercept of the regression line

@@ -16,6 +16,7 @@ setup(
     	                "numpy>=1.5",
                         "scipy>=0.12.0",
                         "matplotlib>=1.3.0",
+                        "jsonpickle",
                         ],
 
     zip_safe = True,
