@@ -19,14 +19,6 @@ import multiprocessing
 import functools
 import itertools
 
-# TODO: change to biufc
-_number_types = { int, long, float, numpy.long, numpy.longlong, numpy.longdouble, numpy.longfloat, 
-                  numpy.uint, numpy.uint0, numpy.uint8, numpy.uint16, numpy.uint32, numpy.uint64,
-                  numpy.int,  numpy.int0,  numpy.int8,  numpy.int16,  numpy.int32,  numpy.int64,
-                  numpy.float, numpy.float16, numpy.float32, numpy.float64, numpy.float128,
-                  numpy.ulonglong,
-                }
-
 
 #===============================================================================
 # INDEX: helper functions
@@ -80,6 +72,73 @@ def linear_noise_gen(m=-0.05, b=1, offset=0):
         offset += 1
         yield max(m * offset + b, 0)
 
+
+def _format_helper(inp):
+    """Format input for logging, depending on type"""
+    if isinstance(x, int):
+        return "%d" % x
+    elif isinstance(x, float):
+        return "%.32e" % x
+    else:
+        return str(x)
+
+
+def DefaultLoggerFactory(fh, model):
+    """Factory function to record likelihood and parameter changes during training
+
+    Parameters
+    ----------
+    fh : file-like
+        Something implementing a ``write()`` method
+
+    model : :class:`~minihmm.hmm.FirstOrderHMM`
+        HMM that will be trained
+    """
+    header  = [
+        "time",
+        "iteration",
+        "counted",
+        "delta",
+        "weighted_logprob",
+        "unweighted_logprob",
+        "weighted_logprob_per_obs",
+        "unweighted_logprob_per_obs",
+        "weighted_length",
+        "unweighted_length",
+    ]
+    header += model.get_header()
+    fh.write("\t".join(header) + "\n")
+
+    def logfunc(model,
+                iteration = None,
+                counted   = counted,
+                delta     = delta,
+
+                weighted_logprob   = new_total_logprob,
+                unweighted_logprob = unweight_total_logprob,
+                weighted_logprob_per_obs   = logprob_per_obs,
+                unweighted_logprob_per_obs = unweight_logprob_per_obs,
+
+                weighted_length   = total_obs_length,
+                unweighted_length = unweight_total_length):
+
+        ltmp = [
+            datetime.datetime.now(),
+            iteration,
+            counted,
+            delta,
+
+            weighted_logprob,
+            unweighted_logprob,
+            weighted_logprob_per_obs,
+            unweighted_logprob_per_obs,
+
+            weighted_length,
+            unweighted_length,
+        ] + model.get_row()
+        fh.write("\t".join([_format_helper(X) for X in ltmp]))
+
+    return logfunc
 
 #===============================================================================
 # INDEX: training functions

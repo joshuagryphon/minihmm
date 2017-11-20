@@ -16,12 +16,19 @@ Unreleased
    what I had been previously doing. This breaks backward compatibility with
    v0.1.4 JSON blobs, but enables far more flexibility in what can be serialized
 
+ - replace older ``(de)serialize()`` methods with much saner ``get_header()``
+   and ``get_row()`` for export of models as ``DataFrame`` rows (e.g. to watch
+   parameter trajectories during training
+
  - ``train_baum_welch()`` can now weight individual observations
 
  - changed logging in ``train_baum_welch()``. This led to some
-   backward-incompatible changes
+   backward-incompatible changes, but is much nicer. It also includes a
+   ``DefaultLoggerFactory()`` so people don't have to comb through insane
+   logs anymore
 
- - Unit tests for ``train_baum_welch()``
+ - Unit tests and multiple improvments for ``train_baum_welch()``
+
 
 
 v0.1.4 = [2017-06-08]
