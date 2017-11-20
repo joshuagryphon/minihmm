@@ -5,9 +5,8 @@ import scipy.stats
 
 from numpy.testing import (
     assert_almost_equal,
-    assert_array_less,
 )
-from nose.tools import assert_greater_equal
+from nose.tools import assert_greater_equal, assert_true
 from minihmm.test.common import check_almost_equal
 
 from minihmm.hmm import FirstOrderHMM
@@ -81,14 +80,12 @@ class _BaseExample:
     def test_state_priors_trained(self):
         found    = self.training_results["best_model"].state_priors.data
         expected = self.generating_hmm.state_priors.data
-        sse = (found - expected)**2
-        assert_array_less(sse, 2e-3)
+        yield check_almost_equal, found, expected, { "decimal" : 2 }
 
     def test_transition_probs_trained(self):
         found    = self.training_results["best_model"].trans_probs.data
         expected = self.generating_hmm.trans_probs.data
-        sse = (found - expected)**2
-        assert_array_less(sse, 1e-3)
+        yield check_almost_equal, found, expected, { "decimal" : 2 }
 
     def test_likelihoods_increased(self):
         delta = numpy.convolve([1, -1], self.training_results["weight_logprobs"], mode="valid")
@@ -124,7 +121,7 @@ class TestCasino(_BaseExample):
             "naive_state_priors" : numpy.array([0.6, 0.4]),
             "transition_probs"   : numpy.array([[0.95, 0.05],
                                               [0.1,  0.9]]),
-            "naive_transition_probs" : numpy.array([[0.5, 0.5],
+            "naive_transition_probs" : numpy.array([[0.6, 0.4],
                                                     [0.5, 0.5]]),
             "emission_probs"   : [
                 1.0 * numpy.ones(6) / 6.0,
@@ -139,8 +136,9 @@ class TestCasino(_BaseExample):
     def test_emission_probs_trained(self):
         for found, expected in zip(self.training_results["best_model"].emission_probs,
                                    self.generating_hmm.emission_probs):
-            sse = (found.data - expected.data)**2
-            assert_array_less(sse, 1e-4)
+            #sse = (found.data - expected.data)**2
+            #assert_true((sse < 1e-4).all())
+            yield check_almost_equal, found.data, expected.data, { "decimal" : 2 }
 
 
 class TestGaussian(_BaseExample):
