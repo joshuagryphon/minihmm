@@ -35,8 +35,8 @@ import copy
 # INDEX: helper functions
 #===============================================================================
 
-def get_model_noise(template,weight,assymetric_weights=1):
-    """Create an array of noise, with total number of counts equal to weight*template.sum()
+def get_model_noise(template, weight, assymetric_weights=1):
+    """Create an array of noise,  with total number of counts equal to weight*template.sum()
     and shape equal to template.shape
     
     @param template   template array
@@ -62,7 +62,7 @@ class AbstractProbabilityEstimator(object):
     """
     
     @abstractmethod
-    def is_valid(self,reduced_data):
+    def is_valid(self, reduced_data):
         """Return true if data is valid and should be included in current round
         of reestimation
 
@@ -73,7 +73,7 @@ class AbstractProbabilityEstimator(object):
         """
         pass
     
-    def is_invalid(self,reduced_data):
+    def is_invalid(self, reduced_data):
         """Return true if data is invalid and should be excluded from current
         round of reestimation
         
@@ -85,7 +85,7 @@ class AbstractProbabilityEstimator(object):
         return not self.is_valid(reduced_data)
         
     @abstractmethod
-    def reduce_data(self,my_obs,obs_logprob,forward,backward,scale_factors,ksi):
+    def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction by self.construct_factors()
         
@@ -119,7 +119,7 @@ class AbstractProbabilityEstimator(object):
         pass
     
     @abstractmethod
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct factor(s) for an HMM using reduced data from observation sequences
        
         Parameters
@@ -148,31 +148,31 @@ class AbstractProbabilityEstimator(object):
 class _FrozenParameterEstimator(AbstractProbabilityEstimator):
     """Keep some parameter constant, completely ignoring observations
     """
-    def is_valid(self,reduced_data):
+    def is_valid(self, reduced_data):
         return True
     
-    def reduce_data(self,my_obs,obs_logprob,forward,backward,scale_factors,ksi):
-        """Completely ignore data, since parameter is frozen"""
+    def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
+        """Completely ignore data,  since parameter is frozen"""
         return None
     
 class FrozenStatePriorEstimator(_FrozenParameterEstimator):
     """Keep state priors constant, completely ignoring observation data
     """
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Return model's previous state prior factor"""        
         return model.state_priors
 
 class FrozenTransitionEstimator(_FrozenParameterEstimator):
-    """Keep transition estimates constant, completely ignoring observation data
+    """Keep transition estimates constant,  completely ignoring observation data
     """
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Return model's previous transition factor"""        
         return model.trans_probs
 
 class FrozenEmissionEstimator(_FrozenParameterEstimator):
-    """Keep emission estimates constant, completely ignoring observation data
+    """Keep emission estimates constant,  completely ignoring observation data
     """
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Return model's previous emission factors"""        
         return model.emission_probs
 
@@ -186,7 +186,7 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
     """Estimate discrete state priors from observation sequences in Baum-Welch
     training, modeling these as an |ArrayFactor|
     """
-    def reduce_data(self,my_obs,obs_logprob,forward,backward,scale_factors,ksi):
+    def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction
 
@@ -215,9 +215,9 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
         numpy.ndarray
             State prior matrix for given observation sequence
         """
-        return ksi[0,:,:].sum(1)
+        return ksi[0, :, :].sum(1)
 
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete transition factor for an HMM using reduced data from
         observation sequences
         
@@ -243,7 +243,7 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
         """
         pi  = sum(reduced_data)
         pi_sum = pi.sum()
-        pi += get_model_noise(pi,noise_weight)
+        pi += get_model_noise(pi, noise_weight)
         pi += ( pseudocount_weight * pi_sum/ len(pi) )
         pi_normed = pi / pi.sum()
         state_priors = ArrayFactor(pi_normed)
@@ -253,7 +253,7 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
     """Estimate transitions between states from observation sequences in Baum-Welch
     training. Constructs a MatrixFactor 
     """
-    def reduce_data(self,my_obs,obs_logprob,forward,backward,scale_factors,ksi):
+    def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction
         
@@ -284,7 +284,7 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
         """
         return ksi.sum(0)
 
-    def construct_factors(self,model,reduced_data,noise_weight=0,pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete transition factor for an HMM using reduced data from
         observation sequences
         
@@ -310,9 +310,9 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
         """
         A = sum(reduced_data)
         A_sum = A.sum()
-        A += get_model_noise(A,noise_weight)
+        A += get_model_noise(A, noise_weight)
         A += ( pseudocount_weight * A_sum / len(A.ravel()) )
-        A_normed = (A.T/A.sum(1)).T
+        A_normed = (A.T / A.sum(1)).T
         return MatrixFactor(A_normed)
 
 class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
@@ -363,7 +363,7 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
 
         my_E  = numpy.zeros((num_states, self.num_symbols), dtype=float)
         postprob = forward * backward
-        tmp = postprob * scale_factors[:,None]
+        tmp = postprob * scale_factors[:, None]
         for i in range(num_states):
             for k in range(self.num_symbols):
                 my_E[i, k] += tmp[my_obs==k, i].sum()
@@ -656,7 +656,7 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
         """        
         self.index_map     = copy.deepcopy(index_map)
         self.index_weights = numpy.array([(self.index_map == X).sum() \
-                                          for X in range(0, 1+self.index_map.max())]
+                                          for X in range(0, 1 + self.index_map.max())]
                                          )
         self.pseudocount_mask = (pseudocount_array > 0)
         PseudocountTransitionEstimator.__init__(self, pseudocount_array)

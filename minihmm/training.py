@@ -585,7 +585,7 @@ def train_baum_welch(model,
     elif halted == True:
         reason = "HALTED"
     else:
-        reason = "SOMETHING TERRIBLE: iter %s, delta %s, counted %s" % (c,delta,counted)
+        reason = "SOMETHING TERRIBLE: iter %s, delta %s, counted %s" % (c, delta, counted)
  
     logprobs   = numpy.array(logprobs)
     best_model = models[logprobs.argmax()]
