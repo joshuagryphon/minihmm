@@ -23,13 +23,15 @@ In addition, factors may:
       from their distribution.
 
 """
-import numpy
 import functools
 import copy
 import multiprocessing
+import numpy
+import scipy.stats
+
 from abc import abstractmethod
 
-from minhmm.util import matrix_from_dict, matrix_to_dict
+from minihmm.util import matrix_from_dict, matrix_to_dict
 
 class AbstractFactor(object):
     """Abstract class for all probability distributions
@@ -180,7 +182,11 @@ class AbstractTableFactor(AbstractGenerativeFactor):
             for each group of parameters
         """
         pass
-    
+  
+def _get_arrayfactor_from_dict(dtmp):
+    """Revive an :class:`ArrayFactor` from a dictionary"""
+    return ArrayFactor(numpy.array([float(X) for X in dtmp["data"]]))
+
 
 class ArrayFactor(AbstractTableFactor):
     """Univariate probability distribution constructed from a 1D list or array
@@ -195,6 +201,8 @@ class ArrayFactor(AbstractTableFactor):
     --------
     MatrixFactor
     """
+    from_dict = staticmethod(_get_arrayfactor_from_dict)
+
     def __init__(self, data):
         """Create an ArrayFactor
 
@@ -208,6 +216,9 @@ class ArrayFactor(AbstractTableFactor):
     def __len__(self):
         return len(self.data)
 
+    def __reduce__(self):
+        return _get_arrayfactor_from_dict, (self.to_dict(), )
+
     def to_dict(self):
         """Serialize `self` as a dictionary"""
         dtmp = {
@@ -215,10 +226,6 @@ class ArrayFactor(AbstractTableFactor):
             "data"        : list(self.data),
         }
         return dtmp
-
-    def from_dict(self, dtmp):
-        """Revive an :class:`ArrayFactor` from a dictionary"""
-        return ArrayFactor(numpy.array([float(X) for X in data]))
 
     def probability(self, i):
         """Return probability in cell ``i`` of the array
@@ -288,7 +295,10 @@ class ArrayFactor(AbstractTableFactor):
         new_parameters.append(1.0 - sum(parameters))
         return ArrayFactor(numpy.array(new_parameters))
 
-
+def _get_matrixfactor_from_dict(dtmp):
+    data = matrix_from_dict(dtmp["data"])
+    return MatrixFactor(data, row_conditional = dtmp["row_conditional"])
+ 
 class MatrixFactor(AbstractTableFactor):
     """Bivariate probability distribution constructed from a two-dimensional
     matrix or array. MatrixFactors can represent joint distributions *P(X,Y)*
@@ -310,6 +320,8 @@ class MatrixFactor(AbstractTableFactor):
         *P(column,row)*. (Default: *True*)
 
     """
+    from_dict = staticmethod(_get_matrixfactor_from_dict)
+
     def __init__(self, data, row_conditional=True):
         """Create a MatrixFactor
         
@@ -331,7 +343,10 @@ class MatrixFactor(AbstractTableFactor):
         if self.row_conditional is True:
             return self.data.shape[0]
         else:
-            return self.data.shape[0]*self.data.shape[1]
+            return self.data.shape[0] * self.data.shape[1]
+
+    def __reduce__(self):
+        return _get_matrixfactor_from_dict, (self.to_dict(), )
 
     def to_dict(self):
         return {
@@ -340,10 +355,6 @@ class MatrixFactor(AbstractTableFactor):
             "data"            : matrix_to_dict(self.data),
         }
 
-    def from_dict(self, dtmp):
-        data = matrix_from_dict(dtmp["data"])
-        return MatrixFactor(data, row_conditional = dtmp["row_conditional"])
-            
     def probability(self, i, j):
         """Return probability value at *(i,j)* in underlying matrix
         
@@ -519,20 +530,6 @@ class FunctionFactor(AbstractGenerativeFactor):
     def __str__(self):
         return "(%s,%s)" % (self._func.func_name, ",".join([str(X) for X in self.data]))
         
-    # TODO: implement
-    def to_dict(self):
-        return {
-            "model_class" : "minihmm.factors.FunctionFactor",
-            "func_args"   : list(func_args),
-            "func_kwargs" : dict(func_kwargs),
-            # "func"           : "",
-            # "generator_func" : "",
-        }
-
-    # TODO: implement
-    def from_dict(dtmp):
-        pass
-
     def serialize(self):
         """Serialize |FunctionFactor|, saving ``self.func_args`` and
         ``self.func_kwargs`` to a tab-delimited string.
@@ -605,7 +602,7 @@ class FunctionFactor(AbstractGenerativeFactor):
 class LogFunctionFactor(FunctionFactor):
     """Probability distribution constructed from functions
     """
-    def __init__(self, func, generator_func, func_args=[]):
+    def __init__(self, func, generator_func, *func_args, **func_kwargs):
         """Create a LogFunctionFactor
         
         Parameters
@@ -634,14 +631,25 @@ class LogFunctionFactor(FunctionFactor):
         self.logprob    = functools.partial(func, *func_args, **func_kwargs)
         self._generator = functools.partial(generator_func, *func_args, **func_kwargs)
 
-    def to_dict(self):
-        dtmp = FunctionFactor.to_dict(self)
-        dtmp["model_class"] = "minihmm.factors.LogFunctionFactor"
-        return dtmp
 
-    # TODO: implement
-    def from_dict(dtmp):
-        pass
+
+def _get_scipydistfactor_from_dict(dtmp):
+      """Rebuilt a :class:`ScipyDistributionFactor` from a dictionary.
+
+      Top-level function to enable unpickling.
+
+      Parameters
+      ----------
+      dtmp : dict
+          Dictionary, created by :meth:`ScipyDistributionFactor.to_dict`
+
+      Returns
+      -------
+      ScipyDistributionFactor
+      """
+      dist_class = getattr(scipy.stats.distributions, dtmp["dist_class"])
+      return ScipyDistributionFactor(dist_class(), *dtmp["dist_args"], **dtmp["dist_kwargs"])
+
 
 class ScipyDistributionFactor(AbstractGenerativeFactor):
     """Probability distribution using distributions provided by :mod:`scipy.stats`
@@ -656,6 +664,8 @@ class ScipyDistributionFactor(AbstractGenerativeFactor):
     These cannot be used in parallelized processes because distributions
     in :py:mod:`scipy.stats` are not picklable!
     """
+    from_dict = staticmethod(_get_scipydistfactor_from_dict)
+
     def __init__(self, dist_class, *dist_args, **dist_kwargs):
         """Create a ScipyDistributionFactor
         
@@ -691,20 +701,19 @@ class ScipyDistributionFactor(AbstractGenerativeFactor):
     def to_dict(self):
         return {
             "model_class" : "minihmm.factors.ScipyDistributionFactor",
-            "dist_class"  : dist_class.__class__.__name__,
-            "dist_args"   : list(dist_args),
-            "dist_kwargs" : dict(dist_kwargs),
+            "dist_class"  : self._dist_class.__class__.__name__,
+            "dist_args"   : list(self.dist_args),
+            "dist_kwargs" : dict(self.dist_kwargs),
         }
 
-    # FIXME: implement
-    def from_dict(self):
-        pass
+    def __reduce__(self):
+        return _get_scipydistfactor_from_dict, (self.to_dict(), )
 
     def __repr__(self):
         return "<%s model:%s parameters:%s>" % (self.__class__.__name__,
                                                  self._dist_class,
-                                                 ",".join([str(X) for X in self._args])+\
-                                                 ",".join(["%s:%s" % (K, V) for K, V in self._kwargs.items()]) )
+                                                 ",".join([str(X) for X in self.dist_args])+\
+                                                 ",".join(["%s:%s" % (K, V) for K, V in self.dist_kwargs.items()]) )
 
     def serialize(self):
         """Serialize |FunctionFactor|, saving ``self.func_args`` and

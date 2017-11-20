@@ -2,12 +2,18 @@
 """
 """
 import pickle
+import numpy
+
 import jsonpickle
 import jsonpickle.ext.numpy
 jsonpickle.ext.numpy.register_handlers()
 
 from nose.tools import assert_equal
-from minihmm.test.common import check_equal, check_array_equal
+from minihmm.test.common import (
+    check_equal,
+    check_array_equal,
+    check_tuple_equal
+)
 
 from minihmm.factors import (
     ArrayFactor,
@@ -17,8 +23,6 @@ from minihmm.factors import (
     ScipyDistributionFactor,
 )
 
-
-import numpy
 
 
 class AbstractFactor():
@@ -111,6 +115,15 @@ class TestArrayFactor(AbstractFactor):
             cls.factors.append(ArrayFactor(ary))
             cls.examples.append([(X,) for X in numpy.random.randint(0, high=my_len, size=50)])
 
+    def test_revive_from_json_shape(self):
+        for initial, revived in zip(self.factors, self.from_json):
+            yield check_tuple_equal, initial.data.shape, revived.data.shape
+
+    def test_revive_from_pickle_shape(self):
+        for initial, revived in zip(self.factors, self.from_pickle):
+            yield check_tuple_equal, initial.data.shape, revived.data.shape
+
+
 class TestMatrixFactor(AbstractFactor):
 
     @classmethod
@@ -124,6 +137,13 @@ class TestMatrixFactor(AbstractFactor):
             cls.factors.append(MatrixFactor(ary, row_conditional=False))
             cls.examples.append([(X,Y) for (X,Y) in numpy.random.randint(0, high=my_len, size=(50, 2))])
 
+    def test_revive_from_json_shape(self):
+        for initial, revived in zip(self.factors, self.from_json):
+            yield check_tuple_equal, initial.data.shape, revived.data.shape
+
+    def test_revive_from_pickle_shape(self):
+        for initial, revived in zip(self.factors, self.from_pickle):
+            yield check_tuple_equal, initial.data.shape, revived.data.shape
 
 
 #===============================================================================
