@@ -296,7 +296,7 @@ class ArrayFactor(AbstractTableFactor):
         return ArrayFactor(numpy.array(new_parameters))
 
 def _get_matrixfactor_from_dict(dtmp):
-    data = matrix_from_dict(dtmp["data"])
+    data = matrix_from_dict(dtmp["data"], dense=True)
     return MatrixFactor(data, row_conditional = dtmp["row_conditional"])
  
 class MatrixFactor(AbstractTableFactor):
