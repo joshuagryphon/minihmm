@@ -26,6 +26,7 @@ from numpy.testing import assert_array_equal
 
 from minihmm.test.common import (
     check_equal,
+    check_almost_equal,
     check_not_equal,
     check_array_equal,
     check_dict_equal,
@@ -33,6 +34,8 @@ from minihmm.test.common import (
     check_tuple_equal,
     check_raises,
     check_true,
+    get_dirty_casino,
+    get_fourstate_poisson,
 )
 
 
@@ -534,4 +537,25 @@ class TestModelReducer():
 
             for k in ("trans_probs", "state_priors"):
                 yield check_array_equal, getattr(found.hmm, k).data, getattr(my_hmm, k).data
+
+    def test_remap_from_first_order(self):
+        # test parameter remapping by asserting that log probabilities of observation sequences
+        # from remapped high-order mdodels match those of low order models
+
+        models = {
+            2 : get_dirty_casino(),
+            4 : get_fourstate_poisson(),
+        }
+
+        for num_states, native_model in sorted(models.items()):
+            seqs = [native_model.generate(200)[1] for _ in range(5)]
+            for starting_order in 2, 3, 4, 5:
+                mod = ModelReducer(starting_order, num_states)
+                trans_model = mod.remap_from_first_order(native_model)
+
+                for my_obs in seqs:
+                    native_logprob = native_model.logprob(my_obs)
+                    trans_logprob = native_model.logprob(my_obs)
+
+                    yield check_almost_equal, native_logprob, trans_logprob
 

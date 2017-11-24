@@ -43,7 +43,8 @@ from minihmm.factors import (ArrayFactor,
 
 from minihmm.test.common import (
     check_array_equal,
-    check_equal
+    check_equal,
+    get_fourstate_poisson,
 )
 
 _FORWARD_SEED  = 5139284
@@ -56,17 +57,18 @@ class _BaseExample():
     # define these variables in this method in subclasses    
     @classmethod
     def do_subclass_setup(cls):
-        cls.name = ""
-        cls.min_frac_equal = 0.8
-        cls.hmm_dict = None
-        cls.models = {
-            "generating" : {
-                "trans_probs"      : None,
-                "state_priors"     : None,
-                "emission_probs"   : None,
-            },
 
-        }
+        # name of test suite
+        cls.name = ""
+
+        # minimum fraction expected to be equal in viterbi decoding test
+        cls.min_frac_equal = 0.8
+        
+        # dict representation of hmm
+        cls.hmm_dict = None
+
+        # HMM instance used for testing
+        cls.generating_hmm = None
 
     @classmethod
     def setUpClass(cls):
@@ -85,8 +87,7 @@ class _BaseExample():
 
         print("Setting up class %s" % cls.__name__)
         cls.do_subclass_setup()
-        hmm = FirstOrderHMM(**cls.models["generating"])
-        cls.generating_hmm = hmm
+        hmm = cls.generating_hmm
         numpy.random.seed(_TRAINING_SEED)
 
         for x in cls.seq_lengths:
@@ -299,17 +300,14 @@ class TestACoin(_BaseExample):
         cls.name = "Coin example"
         cls.min_frac_equal = 0.69
  
-        cls.models = {
-            "generating" : {
+        cls.generating_hmm = FirstOrderHMM(**{
                 "state_priors"     : ArrayFactor([0.005,0.995]),
                 "trans_probs"      : MatrixFactor(numpy.array([
                                                     [0.8, 0.2],
                                                     [0.3, 0.7]])),
                 "emission_probs"   : [ArrayFactor([0.6,0.4]),
                                       ArrayFactor([0.15,0.85])],
-            },
-
-        }
+        })
 
         cls.hmm_dict = {
             "emission_probs" : [],
@@ -339,15 +337,12 @@ class TestBTwoGaussian(_BaseExample):
         transitions = numpy.matrix([[0.9,0.1],
                                     [0.25,0.75]])
 
-        cls.models = {
-            "generating" : {
+        cls.generating_hmm = FirstOrderHMM(**{
                 "trans_probs"    : MatrixFactor(transitions),
                 "state_priors"   : ArrayFactor([0.8,0.2]),
                 "emission_probs" : [ScipyDistributionFactor(scipy.stats.norm,loc=0,scale=0.5),
                                     ScipyDistributionFactor(scipy.stats.norm,loc=5,scale=10)],
-            },
-
-        }
+        })
 
         cls.hmm_dict = {
             "emission_probs" : [],
@@ -366,6 +361,7 @@ class TestBTwoGaussian(_BaseExample):
             }
         } 
 
+
 class TestCFourPoisson(_BaseExample):
 
     @classmethod
@@ -378,20 +374,7 @@ class TestCFourPoisson(_BaseExample):
                                     [0.45,0.01,0.04,0.5],
                                    ])
 
-        cls.models = {
-            "generating" : {
-                "trans_probs"    : MatrixFactor(transitions),
-                "state_priors"   : ArrayFactor([0.7,0.05,0.15,0.10]),
-                "emission_probs" : [
-                      ScipyDistributionFactor(scipy.stats.poisson,1),
-                      ScipyDistributionFactor(scipy.stats.poisson,5),
-                      ScipyDistributionFactor(scipy.stats.poisson,10),
-                      ScipyDistributionFactor(scipy.stats.poisson,25),
-                 ]
-
-            },
-        }
-
+        cls.generating_hmm = get_fourstate_poisson()
         cls.hmm_dict = {
             "emission_probs" : [],
             "state_priors"   : {

@@ -79,6 +79,7 @@ then (2) train the resulting HMM using standard method (e.g.
 """
 import warnings
 import itertools
+import copy
 import numpy
 
 import jsonpickle
@@ -86,6 +87,7 @@ import jsonpickle.ext.numpy
 jsonpickle.ext.numpy.register_handlers()
 
 from minihmm.hmm import FirstOrderHMM
+from minihmm.factors import ArrayFactor, MatrixFactor
 
 from scipy.sparse import (
     lil_matrix,
@@ -177,11 +179,11 @@ class ModelReducer(object):
            or self.low_order_states != other.low_order_states:
                return False
 
-        if self.hmm is None:
-            if other.hmm is None:
+        if self._hmm is None:
+            if other._hmm is None:
                 return True
         else:
-            if other.hmm is None:
+            if other._hmm is None:
                 return False
             return self.hmm == other.hmm
 
@@ -589,20 +591,29 @@ class ModelReducer(object):
 
         return state_priors, coo_matrix((vals, (row_ords, col_ords)))
 
-    # TODO
-    def get_random_model(self):
+    def get_emission_tying_arrays(self):
         pass
 
     # TODO
+    def get_random_model(self):
+        """
+        See also
+        --------
+        :meth:`ModelReducer.remap_from_first_order`
+        """
+        pass
+
+    # TODO: TEST
+    #  - parameters should map sanely
+    #  - and probabilities should be equivalent if model isn't further trained
     def remap_from_first_order(self, native_hmm):
         """Remap parameters from a native first order HMM onto a first-order
-        translation of a high-order HMM, in order to, for example, retrain the
-        translated high-order HMM via refinement.
+        translation of a high-order HMM, in order to, for example, provide a
+        reasonable non-random starting point for refinement training of the
+        high-order HMM.
         
-        Parameters
-        ----------
-        native_hmm : :class:`minihmm.hmm.FirstOrderHMM`
-            Native, first-order HMM, preferably with trained parameters
+        Parameters ---------- native_hmm : :class:`minihmm.hmm.FirstOrderHMM`
+        Native, first-order HMM, preferably with trained parameters
 
         Returns
         -------
@@ -612,5 +623,48 @@ class ModelReducer(object):
             into corresponding positions.
         """
         htl = self.high_states_to_low
-        lth = self.low_states_to_high
+
+        # check that number of states is compatible
+        if self.high_order_states != native_hmm.num_states:
+            raise ValueError("Native HMM (%d states), has different number of states than `self` (%d states)" % (native_hmm.num_states, self.high_order_states))
+
+        # For transitions
+        # Each high-order state transitiono  `(n-i, ... , n-1) ->  (n-i+1 , ... , n)`
+        # should be mapped to appropiate transformations of the parameters (n - 1 , n)
+
+        # For state priors and emission probabilities
+        # each high-order state (n-i, ...,  n) should be given the parameters matching
+        # native state `n` 
+
+        # will need to make appropriate state-tying matrices for emissions, as well
+        sp_source = native_hmm.state_priors.data
+        sp_dest   = numpy.zeros(self.low_order_states, dtype=float)
+        
+        trans_source = native_hmm.trans_probs.data
+        trans_dest = numpy.zeros((self.low_order_states, self.low_order_states), dtype=float)
+
+        em_source = native_hmm.emission_probs
+        em_dest = [None] * self.low_order_states
+
+        for my_tuple, trans_state in htl.items():
+            native_state = my_tuple[-1]
+            sp_dest[trans_state] = sp_source[native_state]
+            em_dest[trans_state] = copy.deepcopy(em_source[native_state])
+
+            for next_native_state in range(self.high_order_states):
+                next_tuple = tuple(list(my_tuple)[1:] + [next_native_state])
+                next_trans_state = htl[next_tuple]
+                trans_dest[trans_state, next_trans_state] = trans_source[native_state, next_native_state]
+
+        # renormalize
+        sp_dest /= sp_dest.sum()
+        sp_dest = ArrayFactor(sp_dest)
+
+        # shoudln't have to renormalize; check this
+        trans_dest = (trans_dest.T / trans_dest.sum(1)).T
+        trans_dest = MatrixFactor(trans_dest)
+
+        return FirstOrderHMM(state_priors     = sp_dest,
+                             emission_probs   = em_dest,
+                             trans_probs = trans_dest)
 
