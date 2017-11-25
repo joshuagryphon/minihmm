@@ -491,7 +491,7 @@ class TestModelReducer():
     def test_from_dict_no_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
             dtmp = {
-                "model_class"       : "minihmm.represent.ModelReducer",
+                "model_class"       : "minihmm.represent.modelreducer",
                 "starting_order"    : starting_order,
                 "high_order_states" : num_states,
             }
@@ -537,6 +537,23 @@ class TestModelReducer():
 
             for k in ("trans_probs", "state_priors"):
                 yield check_array_equal, getattr(found.hmm, k).data, getattr(my_hmm, k).data
+
+    def test_get_emission_mapping(self):
+        cases = {
+            (2, 2) : numpy.tile(range(2), 3),
+            (2, 3) : numpy.tile(range(3), 4),
+            (2, 4) : numpy.tile(range(4), 5),
+            (3, 2) : numpy.tile(range(2), 7),
+            (3, 3) : numpy.tile(range(3), 13),
+            (3, 4) : numpy.tile(range(4), 21),
+            (4, 2) : numpy.tile(range(2), 15),
+            (4, 3) : numpy.tile(range(3), 40),
+            (4, 4) : numpy.tile(range(4), 85),
+
+        }
+        for (order, states), expected in sorted(cases.items()):
+            found = ModelReducer(order, states).get_emission_mapping()
+            yield check_array_equal, expected, found
 
     def test_remap_from_first_order(self):
         # test parameter remapping by asserting that log probabilities of observation sequences

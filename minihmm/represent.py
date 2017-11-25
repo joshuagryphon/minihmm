@@ -591,21 +591,33 @@ class ModelReducer(object):
 
         return state_priors, coo_matrix((vals, (row_ords, col_ords)))
 
-    def get_emission_tying_arrays(self):
-        pass
+    def get_emission_mapping(self):
+        """Generate an array mapping emission factors in translated low-order
+        models to their corresponding emission factors in native, high-order
+        states. In training, the parameters for these groups of emissions
+        should be tied, as they are equivalent.
 
-    # TODO
-    def get_random_model(self):
-        """
-        See also
-        --------
-        :meth:`ModelReducer.remap_from_first_order`
-        """
-        pass
+        Returns
+        -------
+        :class:`numpy.ndarray`
+            Array of length `len(self.high_states_to_low)`, indexed by state in
+            low-order space, mapping low-order states to corresponding native
+            high-order states
 
-    # TODO: TEST
-    #  - parameters should map sanely
-    #  - and probabilities should be equivalent if model isn't further trained
+        """
+        # can rely on lexicographic pairing of high-order state tuples
+        # and translated, low-order state numbers to produce correct tying vector
+        return numpy.array([X[-1] for X in sorted(self.high_states_to_low)])
+
+#    # TODO
+#    def get_random_model(self):
+#        """
+#        See also
+#        --------
+#        :meth:`ModelReducer.remap_from_first_order`
+#        """
+#        pass
+
     def remap_from_first_order(self, native_hmm):
         """Remap parameters from a native first order HMM onto a first-order
         translation of a high-order HMM, in order to, for example, provide a
