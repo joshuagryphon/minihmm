@@ -43,12 +43,12 @@ state sequences accordingly.
 Workflow
 --------
 
-A number of different workflows are (will be) possible depending upon what type of
-starting information you have:
+A number of different workflows are possible depending upon what type of
+starting information is available:
 
 
-If you have known series of states
-..................................
+If state path for each observation sequence are known
+.....................................................
 
 In this case, it is easiest to transcode the state sequences into first-order
 space, and then calculate the model parameters from the known state sequences.
@@ -60,14 +60,14 @@ for a first order model.
 If series of states are unknown, and training is required
 .........................................................
 
-This workflow is uncompliated, but relies on convenience methods that are not
-yet made. Sorry, but this is what it will look like:
-
-In this case, instantiate a ModelReducer and either (1a) create a naive model
-using :meth:`ModelReducer.get_random_model`, or (1b) remap parameters from a
-related first-order model using :meth:`ModelReducer.remap_from_first_order` and
-then (2) train the resulting HMM using standard method (e.g.
-:func:`~minihmm.training.train_baum_welch`)
+In this case, instantiate a :class:`~minihmm.represent.ModelReducer` and either
+(1a) create a naive model using
+:meth:`minihmm.represent.ModelReducer.get_random_model`, or, better, (1b) remap
+parameters from a related first-order model using
+:meth:`minihmm.represent.ModelReducer.remap_from_first_order` and then (2)
+train the resulting HMM using standard method (e.g.
+:func:`~minihmm.training.train_baum_welch`), tying emission factors to improve
+fitting (see :meth:`minihmm.represent.ModelReducer.get_emission_mapping`.
 
 
 
