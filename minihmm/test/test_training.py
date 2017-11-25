@@ -80,7 +80,7 @@ class _BaseExample:
     def test_state_priors_trained(self):
         found    = self.training_results["best_model"].state_priors.data
         expected = self.generating_hmm.state_priors.data
-        yield check_almost_equal, found, expected, { "decimal" : 2 }
+        yield check_almost_equal, found, expected, { "decimal" : 1 }
 
     def test_transition_probs_trained(self):
         found    = self.training_results["best_model"].trans_probs.data
@@ -111,7 +111,7 @@ class TestCasino(_BaseExample):
     def do_subclass_setup(cls):
         cls.test_name = "DiscreteCasino"
         cls.example_len  = 200
-        cls.num_examples = 100
+        cls.num_examples = 150
         cls.state_prior_estimator = DiscreteStatePriorEstimator()
         cls.transition_estimator  = DiscreteTransitionEstimator()
         cls.emission_estimator    = DiscreteEmissionEstimator(6)
@@ -164,7 +164,7 @@ class TestGaussian(_BaseExample):
     def do_subclass_setup(cls):
         cls.test_name = "ContinuousGaussian"
         cls.example_len  = 500
-        cls.num_examples = 100
+        cls.num_examples = 150
         cls.state_prior_estimator = DiscreteStatePriorEstimator()
         cls.transition_estimator  = DiscreteTransitionEstimator()
         cls.emission_estimator    = UnivariateGaussianEmissionEstimator()
@@ -177,7 +177,7 @@ class TestGaussian(_BaseExample):
                                                 [0.2, 0.1,  0.7],
                                                 ]),
             "naive_transition_probs" : numpy.array([[0.4, 0.3, 0.3],
-                                                    [0.3, 0.3, 0.3],
+                                                    [0.33, 0.33, 0.33],
                                                     [0.33, 0.33, 0.33],
                                                     ]),
         }
@@ -186,5 +186,5 @@ class TestGaussian(_BaseExample):
         for found, expected in zip(self.training_results["best_model"].emission_probs,
                                    self.generating_hmm.emission_probs):
             for k in expected.dist_kwargs.keys():
-                yield check_almost_equal, found.dist_kwargs[k], expected.dist_kwargs[k], { "decimal" : 3 }
+                yield check_almost_equal, found.dist_kwargs[k], expected.dist_kwargs[k], { "decimal" : 2 }
 
