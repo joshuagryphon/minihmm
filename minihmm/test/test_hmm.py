@@ -118,7 +118,7 @@ class _BaseExample():
                         
                 paths = new_paths
 
-            dp_prob = numpy.log(numpy.exp(paths.values()).sum())
+            dp_prob = numpy.log(numpy.exp(list(paths.values())).sum())
             cls.expected_forward_logprobs.append(dp_prob)
             cls.expected_joint_logprobs.append(paths)
 
@@ -169,7 +169,7 @@ class _BaseExample():
             expected = numpy.zeros(len(cond_probs))
             found    = numpy.zeros(len(cond_probs))
 
-            for n, (k, v) in enumerate(sorted(cond_probs.items())):
+            for n, (k, v) in enumerate(sorted(list(cond_probs.items()))):
                 expected[n] = num_samples * numpy.exp(v)
                 found[n]    = samples.get(k,0)
 

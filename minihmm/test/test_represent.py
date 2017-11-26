@@ -249,7 +249,7 @@ class TestModelReducer():
     @staticmethod
     def revdict(d):
         # make sure we won't overwrite entries
-        vals = d.values()
+        vals = list(d.values())
         assert len(set(vals)) == len(vals)
         return { v : k for (k,v) in d.items() }
 
@@ -306,7 +306,7 @@ class TestModelReducer():
                 # expected length is number starting states times the number of paths to each, including
                 # paths via dummy states
                 elen = (num_states ** numpy.arange(1, starting_order+1)).sum()
-                mult = elen / num_states
+                mult = elen // num_states
 
                 f_expected = factors * mult
                 f_found    = model.remap_emission_factors(factors)
@@ -373,7 +373,7 @@ class TestModelReducer():
             yield self.check_raise_stateseq_orders, model_order
 
     def test_negative_input_states_raises_value_error(self):
-        model = self.models.values()[0]
+        model = list(self.models.values())[0]
         assert_raises(ValueError, model.lower_stateseq_orders, [[5,1,3,4,1,0,-1]])
         assert_raises(ValueError, model.lower_stateseq_orders, [[-5,1,3,4,1,0,1]])
         assert_raises(ValueError, model.lower_stateseq_orders, [[5,1,3,-4,1,0,1]])

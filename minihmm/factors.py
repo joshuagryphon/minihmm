@@ -392,17 +392,19 @@ class FunctionFactor(AbstractFactor):
         self.probability  = functools.partial(func, *func_args, **func_kwargs)
         self._generator   = functools.partial(generator_func, *func_args, **func_kwargs)
         self._func        = func
+        self._funcname = getattr(self._func, "func_name", getattr(self._func, "__name__", "foo"))
         self._generator_func = generator_func
         self.func_args   = copy.deepcopy(func_args)
         self.func_kwargs = copy.deepcopy(func_kwargs)
- 
+
+    def __eq__(self, other):
+        return self._func == other._func and self.func_args == other.func_args and self.func_kwargs == other.func_kwargs
+
     def __repr__(self):
-        return "<%s func:%s() parameters:%s>" % (self.__class__.__name__,
-                                                 self._func.func_name,
-                                                 ",".join([str(X) for X in self.data]))
+        return "<%s func:'%s'>" % (self.__class__.__name__, self._funcname)
     
     def __str__(self):
-        return "(%s,%s)" % (self._func.func_name, ",".join([str(X) for X in self.data]))
+        return repr(self)
         
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
@@ -463,6 +465,7 @@ class LogFunctionFactor(FunctionFactor):
         self.func_args   = func_args
         self.func_kwargs = func_kwargs
         self._func           = func
+        self._funcname = getattr(self._func, "func_name", getattr(self._func, "__name__", "foo"))
         self._generator_func = generator_func
         self.logprob    = functools.partial(func, *func_args, **func_kwargs)
         self._generator = functools.partial(generator_func, *func_args, **func_kwargs)

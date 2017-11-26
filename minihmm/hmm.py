@@ -593,7 +593,7 @@ class FirstOrderHMM(AbstractFactor):
 
             # because probabilty at all steps is scaled to one, we can just 
             # examine cumsum of final step to start
-	    last_state = final_state_cumsums.searchsorted(randos[n, 0], side="right")
+            last_state = final_state_cumsums.searchsorted(randos[n, 0], side="right")
             #last_state = (scaled_forward[-1,:].cumsum() >= randos[n,0]).argmax()
             my_path[-1] = last_state
             

@@ -580,7 +580,7 @@ class ModelReducer(object):
 
         row_ords = []
         col_ords = []
-        for lstate, hseq in self.low_states_to_high.iteritems():
+        for lstate, hseq in self.low_states_to_high.items():
             stub = hseq[1:]
             for i in range(self.high_order_states):
                 next_state = self.high_states_to_low[tuple(list(stub) + [i])]
