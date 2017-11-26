@@ -8,8 +8,17 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
+Unreleased
+---------------------
 
-vv0.2.1 = [2017-11-26] = [2017-11-25]
+
+v0.2.1 = [2017-11-26]
+---------------------
+
+- Restored Python 3 compatibility
+
+
+v0.2.0 = [2017-11-25]
 ---------------------
 
 - Migrated serialization setup to ``jsonpickle``, a practice much saner than
