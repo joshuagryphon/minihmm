@@ -9,7 +9,7 @@ break backward compatibility.
 
 
 
-v0.2.0 = [2017-11-25]
+vv0.2.1 = [2017-11-26] = [2017-11-25]
 ---------------------
 
 - Migrated serialization setup to ``jsonpickle``, a practice much saner than

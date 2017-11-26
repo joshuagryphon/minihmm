@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 """
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__  = "Joshua G. Dunn"
 
 from minihmm.hmm import *
