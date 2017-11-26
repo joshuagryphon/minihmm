@@ -445,9 +445,9 @@ def train_baum_welch(model,
     c                  = start_iteration
 
     if chunksize is None:
-        chunksize = len(obs) / (4 * processes)
+        chunksize = len(obs) // (4 * processes)
     if chunksize < 1:
-        chunksize = len(obs) / processes
+        chunksize = len(obs) // processes
     if chunksize < 1:
         chunksize = 1
 
@@ -459,21 +459,20 @@ def train_baum_welch(model,
     if observation_weights is None:
         observation_weights = [1.0] * len(obs)
         
-    weighted_obs = zip(obs, observation_weights)
+    weighted_obs = list(zip(obs, observation_weights))
 
     try:
         while c < maxiter and (delta > learning_threshold or c < miniter) and not oopsie:
-            model = model_type(state_priors,emission_factors, trans_probs)
+            model = model_type(state_priors, emission_factors, trans_probs)
             try:
-                noise_weight = noise_weights.next()
+                noise_weight = next(noise_weights)
             except StopIteration:
                 noise_weight = 0
 
             try:
-                pseudocounts = pseudocount_weights.next()
+                pseudocounts = next(pseudocount_weights)
             except StopIteration:
                 pseudocounts = 1e-12
-
 
             # E-step of Expectation-Maximization
             training_func = functools.partial(bw_worker,
@@ -481,11 +480,10 @@ def train_baum_welch(model,
                                               state_prior_estimator=state_prior_estimator,
                                               emission_estimator=emission_estimator,
                                               transition_estimator=transition_estimator
-                                              )        
+                                              )
             if processes == 1:
                 pool_results = (training_func(X) for X in weighted_obs)
             else:
-
                 pool = multiprocessing.Pool(processes=processes)
                 pool_results = pool.map(training_func, weighted_obs, chunksize)
                 pool.close()
@@ -503,7 +501,7 @@ def train_baum_welch(model,
                     anti_results.append(my_result)
                 else:
                     results.append(my_result)
-            
+
             counted = len(results)
             if counted == 0:
                 oopsie = True
@@ -536,6 +534,7 @@ def train_baum_welch(model,
             delta              = new_total_logprob - last_total_logprob
             last_total_logprob = new_total_logprob
 
+
             if logfunc is not None:
                 logfunc(model,
                         iteration = c,
@@ -549,7 +548,7 @@ def train_baum_welch(model,
 
                         weighted_length   = total_obs_length,
                         unweighted_length = unweight_total_length)
-                
+
 
             # M-step of Expectation-Maximization:
             # Update parameters for next model
@@ -565,13 +564,13 @@ def train_baum_welch(model,
                                                                     E_parts,
                                                                     noise_weight       = noise_weight,
                                                                     pseudocount_weight = pseudocounts)
-            
+
             c += 1
 
     except KeyboardInterrupt:
         halted = True
 
-        
+
     # report why training stopped
     if c == maxiter:
         reason = "MAXITER"
@@ -586,7 +585,7 @@ def train_baum_welch(model,
         reason = "HALTED"
     else:
         reason = "SOMETHING TERRIBLE: iter %s, delta %s, counted %s" % (c, delta, counted)
- 
+
     logprobs   = numpy.array(logprobs)
     best_model = models[logprobs.argmax()]
 
@@ -602,5 +601,5 @@ def train_baum_welch(model,
         "models"                       : models,
     }
  
-       
+
     return dtmp
