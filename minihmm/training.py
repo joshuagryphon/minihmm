@@ -83,7 +83,7 @@ def _format_helper(x):
         return str(x)
 
 
-def DefaultLoggerFactory(fh, model, maxcols=None):
+def DefaultLoggerFactory(fh, model, maxcols=None, printer=None):
     """Factory function to record likelihood and parameter changes during training
 
     Parameters
@@ -95,7 +95,12 @@ def DefaultLoggerFactory(fh, model, maxcols=None):
         HMM that will be trained
 
     maxcols : int or None, optional
-        If not `None`, only output the first `maxcols` columns of output
+        If not `None`, only output the first `maxcols` columns of output to `fh`
+
+    printer : file-like or None, optional
+        If not `None`, a file-like object to which the first five coluimns of 
+        output will be dumped (e.g. :obj:`sys.stdout` )
+
 
     Returns
     -------
@@ -115,6 +120,9 @@ def DefaultLoggerFactory(fh, model, maxcols=None):
         "unweighted_length",
     ]
     header += model.get_header()
+    if printer is not None:
+        printer.write("\t".join(header[:5]))
+
     header = header[:maxcols]
     fh.write("\t".join(header) + "\n")
 
@@ -143,8 +151,12 @@ def DefaultLoggerFactory(fh, model, maxcols=None):
             weighted_length,
             unweighted_length,
         ] + model.get_row()
-        ltmp = ltmp[:maxcols]
-        fh.write("\t".join([_format_helper(X) for X in ltmp]))
+        ltmp = [_format_helper(X) for X in ltmp]
+
+        fh.write("\t".join(ltmp[:maxcols]))
+
+        if printer is not None:
+            printer.write("\t".join(ltmp[:5]))
 
     return logfunc
 
