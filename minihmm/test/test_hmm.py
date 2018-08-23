@@ -131,7 +131,6 @@ class _BaseExample():
 
         print("Set up class %s" % cls.__name__)
 
-    @unittest.skip
     def test_generate(self):
         # testable
 
@@ -293,6 +292,7 @@ class _BaseExample():
 
 
 class TestACoin(_BaseExample):
+
     @classmethod
     def do_subclass_setup(cls):
         cls.name = "Coin example"

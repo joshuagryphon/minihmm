@@ -46,14 +46,14 @@ class AbstractFactor():
             numpy.random.seed(seed=cls.random_seed)
             cls.generated.append([factor.generate() for _ in range(cls.to_generate)])
 
-#    def test_generate_distribution_is_correct(self):
-#        assert False
-#
-#    def test_logprob_is_correct(self):
-#        assert False
-#
-#    def test_probability_is_correct(self):
-#        assert False
+    def test_generate_distribution_is_correct(self):
+        assert False
+
+    def test_logprob_is_correct(self):
+        assert False
+
+    def test_probability_is_correct(self):
+        assert False
 
     def test_revive_from_pickle_equal(self):
         # NOTE: only tested if class implements __eq__
@@ -114,6 +114,7 @@ class AbstractFactor():
 
 
 class TestArrayFactor(AbstractFactor):
+
     @classmethod
     def do_subclass_setup(cls):
         for my_len in range(10, 100, 200):
