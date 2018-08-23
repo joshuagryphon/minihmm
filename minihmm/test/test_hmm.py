@@ -275,7 +275,7 @@ class _BaseExample():
     def test_to_dict(self):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            found_dict = self.generating_hmm.to_dict()
+            found_dict = self.generating_hmm._to_dict()
 
         for k in ("state_priors", "trans_probs"):
             assert_dict_equal(found_dict[k], self.hmm_dict[k])
