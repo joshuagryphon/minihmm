@@ -126,9 +126,8 @@ def build_hmm_tables(
 
 
 def matrix_to_dict(mat):
-    """Convert a matrix or array `mat` to a dictionary.
-    This is intende to be useful for serializing large, sparse matrices of
-    high-order hidden Markov models.
+    """Convert a matrix or array `mat` to a sparse dictionary. This function
+    assists various ``to_json()`` methods.
 
     Parameters
     ----------
@@ -159,9 +158,9 @@ def matrix_to_dict(mat):
     coomat = coo_matrix(mat)
     dout = {
         "shape": tuple(coomat.shape),
-        "row": list(coomat.row.astype(int)),
-        "col": list(coomat.col.astype(int)),
-        "data": list(coomat.data.astype(float)),
+        "row": list([int(X) for X in coomat.row]),
+        "col": list([int(X) for X in coomat.col]),
+        "data": list([float(X) for X in coomat.data]),
     }
     return dout
 
