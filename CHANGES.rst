@@ -11,6 +11,9 @@ break backward compatibility.
 Unreleased
 ---------------------
 
+- Improved screen output in ``DefaultLoggerFactory()``
+
+
 
 v0.2.1 = [2017-11-26]
 ---------------------
@@ -105,9 +108,9 @@ Added
 Changed
 .......
 
- - miniHMM factored out of unpublished scientific project
+- miniHMM factored out of unpublished scientific project
 
- - Migration from SVN to GIT repo
+- Migration from SVN to GIT repo
 
- - get_free_parameters() and from_parameters() replaced by serialize()
-   and deserialize() methods in all factors
+- get_free_parameters() and from_parameters() replaced by serialize()
+  and deserialize() methods in all factors

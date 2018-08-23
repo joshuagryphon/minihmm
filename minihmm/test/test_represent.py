@@ -254,7 +254,6 @@ class TestModelReducer():
         return { v : k for (k,v) in d.items() }
 
     # skipping because need to define HMM for model reducer
-    @unittest.skip
     def test_revive_from_json(self):
         for k, v in self.models.items():
             enc = v.to_json()
