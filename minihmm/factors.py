@@ -20,7 +20,8 @@ Factors must be able to:
       a ``get_model_log_likelihood()`` method
 
     - offer serialization support via pickling (we use :mod:`jsonpickle`
-      and implement ``__reduce__`` methods to make sane JSON blobs)
+      and, where necessary, implement ``__reduce__`` methods to make sane JSON
+      blobs)
 
 In addition, factors may:
     - supply a ``generate(n)`` function, to generate `n` observations
@@ -210,9 +211,6 @@ class ArrayFactor(AbstractFactor):
     def __len__(self):
         return len(self.data)
 
-    def __reduce__(self):
-        return _get_arrayfactor_from_dict, (self._to_dict(), )
-
     def _to_dict(self):
         """Serialize `self` as a dictionary"""
         dtmp = {
@@ -292,9 +290,6 @@ class MatrixFactor(AbstractFactor):
             return self.data.shape[0]
         else:
             return self.data.shape[0] * self.data.shape[1]
-
-    def __reduce__(self):
-        return _get_matrixfactor_from_dict, (self._to_dict(), )
 
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""

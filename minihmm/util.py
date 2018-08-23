@@ -126,8 +126,8 @@ def build_hmm_tables(
 
 
 def matrix_to_dict(mat):
-    """Convert a matrix or array `mat` to a sparse dictionary. This function
-    assists various ``to_json()`` methods.
+    """Convert a matrix or array `mat` to a sparse dictionary. Not necessary
+    for serialization
 
     Parameters
     ----------

@@ -238,8 +238,6 @@ class TestBuildHMMTables():
         found_dense = found_transition_counts.todense()
         assert_array_equal(found_dense, expected_transition_counts)
 
-#---------------------------------------------------
-
     def test_state_priors_no_weights_no_pseudocounts(self):
         expected_prior_counts = numpy.zeros(self.num_states)
         for my_seq in self.test_seqs:
