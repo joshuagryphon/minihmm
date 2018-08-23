@@ -171,7 +171,7 @@ class FirstOrderHMM(AbstractFactor):
         """
         return jsonpickle.decode(stmp)
 
-    def to_dict(self):
+    def _to_dict(self):
         """Return a dictionary describing `self`, which can be serialized as JSON
 
         Warning
@@ -188,7 +188,7 @@ class FirstOrderHMM(AbstractFactor):
             "model_class": "minihmm.hmm.FirstOrderHMM",
             "state_priors": matrix_to_dict(self.state_priors.data),
             "trans_probs": matrix_to_dict(self.trans_probs.data),
-            "emission_probs": [X.to_dict() for X in self.emission_probs],
+            "emission_probs": [X._to_dict() for X in self.emission_probs],
         }
         warnings.warn("This is deprecated! Use to_json()", UserWarning)
         return dtmp

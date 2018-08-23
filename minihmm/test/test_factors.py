@@ -188,7 +188,7 @@ def _fact_func1(x):
 
 
 def _fact_func2(x, **kwargs):
-    return x, kwargs
+    return x + sum(kwargs.values())
 
 
 def _gen_func(*args, **kwargs):

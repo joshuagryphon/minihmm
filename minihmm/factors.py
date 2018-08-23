@@ -133,7 +133,7 @@ def _get_arrayfactor_from_dict(dtmp):
     Parameters
     ----------
     dtmp : dict
-         Dictionary, created by :meth:`ArrayFactor.to_dict`
+         Dictionary, created by :meth:`ArrayFactor._to_dict`
 
     Returns
     -------
@@ -148,7 +148,7 @@ def _get_matrixfactor_from_dict(dtmp):
     Parameters
     ----------
     dtmp : dict
-         Dictionary, created by :meth:`MatrixFactor.to_dict`
+         Dictionary, created by :meth:`MatrixFactor._to_dict`
 
     Returns
     -------
@@ -164,7 +164,7 @@ def _get_scipydistfactor_from_dict(dtmp):
     Parameters
     ----------
     dtmp : dict
-        Dictionary, created by :meth:`ScipyDistributionFactor.to_dict`
+        Dictionary, created by :meth:`ScipyDistributionFactor._to_dict`
 
     Returns
     -------
@@ -211,9 +211,9 @@ class ArrayFactor(AbstractFactor):
         return len(self.data)
 
     def __reduce__(self):
-        return _get_arrayfactor_from_dict, (self.to_dict(), )
+        return _get_arrayfactor_from_dict, (self._to_dict(), )
 
-    def to_dict(self):
+    def _to_dict(self):
         """Serialize `self` as a dictionary"""
         dtmp = {
             "model_class": "minihmm.factors.ArrayFactor",
@@ -294,7 +294,7 @@ class MatrixFactor(AbstractFactor):
             return self.data.shape[0] * self.data.shape[1]
 
     def __reduce__(self):
-        return _get_matrixfactor_from_dict, (self.to_dict(), )
+        return _get_matrixfactor_from_dict, (self._to_dict(), )
 
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
@@ -305,7 +305,7 @@ class MatrixFactor(AbstractFactor):
         """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
         return list(self.data.ravel())
 
-    def to_dict(self):
+    def _to_dict(self):
         return {
             "model_class": "minihmm.factors.MatrixFactor",
             "row_conditional": self.row_conditional,
@@ -525,7 +525,7 @@ class ScipyDistributionFactor(AbstractFactor):
             self.log_prob_fn = self.distribution.logpmf
 
     def __eq__(self, other):
-        return self.to_dict() == other.to_dict()
+        return self._to_dict() == other._to_dict()
 
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
@@ -539,7 +539,7 @@ class ScipyDistributionFactor(AbstractFactor):
         ltmp += [X[1] for X in sorted(self.dist_kwargs.items())]
         return ltmp
 
-    def to_dict(self):
+    def _to_dict(self):
         return {
             "model_class": "minihmm.factors.ScipyDistributionFactor",
             "dist_class": self._dist_class.__class__.__name__,
@@ -548,7 +548,7 @@ class ScipyDistributionFactor(AbstractFactor):
         }
 
     def __reduce__(self):
-        return _get_scipydistfactor_from_dict, (self.to_dict(), )
+        return _get_scipydistfactor_from_dict, (self._to_dict(), )
 
     def __repr__(self):
         return "<%s model:%s parameters:%s>" % (self.__class__.__name__,
