@@ -2,7 +2,7 @@
 """
 """
 __version__ = "0.2.1"
-__author__  = "Joshua G. Dunn"
+__author__ = "Joshua G. Dunn"
 
 from minihmm.hmm import *
 from minihmm.represent import *

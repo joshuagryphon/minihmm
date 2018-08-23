@@ -19,10 +19,10 @@ class NullWriter(object):
 
     def __repr__(self):
         return "NullWriter()"
-    
+
     def __str__(self):
         return "NullWriter()"
-    
+
     def close(self):
         pass
 
@@ -34,14 +34,16 @@ class NullWriter(object):
 # Building tables when state paths are known
 #===============================================================================
 
-def build_hmm_tables(num_states,
-                     state_sequences,
-                     weights          = None,
-                     state_prior_pseudocounts = 0,
-                     transition_pseudocounts  = 0,
-                     normalize        = True,
-                     initializer      = numpy.zeros,
-                     ):
+
+def build_hmm_tables(
+        num_states,
+        state_sequences,
+        weights=None,
+        state_prior_pseudocounts=0,
+        transition_pseudocounts=0,
+        normalize=True,
+        initializer=numpy.zeros,
+):
     """Build a set of state prior and transition tables from sequences of known
     states.  This in contrast to *training*, in which parameters for transition
     tables are estimated from msequences of observations and unknown states.
@@ -90,23 +92,26 @@ def build_hmm_tables(num_states,
     """
     tmat = initializer((num_states, num_states), dtype=float)
     state_priors = numpy.zeros(num_states, dtype=float)
-    
+
     if weights is None:
-            weights = [1] * len(state_sequences)
+        weights = [1] * len(state_sequences)
 
     for my_seq, my_weight in zip(state_sequences, weights):
         if not numpy.isnan(my_weight):
             state_priors[my_seq[0]] += my_weight
 
             for i in range(len(my_seq) - 1):
-                from_seq, to_seq = my_seq[i:i+2]
+                from_seq, to_seq = my_seq[i:i + 2]
                 tmat[from_seq, to_seq] += my_weight
 
     state_priors += state_prior_pseudocounts
     tmat += transition_pseudocounts
 
     if (tmat.sum(1) == 0).any():
-        warnings.warn("There are all-zero rows in the transition table! These may yield nonsensical probabilities! Consider adding pseudocounts", UserWarning)
+        warnings.warn(
+            "There are all-zero rows in the transition table! These may yield nonsensical probabilities! Consider adding pseudocounts",
+            UserWarning
+        )
 
     if normalize == True:
         tmat = (1.0 * tmat.T / tmat.sum(1)).T
@@ -115,10 +120,10 @@ def build_hmm_tables(num_states,
     return state_priors, tmat
 
 
-
 #===============================================================================
 # Serialization / deserialization of matrices
 #===============================================================================
+
 
 def matrix_to_dict(mat):
     """Convert a matrix or array `mat` to a dictionary.
@@ -153,12 +158,13 @@ def matrix_to_dict(mat):
     """
     coomat = coo_matrix(mat)
     dout = {
-        "shape" : tuple(coomat.shape),
-        "row"   : list(coomat.row.astype(int)),
-        "col"   : list(coomat.col.astype(int)),
-        "data"  : list(coomat.data.astype(float)),
+        "shape": tuple(coomat.shape),
+        "row": list(coomat.row.astype(int)),
+        "col": list(coomat.col.astype(int)),
+        "data": list(coomat.data.astype(float)),
     }
     return dout
+
 
 def matrix_from_dict(dtmp, dense=False):
     """Reconstruct a matrix from a dictionary made e.g. by :func:`matrix_to_dict`
@@ -182,8 +188,5 @@ def matrix_from_dict(dtmp, dense=False):
     --------
     matrix_to_dict
     """
-    coomat = coo_matrix((dtmp["data"], (dtmp["row"],dtmp["col"])), shape=dtmp["shape"])
+    coomat = coo_matrix((dtmp["data"], (dtmp["row"], dtmp["col"])), shape=dtmp["shape"])
     return coomat.todense() if dense is True else coomat
-
-
-

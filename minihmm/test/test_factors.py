@@ -9,11 +9,7 @@ import jsonpickle.ext.numpy
 jsonpickle.ext.numpy.register_handlers()
 
 from nose.tools import assert_equal
-from minihmm.test.common import (
-    check_equal,
-    check_array_equal,
-    check_tuple_equal
-)
+from minihmm.test.common import (check_equal, check_array_equal, check_tuple_equal)
 
 from minihmm.factors import (
     ArrayFactor,
@@ -22,7 +18,6 @@ from minihmm.factors import (
     LogFunctionFactor,
     ScipyDistributionFactor,
 )
-
 
 
 class AbstractFactor():
@@ -41,16 +36,16 @@ class AbstractFactor():
         if hasattr(cls, "do_subclass_setup"):
             cls.do_subclass_setup()
 
-        cls.from_json   = []
+        cls.from_json = []
         cls.from_pickle = []
-        cls.generated   = []
+        cls.generated = []
 
         for factor in cls.factors:
             cls.from_json.append(jsonpickle.decode(jsonpickle.encode(factor)))
             cls.from_pickle.append(pickle.loads(pickle.dumps(factor)))
             numpy.random.seed(seed=cls.random_seed)
             cls.generated.append([factor.generate() for _ in range(cls.to_generate)])
-    
+
 #    def test_generate_distribution_is_correct(self):
 #        assert False
 #
@@ -65,13 +60,13 @@ class AbstractFactor():
         for initial, revived in zip(self.factors, self.from_pickle):
             if hasattr(initial, "__eq__"):
                 yield check_equal, initial, revived
- 
+
     def test_revive_from_json_equal(self):
         # NOTE: only tested if class implements __eq__
         for initial, revived in zip(self.factors, self.from_json):
             if hasattr(initial, "__eq__"):
                 yield check_equal, initial, revived
- 
+
     def test_revive_from_pickle_logprob(self):
         for initial, revived, examples in zip(self.factors, self.from_pickle, self.examples):
             for my_example in examples:
@@ -117,15 +112,15 @@ class AbstractFactor():
 # Tests for ArrayFactor, MatrixFactor
 #===============================================================================
 
-class TestArrayFactor(AbstractFactor):
 
+class TestArrayFactor(AbstractFactor):
     @classmethod
     def do_subclass_setup(cls):
         for my_len in range(10, 100, 200):
             ary = numpy.random.random(my_len)
             ary /= ary.sum()
             cls.factors.append(ArrayFactor(ary))
-            cls.examples.append([(X,) for X in numpy.random.randint(0, high=my_len, size=50)])
+            cls.examples.append([(X, ) for X in numpy.random.randint(0, high=my_len, size=50)])
 
     def test_revive_from_json_shape(self):
         for initial, revived in zip(self.factors, self.from_json):
@@ -137,17 +132,20 @@ class TestArrayFactor(AbstractFactor):
 
 
 class TestMatrixFactor(AbstractFactor):
-
     @classmethod
     def do_subclass_setup(cls):
         for my_len in range(10, 100, 200):
             ary = numpy.random.random((my_len, my_len))
             ary = (ary.T / ary.sum(1)).T
             cls.factors.append(MatrixFactor(ary, row_conditional=True))
-            cls.examples.append([(X,Y) for (X,Y) in numpy.random.randint(0, high=my_len, size=(50, 2))])
+            cls.examples.append(
+                [(X, Y) for (X, Y) in numpy.random.randint(0, high=my_len, size=(50, 2))]
+            )
 
             cls.factors.append(MatrixFactor(ary, row_conditional=False))
-            cls.examples.append([(X,Y) for (X,Y) in numpy.random.randint(0, high=my_len, size=(50, 2))])
+            cls.examples.append(
+                [(X, Y) for (X, Y) in numpy.random.randint(0, high=my_len, size=(50, 2))]
+            )
 
     def test_revive_from_json_shape(self):
         for initial, revived in zip(self.factors, self.from_json):
@@ -164,6 +162,7 @@ class TestMatrixFactor(AbstractFactor):
 
 from scipy.stats.distributions import binom, chi2, norm
 
+
 class TestScipyDistributionFactor(AbstractFactor):
 
     factors = [
@@ -173,9 +172,9 @@ class TestScipyDistributionFactor(AbstractFactor):
     ]
 
     examples = [
-        [(X,) for X in numpy.arange(6)],
-        [(X,) for X in numpy.linspace(0, 20, 100)],
-        [(X,) for X in numpy.linspace(-5, 5, 30)],
+        [(X, ) for X in numpy.arange(6)],
+        [(X, ) for X in numpy.linspace(0, 20, 100)],
+        [(X, ) for X in numpy.linspace(-5, 5, 30)],
     ]
 
 
@@ -183,14 +182,18 @@ class TestScipyDistributionFactor(AbstractFactor):
 # Tests for FunctionFactor, LogFunctionFactor
 #===============================================================================
 
+
 def _fact_func1(x):
     return 1.0 / numpy.exp(-x)
+
 
 def _fact_func2(x, **kwargs):
     return x, kwargs
 
+
 def _gen_func(*args, **kwargs):
     return 5
+
 
 class TestFunctionFactor(AbstractFactor):
 
@@ -200,8 +203,8 @@ class TestFunctionFactor(AbstractFactor):
     ]
 
     examples = [
-        [(X,) for X in numpy.linspace(1, 100, 10)],
-        [(X,) for X in numpy.linspace(1, 100, 10)],
+        [(X, ) for X in numpy.linspace(1, 100, 10)],
+        [(X, ) for X in numpy.linspace(1, 100, 10)],
     ]
 
 
@@ -212,7 +215,6 @@ class TestLogFunctionFactor(AbstractFactor):
     ]
 
     examples = [
-        [(X,) for X in numpy.linspace(0, 1, 10)],
-        [(X,) for X in numpy.linspace(0, 1, 10)],
+        [(X, ) for X in numpy.linspace(0, 1, 10)],
+        [(X, ) for X in numpy.linspace(0, 1, 10)],
     ]
-

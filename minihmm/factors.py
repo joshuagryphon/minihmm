@@ -41,6 +41,7 @@ from minihmm.util import matrix_from_dict, matrix_to_dict
 # Abstract classes
 #===============================================================================
 
+
 class AbstractFactor(object):
     """Abstract class for all probability distributions
     """
@@ -62,7 +63,7 @@ class AbstractFactor(object):
             Probability of observation
         """
         return numpy.exp(self.logprob(*args, **kwargs))
-    
+
     def logprob(self, *args, **kwargs):
         """Return the log probability of a single observation
         
@@ -80,7 +81,7 @@ class AbstractFactor(object):
             Log probability of observation
         """
         return numpy.log(self.probability(*args, **kwargs))
-    
+
     def get_model_log_likelihood(self, observations, processes=4):
         """Return the log likelihood of a sequence of observations
        
@@ -106,11 +107,11 @@ class AbstractFactor(object):
             pool.close()
             pool.join()
             return sum(pool_results)
-        
+
     @abstractmethod
     def generate(self, *args, **kwargs):
         """Sample a random value from the distribution"""
-        pass        
+        pass
 
     @abstractmethod
     def get_header(self):
@@ -120,10 +121,12 @@ class AbstractFactor(object):
     def get_row(self):
         """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
 
+
 #===============================================================================
 # Helpers for unpickling / reviving from jsonpickle
 #===============================================================================
- 
+
+
 def _get_arrayfactor_from_dict(dtmp):
     """Revive a :class:`ArrayFactor` from a dictionary
 
@@ -138,6 +141,7 @@ def _get_arrayfactor_from_dict(dtmp):
     """
     return ArrayFactor(numpy.array([float(X) for X in dtmp["data"]]))
 
+
 def _get_matrixfactor_from_dict(dtmp):
     """Revive a :class:`MatrixFactor` from a dictionary
 
@@ -151,7 +155,8 @@ def _get_matrixfactor_from_dict(dtmp):
     MatrixFactor
     """
     data = matrix_from_dict(dtmp["data"], dense=True)
-    return MatrixFactor(data, row_conditional = dtmp["row_conditional"])
+    return MatrixFactor(data, row_conditional=dtmp["row_conditional"])
+
 
 def _get_scipydistfactor_from_dict(dtmp):
     """Revive a :class:`ScipyDistributionFactor` from a dictionary
@@ -201,7 +206,7 @@ class ArrayFactor(AbstractFactor):
 
     def __eq__(self, other):
         return (self.data == other.data).all()
-    
+
     def __len__(self):
         return len(self.data)
 
@@ -211,11 +216,11 @@ class ArrayFactor(AbstractFactor):
     def to_dict(self):
         """Serialize `self` as a dictionary"""
         dtmp = {
-            "model_class" : "minihmm.factors.ArrayFactor",
-            "data"        : list(self.data),
+            "model_class": "minihmm.factors.ArrayFactor",
+            "data": list(self.data),
         }
         return dtmp
-   
+
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
         return [str(X) for X in range(len(self.data))]
@@ -233,14 +238,14 @@ class ArrayFactor(AbstractFactor):
             Index of requested probability   
         """
         return self.data[i]
-            
+
     def generate(self):
         """Generate a random sample from the distribution
         
         @return Sample
         """
         return (self.data.cumsum() >= numpy.random.random()).argmax()
-    
+
 
 class MatrixFactor(AbstractFactor):
     """Bivariate probability distribution constructed from a two-dimensional
@@ -281,7 +286,7 @@ class MatrixFactor(AbstractFactor):
 
     def __eq__(self, other):
         return self.row_conditional == other.row_conditional and (self.data == other.data).all()
-    
+
     def __len__(self):
         if self.row_conditional is True:
             return self.data.shape[0]
@@ -302,9 +307,9 @@ class MatrixFactor(AbstractFactor):
 
     def to_dict(self):
         return {
-            "model_class"     : "minihmm.factors.MatrixFactor",
-            "row_conditional" : self.row_conditional,
-            "data"            : matrix_to_dict(self.data),
+            "model_class": "minihmm.factors.MatrixFactor",
+            "row_conditional": self.row_conditional,
+            "data": matrix_to_dict(self.data),
         }
 
     def probability(self, i, j):
@@ -325,7 +330,7 @@ class MatrixFactor(AbstractFactor):
             *P(i,j)* if ``self.row_conditional`` is *False*.
         """
         return self.data[i, j]
-    
+
     def generate(self, i=None, size=1):
         """Sample from the |MatrixFactor|
         
@@ -367,6 +372,7 @@ class FunctionFactor(AbstractFactor):
         Zero or more keyword arguments passed to ``self._func``
         and ``self._generator``
     """
+
     def __init__(self, func, generator_func, *func_args, **func_kwargs):
         """Create a FunctionFactor
         
@@ -389,12 +395,12 @@ class FunctionFactor(AbstractFactor):
             and ``geneator func``
 
         """
-        self.probability  = functools.partial(func, *func_args, **func_kwargs)
-        self._generator   = functools.partial(generator_func, *func_args, **func_kwargs)
-        self._func        = func
+        self.probability = functools.partial(func, *func_args, **func_kwargs)
+        self._generator = functools.partial(generator_func, *func_args, **func_kwargs)
+        self._func = func
         self._funcname = getattr(self._func, "func_name", getattr(self._func, "__name__", "foo"))
         self._generator_func = generator_func
-        self.func_args   = copy.deepcopy(func_args)
+        self.func_args = copy.deepcopy(func_args)
         self.func_kwargs = copy.deepcopy(func_kwargs)
 
     def __eq__(self, other):
@@ -402,22 +408,22 @@ class FunctionFactor(AbstractFactor):
 
     def __repr__(self):
         return "<%s func:'%s'>" % (self.__class__.__name__, self._funcname)
-    
+
     def __str__(self):
         return repr(self)
-        
+
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
-        ltmp  = [str(X) for X in range(len(self.func_args))]
+        ltmp = [str(X) for X in range(len(self.func_args))]
         ltmp += sorted(self.func_kwargs.keys())
         return ltmp
 
     def get_row(self):
         """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
-        ltmp  = list(self.func_args)
+        ltmp = list(self.func_args)
         ltmp += [X[1] for X in sorted(self.func_kwargs.items())]
         return ltmp
-   
+
     def generate(self, *args, **kwargs):
         """Sample a random value from the distribution 
        
@@ -440,6 +446,7 @@ class FunctionFactor(AbstractFactor):
 class LogFunctionFactor(FunctionFactor):
     """Probability distribution constructed from functions
     """
+
     def __init__(self, func, generator_func, *func_args, **func_kwargs):
         """Create a LogFunctionFactor
         
@@ -462,12 +469,12 @@ class LogFunctionFactor(FunctionFactor):
             and ``geneator func``
 
         """
-        self.func_args   = func_args
+        self.func_args = func_args
         self.func_kwargs = func_kwargs
-        self._func           = func
+        self._func = func
         self._funcname = getattr(self._func, "func_name", getattr(self._func, "__name__", "foo"))
         self._generator_func = generator_func
-        self.logprob    = functools.partial(func, *func_args, **func_kwargs)
+        self.logprob = functools.partial(func, *func_args, **func_kwargs)
         self._generator = functools.partial(generator_func, *func_args, **func_kwargs)
 
 
@@ -502,14 +509,14 @@ class ScipyDistributionFactor(AbstractFactor):
             Zero or mor keyword arguments to pass to ``dist_class``
         """
         self.distribution = dist_class(*dist_args, **dist_kwargs)
-        self._dist_class  = dist_class
-        self.dist_args    = dist_args
-        self.dist_kwargs  = dist_kwargs
-        
-        self.prob_fn     = self.distribution.pdf
+        self._dist_class = dist_class
+        self.dist_args = dist_args
+        self.dist_kwargs = dist_kwargs
+
+        self.prob_fn = self.distribution.pdf
         self.log_prob_fn = self.distribution.logpdf
 
-        # determine whether distribution is continuous 
+        # determine whether distribution is continuous
         # or discrete
         try:
             self.distribution.pdf(3)
@@ -522,22 +529,22 @@ class ScipyDistributionFactor(AbstractFactor):
 
     def get_header(self):
         """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
-        ltmp  = [str(X) for X in range(len(self.dist_args))]
+        ltmp = [str(X) for X in range(len(self.dist_args))]
         ltmp += sorted(self.dist_kwargs.keys())
         return ltmp
 
     def get_row(self):
         """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
-        ltmp  = list(self.dist_args)
+        ltmp = list(self.dist_args)
         ltmp += [X[1] for X in sorted(self.dist_kwargs.items())]
         return ltmp
 
     def to_dict(self):
         return {
-            "model_class" : "minihmm.factors.ScipyDistributionFactor",
-            "dist_class"  : self._dist_class.__class__.__name__,
-            "dist_args"   : list(self.dist_args),
-            "dist_kwargs" : dict(self.dist_kwargs),
+            "model_class": "minihmm.factors.ScipyDistributionFactor",
+            "dist_class": self._dist_class.__class__.__name__,
+            "dist_args": list(self.dist_args),
+            "dist_kwargs": dict(self.dist_kwargs),
         }
 
     def __reduce__(self):
@@ -568,7 +575,7 @@ class ScipyDistributionFactor(AbstractFactor):
             Log-probability of observation
         """
         return self.log_prob_fn(*args, **kwargs)
-    
+
     def probability(self, *args, **kwargs):
         """Return the probability of observing an observation
         
@@ -586,7 +593,7 @@ class ScipyDistributionFactor(AbstractFactor):
             Probability of observation
         """
         return self.prob_fn(*args)
-    
+
     def generate(self, *args, **kwargs):
         """Sample a random value from the distribution 
         """

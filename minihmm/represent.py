@@ -89,17 +89,12 @@ jsonpickle.ext.numpy.register_handlers()
 from minihmm.hmm import FirstOrderHMM
 from minihmm.factors import ArrayFactor, MatrixFactor
 
-from scipy.sparse import (
-    lil_matrix,
-    dok_matrix,
-    coo_matrix
-)
-
-
+from scipy.sparse import (lil_matrix, dok_matrix, coo_matrix)
 
 #===============================================================================
 # Model translation
 #===============================================================================
+
 
 class ModelReducer(object):
     """Utility class for reducing high-order HMMs to equivalent first-order HMMs.
@@ -135,31 +130,39 @@ class ModelReducer(object):
             raise ValueError("Cannot reduce order of 0-order model")
         elif starting_order == 1:
             warnings.warn("Reducing a first-order model doesn't make much sense.", UserWarning)
- 
-        self.starting_order    = starting_order
+
+        self.starting_order = starting_order
         self.high_order_states = num_states
-        self._dummy_states     = self._get_dummy_states()
+        self._dummy_states = self._get_dummy_states()
         self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
-        self.low_order_states  = len(self.low_states_to_high)
+        self.low_order_states = len(self.low_states_to_high)
         self.hmm = hmm
 
     @property
     def hmm(self):
-       if self._hmm is None:
+        if self._hmm is None:
             cname = self.__class__.__name__
-            raise ValueError("No HMM associated with %s. Please set `this.hmm` to something." % cname)
+            raise ValueError(
+                "No HMM associated with %s. Please set `this.hmm` to something." % cname
+            )
 
-       return self._hmm
+        return self._hmm
 
     @hmm.setter
     def hmm(self, value):
         if not isinstance(value, FirstOrderHMM) and value is not None:
-            raise ValueError("`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" % (type(value).__name__))
-        
+            raise ValueError(
+                "`hmm` must be a valid FirstOrderHMM. Instead got type '%s'" %
+                (type(value).__name__)
+            )
+
         self._hmm = value
 
     def __str__(self):
-        return "<%s order=%s high_states=%s hmm=%s>" % (self.__class__.__name__, self.starting_order, self.high_order_states, self._hmm is not None)
+        return "<%s order=%s high_states=%s hmm=%s>" % (
+            self.__class__.__name__, self.starting_order, self.high_order_states,
+            self._hmm is not None
+        )
 
     def __eq__(self, other):
         """Test whether `self` is equal to `other`, defined as equality of:
@@ -177,7 +180,7 @@ class ModelReducer(object):
         if self.starting_order != other.starting_order \
            or self.high_order_states != self.high_order_states \
            or self.low_order_states != other.low_order_states:
-               return False
+            return False
 
         if self._hmm is None:
             if other._hmm is None:
@@ -225,7 +228,9 @@ class ModelReducer(object):
         :class:`~minihmm.represent.ModelReducer`
             Revived model
         """
-        hmm = FirstOrderHMM.from_dict(dtmp["first_order_hmm"], emission_probs=emission_probs) if "first_order_hmm" in dtmp else None
+        hmm = FirstOrderHMM.from_dict(
+            dtmp["first_order_hmm"], emission_probs=emission_probs
+        ) if "first_order_hmm" in dtmp else None
         return ModelReducer(dtmp["starting_order"], dtmp["high_order_states"], hmm=hmm)
 
     def to_dict(self):
@@ -237,9 +242,9 @@ class ModelReducer(object):
             Dictionary representation of `self`
         """
         dtmp = {
-            "model_class"       : "minihmm.represent.ModelReducer",
-            "starting_order"    : self.starting_order,
-            "high_order_states" : self.high_order_states,
+            "model_class": "minihmm.represent.ModelReducer",
+            "starting_order": self.starting_order,
+            "high_order_states": self.high_order_states,
         }
         if self._hmm is not None:
             dtmp["first_order_hmm"] = self.hmm.to_dict()
@@ -301,7 +306,7 @@ class ModelReducer(object):
             List of new dummy states, sorted
         """
         return list(range(1 - self.starting_order, 0))
-        
+
     def _get_state_mapping(self):
         """Create dicts mapping states between a high-order and a first-order HMM.
 
@@ -316,23 +321,23 @@ class ModelReducer(object):
         forward = {}
         reverse = {}
         states = list(range(self.high_order_states))
-            
+
         c = 0
-        
+
         # create maps for newly added start and end states
         for idx in range(self.starting_order - 1):
             root = self._dummy_states[idx:]
-            for symbol in itertools.product(*([states]*(idx + 1))):
+            for symbol in itertools.product(*([states] * (idx + 1))):
                 tup = tuple(root + list(symbol))
                 forward[tup] = c
-                reverse[c]   = tup
+                reverse[c] = tup
                 c += 1
-        
+
         # combinations of true states
-        for n, symbol in enumerate(itertools.product(*([states]*self.starting_order))):
+        for n, symbol in enumerate(itertools.product(*([states] * self.starting_order))):
             forward[symbol] = n + c
             reverse[c + n] = symbol
-        
+
         return forward, reverse
 
     def _get_stateseq_tuples(self, state_seqs):
@@ -354,18 +359,24 @@ class ModelReducer(object):
         list of lists
             List of tuples of state sequences
         """
-        dummy_states   = self._dummy_states
+        dummy_states = self._dummy_states
         starting_order = self.starting_order
         outseqs = []
         for n, inseq in enumerate(state_seqs):
             if (numpy.array(inseq) < 0).any():
                 raise ValueError("Found negative state label in input sequence %s!" % n)
-            
+
             baseseq = dummy_states + list(inseq)
-            outseqs.append([tuple(baseseq[idx:idx+starting_order]) for idx in range(0, len(baseseq) - starting_order + 1)])
-        
-        return outseqs 
-        
+            outseqs.append(
+                [
+                    tuple(baseseq[idx:idx + starting_order])
+                    for idx in range(0,
+                                     len(baseseq) - starting_order + 1)
+                ]
+            )
+
+        return outseqs
+
     def lower_stateseq_orders(self, state_seqs):
         """Map a high-order sequence of states into an equivalent first-order state sequence,
         creating dummy states as necessary and dictionaries that map states between
@@ -388,11 +399,11 @@ class ModelReducer(object):
         raise_stateseq_orders
         """
         dummy_states = self._dummy_states
-        state_map    = self.high_states_to_low
-            
+        state_map = self.high_states_to_low
+
         tuple_seqs = self._get_stateseq_tuples(state_seqs)
         return ModelReducer.transcode_sequences(tuple_seqs, state_map)
-            
+
     def raise_stateseq_orders(self, state_seqs):
         """Map a state sequence from first-order space back to original high-order space
         
@@ -414,7 +425,7 @@ class ModelReducer(object):
         ltmp = []
         for t in self.transcode_sequences(state_seqs, self.low_states_to_high):
             ltmp.append([X[-1] for X in t])
-        
+
         return ltmp
 
     def viterbi(self, emissions):
@@ -433,7 +444,7 @@ class ModelReducer(object):
         `viterbi_states`
             :class:`numpy.ndarray`. Decoded labels for each position in
             emissions[start:end]
-        """        
+        """
         raw = self.hmm.viterbi(emissions)["viterbi_states"]
         high = self.raise_stateseq_orders([raw])[0]
         return high
@@ -557,7 +568,7 @@ class ModelReducer(object):
             ltmp[newstate] = emission_probs[state_tuple[-1]]
 
         return ltmp
- 
+
     # convert to csr, csc, or dense before computations depending on which needed
     # serialize coomat as coomat.row, coomat.col, coomat.data
     def get_pseudocount_arrays(self):
@@ -609,6 +620,7 @@ class ModelReducer(object):
         # and translated, low-order state numbers to produce correct tying vector
         return numpy.array([X[-1] for X in sorted(self.high_states_to_low)])
 
+
 #    # TODO
 #    def get_random_model(self):
 #        """
@@ -638,7 +650,10 @@ class ModelReducer(object):
 
         # check that number of states is compatible
         if self.high_order_states != native_hmm.num_states:
-            raise ValueError("Native HMM (%d states), has different number of states than `self` (%d states)" % (native_hmm.num_states, self.high_order_states))
+            raise ValueError(
+                "Native HMM (%d states), has different number of states than `self` (%d states)" %
+                (native_hmm.num_states, self.high_order_states)
+            )
 
         # For transitions
         # Each high-order state transitiono  `(n-i, ... , n-1) ->  (n-i+1 , ... , n)`
@@ -646,12 +661,12 @@ class ModelReducer(object):
 
         # For state priors and emission probabilities
         # each high-order state (n-i, ...,  n) should be given the parameters matching
-        # native state `n` 
+        # native state `n`
 
         # will need to make appropriate state-tying matrices for emissions, as well
         sp_source = native_hmm.state_priors.data
-        sp_dest   = numpy.zeros(self.low_order_states, dtype=float)
-        
+        sp_dest = numpy.zeros(self.low_order_states, dtype=float)
+
         trans_source = native_hmm.trans_probs.data
         trans_dest = numpy.zeros((self.low_order_states, self.low_order_states), dtype=float)
 
@@ -666,7 +681,8 @@ class ModelReducer(object):
             for next_native_state in range(self.high_order_states):
                 next_tuple = tuple(list(my_tuple)[1:] + [next_native_state])
                 next_trans_state = htl[next_tuple]
-                trans_dest[trans_state, next_trans_state] = trans_source[native_state, next_native_state]
+                trans_dest[trans_state, next_trans_state] = trans_source[native_state,
+                                                                         next_native_state]
 
         # renormalize
         sp_dest /= sp_dest.sum()
@@ -676,7 +692,4 @@ class ModelReducer(object):
         trans_dest = (trans_dest.T / trans_dest.sum(1)).T
         trans_dest = MatrixFactor(trans_dest)
 
-        return FirstOrderHMM(state_priors     = sp_dest,
-                             emission_probs   = em_dest,
-                             trans_probs = trans_dest)
-
+        return FirstOrderHMM(state_priors=sp_dest, emission_probs=em_dest, trans_probs=trans_dest)

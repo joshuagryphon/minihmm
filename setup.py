@@ -51,4 +51,4 @@ setup(
         ],
     
     **config_info
-)
+    ) # yapf: disable
