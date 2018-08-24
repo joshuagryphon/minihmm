@@ -9,11 +9,11 @@ Notes on model reduction
 In a high-order model, the ends of sequences introduce inhomogeneities, similar
 to state priors in first-order models. For example, in a 3rd order model, the
 first two states must be handled separately from those remaining:
- 
+
 .. math::
 
-   P = p(S_1) * p(S_2 | S_1) * p(S_3 | S_2, S_1) * p(S_4 | S_3, S_2) *  ... * p(S_N |, S_{N-2}, S_{N-1})          
-   
+   P = p(S_1) * p(S_2 | S_1) * p(S_3 | S_2, S_1) * p(S_4 | S_3, S_2) *  ... * p(S_N |, S_{N-2}, S_{N-1})
+
 Rather than adding extra probability tables to represent these inhomogeneities,
 :mod:`miniHMM` creates dummy states. For a third-order model, we would need
 to add two dummy start states in high-order space, $ S_{dummy1} $ and $ S_{dummy2} $.
@@ -28,14 +28,14 @@ Then:
 
  - The prior probabilities of every state pair are set to zero, except
    $ p(S_{dummy2}, S_{dummy1}) $, which is  set to one.
-   
+
  - The transition probabilities of p(S_i | S_{dummy2}, S_{dummy1}) are set to
    the prior probabilities of P(S_i) in the previous model description
-   
- - Transition probabilities of p(S_i | S_{i-1}, S_{dummy2}) are set to the 
+
+ - Transition probabilities of p(S_i | S_{i-1}, S_{dummy2}) are set to the
    observed values for P(S_i | S_{i-1}) in the previous model description
 
-:mod:`miniHMM` contains tools for creating these dummy states, and remapping 
+:mod:`miniHMM` contains tools for creating these dummy states, and remapping
 state sequences accordingly.
 
 
@@ -72,7 +72,8 @@ fitting (see :meth:`minihmm.represent.ModelReducer.get_emission_mapping`.
 
 
 .. autosummary::
-       
+
+   ModelReducer
    get_state_mapping
    lower_stateseq_orders
    raise_stateseq_orders
@@ -206,10 +207,18 @@ class ModelReducer(object):
     @staticmethod
     def from_json(stmp):
         """Revive a :class:`ModelReducer` from a string-format JSON blob"""
-        return jsonpickle.decode(stmp)
+        mod = jsonpickle.decode(stmp)
+
+        # for some reason, `jsonpickle` leaves integer dictionary keys as
+        # strings upon unpickling. We therefore need to re-cast to integers to
+        # avoid downstream index errors
+        mod.low_states_to_high = {
+            int(K) : V for K, V in mod.low_states_to_high.items()
+        }
+        return mod
 
     @staticmethod
-    def from_dict(dtmp, emission_probs=None):
+    def _from_dict(dtmp, emission_probs=None):
         """Revive a model from a dictionary
 
         Parameters
@@ -228,12 +237,12 @@ class ModelReducer(object):
         :class:`~minihmm.represent.ModelReducer`
             Revived model
         """
-        hmm = FirstOrderHMM.from_dict(
+        hmm = FirstOrderHMM._from_dict(
             dtmp["first_order_hmm"], emission_probs=emission_probs
         ) if "first_order_hmm" in dtmp else None
         return ModelReducer(dtmp["starting_order"], dtmp["high_order_states"], hmm=hmm)
 
-    def to_dict(self):
+    def _to_dict(self):
         """Convert `self` to a dict (e.g. for JSON dumps)
 
         Returns
@@ -247,22 +256,22 @@ class ModelReducer(object):
             "high_order_states": self.high_order_states,
         }
         if self._hmm is not None:
-            dtmp["first_order_hmm"] = self.hmm.to_dict()
+            dtmp["first_order_hmm"] = self.hmm._to_dict()
 
         return dtmp
 
     @staticmethod
     def transcode_sequence(sequence, alphadict):
         """Transcode a single sequence from one alphabet to another
-        
+
         Parameters
         ----------
         sequence : list-like
             A sequence
-            
+
         alphadict : dict-like
             Dictionary mapping symbols in input sequence to symbols in output sequence
-            
+
         Returns
         -------
         :class:`numpy.ndarray`
@@ -273,15 +282,15 @@ class ModelReducer(object):
     @staticmethod
     def transcode_sequences(sequences, alphadict):
         """Transcode a set of sequences from one alphabet to another
-        
+
         Parameters
         ----------
         sequences : iterable of list-like
             Iterable of sequences (each, itself, an iterable like a list et c)
-            
+
         alphadict : dict-like
             Dictionary mapping symbols in input sequence to symbols in output sequence
-            
+
         Returns
         -------
         list of :class:`numpy.ndarray`
@@ -291,15 +300,15 @@ class ModelReducer(object):
 
     def _get_dummy_states(self):
         """Create sorted lists of dummy states required to reduce `self` to an equivalent first-order model.
-        
+
         By convention, dummy states are given negative indices in high-order space.
         Don't rely on this- it may change in the future
-        
+
         Parameters
         ----------
         starting_order : int
             Starting order of HMM/MM
-            
+
         Returns
         -------
         list
@@ -314,7 +323,7 @@ class ModelReducer(object):
         -------
         :class:`dict`
             Forward state map, mapping high-order states to tuples of equivalent low-order states
-            
+
         :class:`dict`
             Reverse state map, mapping new first-order states to tuples of high-order states
         """
@@ -342,13 +351,13 @@ class ModelReducer(object):
 
     def _get_stateseq_tuples(self, state_seqs):
         """Remap a high-order sequence of states into tuples for use in a low-order model, adding dummy start states
-        
+
         Notes
         -----
         This does *not* remap those tuples into lower state spaces. Use
         :func:`lower_stateseq_orders`, which wraps this function, for that
-        
-        
+
+
         Parameters
         ----------
         state_seqs : list of list-like
@@ -381,19 +390,19 @@ class ModelReducer(object):
         """Map a high-order sequence of states into an equivalent first-order state sequence,
         creating dummy states as necessary and dictionaries that map states between
         high and first-order spaces.
-        
-        
+
+
         Parameters
         ----------
         state_seqs : list of list-like
             List of state sequences, each given in high-order space
-            
+
         Returns
         -------
         list of :class`numpy.ndarray`
             List of state sequences, represented in first-order space
 
-           
+
         See also
         --------
         raise_stateseq_orders
@@ -406,9 +415,9 @@ class ModelReducer(object):
 
     def raise_stateseq_orders(self, state_seqs):
         """Map a state sequence from first-order space back to original high-order space
-        
+
         Parameters
-        ----------    
+        ----------
         state_seqs : list
             List of high-order state sequences
 
@@ -416,13 +425,16 @@ class ModelReducer(object):
         -------
         list of :class:`numpy.ndarray`
             State sequences, in high-order space
-            
-            
+
+
         See also
         --------
         lower_stateseq_orders
         """
         ltmp = []
+        print("-----")
+        print(self.low_states_to_high)
+        print("-----")
         for t in self.transcode_sequences(state_seqs, self.low_states_to_high):
             ltmp.append([X[-1] for X in t])
 
@@ -433,7 +445,7 @@ class ModelReducer(object):
         using the Viterbi algorithm.
 
         See http://en.wikipedia.org/wiki/Viterbi_algorithm
-        
+
         Parameters
         ----------
         emissions : numpy.ndarray
@@ -461,18 +473,19 @@ class ModelReducer(object):
         emissions : numpy.ndarray
             Sequence of observations
 
-        
+
         Returns
         -------
         numpy.ndarray
             An array of dimension [t x 1] of the most likely states at each point t
         """
         raw, _ = self.hmm.posterior_decode(emissions)
+        print("raw stateseq: ", raw)
         return self.raise_stateseq_orders([raw])[0]
 
     def sample(self, emissions, num_samples):
         """Sample state sequences from the distribution P(states | emissions),
-        by tracing backward through the matrix of forward probabilities. 
+        by tracing backward through the matrix of forward probabilities.
         See Durbin1997 ch 4.3, section "Probabilistic sampling of aligments"
 
         Parameters
@@ -494,29 +507,29 @@ class ModelReducer(object):
 
     def generate(self, length):
         """Generates a random sequence of states and emissions from the HMM
-        
+
         Parameters
         ----------
         length : int
             Length of sequence to generate
-        
-        
+
+
         Returns
         -------
         numpy.ndarray
             Array of dimension [t x 1] indicating the HMM state at each timestep
-        
+
         numpy.ndarray
             Array of dimension [t x Q] indicating the observation at each timestep.
             Q = 1 for univariate HMMs, or more than 1 if observations are multivariate.
-            
+
         float
             Joint log probability of generated state and observation sequence.
             **Note**: this is different from the log probability of the observation
             sequence alone, which would be the sum of its joint probabilities
             with all possible state sequences.
-        
-        
+
+
         Notes
         -----
         The HMM can only generate sequences if all of its EmissionFactors
@@ -635,9 +648,11 @@ class ModelReducer(object):
         translation of a high-order HMM, in order to, for example, provide a
         reasonable non-random starting point for refinement training of the
         high-order HMM.
-        
-        Parameters ---------- native_hmm : :class:`minihmm.hmm.FirstOrderHMM`
-        Native, first-order HMM, preferably with trained parameters
+
+        Parameters
+        ----------
+        native_hmm : :class:`minihmm.hmm.FirstOrderHMM`
+            Native, first-order HMM, preferably with trained parameters
 
         Returns
         -------
