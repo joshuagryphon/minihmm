@@ -432,9 +432,6 @@ class ModelReducer(object):
         lower_stateseq_orders
         """
         ltmp = []
-        print("-----")
-        print(self.low_states_to_high)
-        print("-----")
         for t in self.transcode_sequences(state_seqs, self.low_states_to_high):
             ltmp.append([X[-1] for X in t])
 
@@ -480,7 +477,6 @@ class ModelReducer(object):
             An array of dimension [t x 1] of the most likely states at each point t
         """
         raw, _ = self.hmm.posterior_decode(emissions)
-        print("raw stateseq: ", raw)
         return self.raise_stateseq_orders([raw])[0]
 
     def sample(self, emissions, num_samples):
