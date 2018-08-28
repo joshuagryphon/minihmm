@@ -5,24 +5,28 @@ cycle.
 
 Estimators must be able to:
 
-    1) Determine whether a set of observations is valid under the
-       probability distribution. This is implemented by the methods
-       ``is_valid()`` and ``is_invalid()``
+    1. Determine whether a set of observations is valid under the probability
+       distribution. This is implemented by the methods ``is_valid()`` and
+      ``is_invalid()``
 
-    2) Reduce a set of observations to expected summary statistics
-       (expectation step), implemented by the method ``reduce_data()``
+    2. Reduce a set of observations to expected summary statistics (expectation
+       step), implemented by the method ``reduce_data()``
 
-    3) Estimate improved parameters for the model from the expected
-       statistics (maximization step), and, using these parameters,
-       initialize new Factors. These steps are implemented by the
-       method ``construct_factors()``
+    3. Estimate improved parameters for the model from the expected statistics
+    (maximization step), and, using these parameters, initialize new Factors.
+    These steps are implemented by the method ``construct_factors()``
 
 Here we provide examples of estimators for discrete and continuous
-distributions, as well as "frozen" estimators which keep parameter
-values constant through Baum-Welch training.
+distributions, as well as "frozen" estimators which keep parameter values
+constant through Baum-Welch training.
 """
+
 from minihmm.factors import (
-    ArrayFactor, MatrixFactor, FunctionFactor, LogFunctionFactor, ScipyDistributionFactor
+    ArrayFactor,
+    MatrixFactor,
+    FunctionFactor,
+    LogFunctionFactor,
+    ScipyDistributionFactor,
 )
 
 from abc import abstractmethod
@@ -83,7 +87,7 @@ class AbstractProbabilityEstimator(object):
         Parameters
         ----------
         reduced_data
-            output from :meth:`reduce_data`
+            output from :meth:`AbstractProbabilityEstimator.reduce_data`
         """
         pass
 
@@ -94,7 +98,7 @@ class AbstractProbabilityEstimator(object):
         Parameters
         ----------
         reduced_data
-            output from :meth:`reduce_data``
+            output from :meth:`AbstractProbabilityEstimator.reduce_data``
         """
         return not self.is_valid(reduced_data)
 
@@ -148,7 +152,8 @@ class AbstractProbabilityEstimator(object):
         model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
+            sufficient statistics for observations, from
+            :meth:`AbstractProbabilityEstimator.reduce_data`
 
         noise_weight : float, optional
             weight of noise to add, relative to number of of observations
@@ -216,12 +221,12 @@ class _DiscreteParameterEstimator(AbstractProbabilityEstimator):
 
 class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
     """Estimate discrete state priors from observation sequences in Baum-Welch
-    training, modeling these as an |ArrayFactor|
+    training, modeling these as an :class:`~minihmm.factors.ArrayFactor`
     """
 
     def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
-        """Collect data from a single observation sequence and reduce it to a form
-        amenable for factor construction
+        """Collect data from a single observation sequence and reduce it to a
+        form amenable for factor construction
 
         Parameters
         ----------
@@ -266,7 +271,7 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
-            :meth:`DiscreteStatePriorEstimato.reduce_data`
+            :meth:`DiscreteStatePriorEstimator.reduce_data`
 
         noise_weight : float, optional
             weight of noise to add, relative to number of of observations (e.g.
@@ -280,7 +285,7 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
 
         Returns
         -------
-        |ArrayFactor|
+        :class:`~minihmm.factors.ArrayFactor`
             State prior probability factor
         """
         pi = sum(reduced_data)
@@ -307,7 +312,8 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
             Observation sequence
 
         obs_logprob : float
-            Observation logprob, from :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
+            Observation logprob, from
+            :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
 
         forward : numpy.ndarray
             Scaled forward probability matrix, from
@@ -357,7 +363,7 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
 
         Returns
         -------
-        |MatrixFactor|
+        :class:`~minihmm.factors.MatrixFactor`
             Transition probability factor
         """
         A = sum(reduced_data)
@@ -453,8 +459,8 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         Returns
         -------
         list
-            list of |ArrayFactor| objects, representing emisison probabilities
-            for each state
+            list of :class:`~minihmm.factors.ArrayFactor` objects, representing
+            emission probabilities for each state
         """
         E = sum(reduced_data)
         E_sum = E.sum()
@@ -511,7 +517,7 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
 
         Returns
         -------
-        |MatrixFactor|
+        :class:`~minihmm.factors.MatrixFactor`
             Transition probability factor
         """
         pi = sum(reduced_data)
@@ -563,7 +569,7 @@ class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
 
         Returns
         -------
-        |MatrixFactor|
+        :class:`~minihmm.factors.MatrixFactor`
             Transition probability factor
         """
         A = sum(reduced_data)
@@ -615,8 +621,8 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
         Returns
         -------
         list
-            list of |ArrayFactor| objects representing emission probabilities
-            for each state
+            list of :class:`~minihmm.factors.ArrayFactor` objects representing
+            emission probabilities for each state
         """
         E = sum(reduced_data)
         E_sum = E.sum()
@@ -679,7 +685,7 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
 
         Returns
         -------
-        |ArrayFactor|
+        :class:`~minihmm.factors.ArrayFactor`
            Tied state priors
         """
         pi_raw = sum(reduced_data)
@@ -759,7 +765,7 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
 
         Returns
         -------
-        |MatrixFactor|
+        :class:`~minihmm.factors.MatrixFactor`
             Tied state transition probability table
         """
         A_raw = sum(reduced_data)
@@ -872,14 +878,15 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
         model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
+            sufficient statistics for observations, from
+            :meth:`UnivariateTEmissionEstimator.reduce_data`
 
 
         Returns
         -------
         list
-            List of |ScipyDistributionFactor| objects representing Gaussian
-            emission factors for each state
+            List of :class:`~minihmm.factors.ScipyDistributionFactor` objects
+            representing Gaussian emission factors for each state
         """
         E = numpy.zeros_like(reduced_data[0])
         var_pool_numerators = numpy.zeros(E.shape[0])
@@ -925,8 +932,8 @@ class UnivariateTEmissionEstimator(UnivariateGaussianEmissionEstimator):
         Returns
         -------
         list
-            list of |ScipyDistributionFactor| objects representing emission
-            factors for each state
+            list of :class:`~minihmm.factors.ScipyDistributionFactor` objects
+            representing emission factors for each state
         """
         E = numpy.zeros_like(reduced_data[0])
         n = numpy.zeros(E.shape[0])
