@@ -52,9 +52,9 @@ If state path for each observation sequence are known
 
 In this case, it is easiest to transcode the state sequences into first-order
 space, and then calculate the model parameters from the known state sequences.
-To do this, call :func:`lower_stateseq_orders`, to re-map state sequences
-into the reduced model space, then calculate transition probabilities as
-for a first order model.
+To do this, call :meth:`ModelReducer.lower_stateseq_orders`, to re-map state
+sequences into the reduced model space, then calculate transition probabilities
+as for a first order model.
 
 
 If series of states are unknown, and training is required
@@ -71,12 +71,6 @@ fitting (see :meth:`~minihmm.represent.ModelReducer.get_emission_mapping`.
 
 
 
-.. autosummary::
-
-   ModelReducer
-   get_state_mapping
-   lower_stateseq_orders
-   raise_stateseq_orders
 """
 import warnings
 import itertools
@@ -137,7 +131,7 @@ class ModelReducer(object):
     low_states_to_high : dict
         Dicitonary mapping tuples of low-order states to high-order states
 
-    hmm : :class:`minihmm.hmm.FirstOrderHMM`
+    hmm : :class:`~minihmm.hmm.FirstOrderHMM`
         Associated first-order HMM. At the moment, this must be constructed by
         the user.. Will be used for sampling, decoding, et c
     """
@@ -542,10 +536,10 @@ class ModelReducer(object):
 
         Notes
         -----
-        The HMM can only generate sequences if all of its EmissionFactors
-        are generative. I.e. if using |FunctionFactor| or |LogFunctionFactor| s,
-        generator functions must be specified at their instantiation. See the
-        documentation for |FunctionFactor| and |LogFunctionFactor| for help.
+        The HMM can only generate sequences if all of its EmissionFactors are
+        generative. I.e. if using :class:`minihmm.factors.FunctionFactor` or
+        :class:`minihmm.factors.LogFunctionFactor` , generator functions must
+        be specified at their instantiation.
         """
         raw_path, obs, logprob = self.hmm.generate(length)
         high_path = self.raise_stateseq_orders([raw_path])[0]

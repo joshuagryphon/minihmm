@@ -77,6 +77,7 @@ intersphinx_mapping = {
     "numpy"  : ("http://docs.scipy.org/doc/numpy/", None),
     "scipy"  : ("http://docs.scipy.org/doc/scipy/reference/", None),
     "pandas" : ("http://pandas-docs.github.io/pandas-docs-travis/", None),
+    "jsonpickle" : ("https://jsonpickle.github.io/", None),
 }
 
 
@@ -84,7 +85,6 @@ intersphinx_mapping = {
 
 # Enable substitutions
 rst_prolog = """
-.. include:: /class_substitutions.txt
 .. include:: /links.txt
 """
 

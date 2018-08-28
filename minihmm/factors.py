@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """Pythonic representations of Factors (probability distributions, or, more
 generally, affinity functions), which may serve as components of probabilistic
-models (e.g. transition or observation probabilities for a |FirstOrderHMM|)
-or as models themselves. All probabilistic models in this library
-descend from |AbstractFactor|.
+models (e.g. transition or observation probabilities for a
+:class:`~minihmm.hmm.FirstOrderHMM` or as models themselves. All probabilistic
+models in this library descend from :class:`~minihmm.factors.AbstractFactor`
 
 Factors may be:
 
@@ -296,7 +296,7 @@ class MatrixFactor(AbstractFactor):
         return self.data[i, j]
 
     def generate(self, i=None, size=1):
-        """Sample from the |MatrixFactor|
+        """Sample from the :class:`~minihmm.factors.MatrixFactor`
 
         Parameters
         ----------

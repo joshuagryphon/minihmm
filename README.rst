@@ -19,7 +19,7 @@ At present, `miniHMM` offers some benefits hard to find in other HMM libraries:
   that converts high-order models of arbitrary degree into mathematically
   equivalent first-order models over a virtual state space. This implementation
   allows all algorithms developed for first-order models to be applied in 
-  higher dimensions. See :mod:`minihmm.representation` for further detail.
+  higher dimensions. See :mod:`minihmm.represent` for further detail.
 
 - Emissions may be univariate or multivariate (for multidimensional emissions),
   continuous or discrete. See ``minihmm.factors`` for examples of distributions

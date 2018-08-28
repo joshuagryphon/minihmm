@@ -183,29 +183,30 @@ def bw_worker(
         emission_estimator=None,
         transition_estimator=DiscreteTransitionEstimator()
 ):
-    """Collect summary statistics from an observation sequence for Baum-Welch training.
-    In an expectation-maximization context, :py:func:`bw_worker` is used in
-    evaluating the Q function in the E step.
+    """Collect summary statistics from an observation sequence for Baum-Welch
+    training.  In an expectation-maximization context, :py:func:`bw_worker` is
+    used in evaluating the Q function in the E step.
 
 
     Parameters
     ----------
-    my_model : |FirstOrderHMM|
+    my_model : :class:`~minihmm.hmm.FirstOrderHMM`
         Model under which observations are evaluated
 
     my_tuple : tuple
-        Tuple of (:class:`numpy.ndarray`, :class:`float`) corresponding to an observation
-        sequence and its weight
+        Tuple of (:class:`numpy.ndarray`, :class:`float`) corresponding to an
+        observation sequence and its weight
 
-    state_prior_estimator : instance of subclass of |AbstractProbabilityEstimator|, optional
+    state_prior_estimator : instance of subclass of :class:`~minihmm.estimators.AbstractProbabilityEstimator`, optional
         Estimator that extracts summary statistics regarding probabilities of
-        starting in each state. Typically a |DiscretePseudocountStatePriorEstimator|
+        starting in each state. Typically a :class:`~minihmm.estimators.DiscreteStatePriorEstimator`
 
-    transition_estimator : instance of subclass of |AbstractProbabilityEstimator|, optional
-        Estimator that extracts summary statistics regarding transition probabilities.
-        Typically a |DiscretePseudocountTransitionEstimator|
+    transition_estimator : instance of subclass of :class:`~minihmm.estimators.AbstractProbabilityEstimator`, optional
+        Estimator that extracts summary statistics regarding transition
+        probabilities.  Typically a
+        :class:`~minihmm.estimators.DiscreteTransitionEstimator`
 
-    emission_estimator : instance of subclass of |AbstractProbabilityEstimator|, optional
+    emission_estimator : instance of subclass of :class:`~minihmm.estimators.AbstractProbabilityEstimator`, optional
         Estimator that extracts summary statistics regarding observations
         for each state
 
@@ -377,17 +378,17 @@ def train_baum_welch(model,
 
     Parameters
     ----------
-    model : |FirstOrderHMM| or subclass thereof
+    model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass thereof
         Starting HMM, initialized with some set of initial parameters
 
     obs : list of numpy.ndarray
         One or more observation sequences which will be used for training.
 
-    state_prior_estimator : instance of any subclass of |AbstractStatePriorEstimator|, optional
-        (Default: instance of |DiscreteStatePriorEstimator|)
+    state_prior_estimator : instance of any subclass of :class:`~minihmm.estimators.AbstractProbabilityEstimator`, optional
+        (Default: instance of :class:`~minihmm.estimators.DiscreteStatePriorEstimator`)
 
-    transition_estimator : instance of any subclass of |AbstractTransitionEstimator|, optional
-        (Default: instance of |DiscreteTransitionEstimator|)
+    transition_estimator : instance of any subclass of :class:`~minhimm.estimators.AbstractProbabilityEstimator`, optional
+        (Default: instance of :class:`~minihmm.estimators.DiscreteTransitionEstimator`)
 
     emission_estimator : instance of any subclass of AbstractEmissionEstimator
 
@@ -444,10 +445,10 @@ def train_baum_welch(model,
 
     Returns
     -------
-    |FirstOrderHMM|
+    :class:`~minihmm.hmm.FirstOrderHMM`
         Best (highest-likelihood) model from training trajectory
 
-    |FirstOrderHMM|
+    :class:`~minihmm.hmm.FirstOrderHMM`
         Final model from training trajectory
 
     str

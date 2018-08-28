@@ -18,11 +18,6 @@ Training utilities for estimating model parameters may be found in
 found in :mod:`minihmm.represent`
 
 
-Important classes
------------------
-|FirstOrderHMM|
-    A First-Order HMM using ordinary precision math, suitable for most purposes
-
 
 References
 ----------
@@ -59,28 +54,28 @@ from minihmm.factors import (
 
 
 class FirstOrderHMM(AbstractFactor):
-    """First-order homogeneous Hidden Markov Model.
+    """First-order homogeneous hidden Markov model.
 
     Observations/emissions can be multivariate
     """
 
     def __init__(self, state_priors=None, emission_probs=None, trans_probs=None):
-        """Create a |FirstOrderHMM|.
+        """Create a First order hidden Markov model
 
         Parameters
         ----------
-        state_priors : |ArrayFactor|
+        state_priors : :class:`~minihmm.factors.ArrayFactor`
             Probabilities of starting in any state
 
-        emission_probs  : list of Factors, or a |CompoundFactor|
+        emission_probs  : list of Factors
             Probability distributions describing the probabilities of observing
             any emission in each state. If a list, the types of factors need
             not be identical (e.g. some could be Gaussian, others T-distributed,
             et c)
 
-        trans_probs : |MatrixFactor|
-            |MatrixFactor| describing transition probabilities from each state
-            (first index) to each other state (second index).
+        trans_probs : :class:`~minihmm.factors.MatrixFactor`
+            Matrix describing transition probabilities from each state (first
+            index) to each other state (second index).
         """
         splen = len(state_priors)
         tlen = len(trans_probs)
@@ -479,10 +474,10 @@ class FirstOrderHMM(AbstractFactor):
 
         Notes
         -----
-        The HMM can only generate sequences if all of its EmissionFactors
-        are generative. I.e. if using |FunctionFactor| or |LogFunctionFactor| s,
-        generator functions must be specified at their instantiation. See the
-        documentation for |FunctionFactor| and |LogFunctionFactor| for help.
+        The HMM can only generate sequences if all of its EmissionFactors are
+        generative. I.e. if using :class:`~minihmm.factors.FunctionFactor` or
+        :class:`~minihmm.factors.LogFunctionFactor`, generator functions must
+        be specified at their instantiation.
         """
         states = []
         emissions = []
