@@ -7,53 +7,89 @@
 import sys
 import os
 import minihmm
+import mock
 
+# Manual mocking
+
+
+class SetMock():
+    def __contains__(self, val):
+        return True
+
+
+class DocMock(mock.MagicMock):
+    """Proxy class to stand in for modules/packages that can't be built
+    or installed on readthedocs.org .
+    
+    Thanks to https://read-the-docs.readthedocs.org/en/latest/faq.html"""
+
+    g_code = SetMock()
+
+    @classmethod
+    def __getattr__(cls, name):
+        return mock.MagicMock()
+
+mock_modules = [
+    'numpy',
+    'numpy.testing',
+    'scipy',
+    'scipy.sparse',
+    'scipy.stats',
+    'scipy.stats.distributions',
+    'jsonpickle',
+    'jsonpickle.ext.numpy',
+]
+
+# insert mock modules
+for mod_name in mock_modules:
+    sys.modules[mod_name] = DocMock()
+
+# allows autodoc to find seqmodels without installing it
+sys.path.insert(0, os.path.join(os.getcwd(), "..", ".."))
 
 # -- Extensions & options ------------------------------------------------
 
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'numpydoc',`
+    'sphinx.ext.githubpages',
+    'numpydoc',
 ]
 
-autodoc_default_flags = ["show-inheritance",
-                         "undoc-members",
-                         "special-members",
-                         "private-members",
-                         "inherited-members",
-                         ]
-autodoc_member_order = "bysource"
+autodoc_default_flags = [
+    "show-inheritance",
+    "undoc-members",
+    "special-members",
+    "private-members",
+    "inherited-members",
+]
+autodoc_member_order = "groupwise"
+autodoc_docstring_signature = True
+numpydoc_show_class_members = False
 
-
-intersphinx_mapping = { "python" : ("http://docs.python.org",None),
-                         #"numpy"  : ("http://docs.scipy.org/numpy/doc",None), # 404 error
-                         #"scipy"  : ("http://docs.scipy.org/scipy/reference",None), # 404 error
-                         "pysam"  : ("http://pysam.readthedocs.org/en/latest",None),
-                         "pandas" : ("http://pandas.pydata.org/pandas-docs/dev",None),
-                         "mpmath" : ("",None),
+intersphinx_mapping = { 
+    "python" : ("http://docs.python.org", None),
+    "numpy"  : ("http://docs.scipy.org/doc/numpy/", None),
+    "scipy"  : ("http://docs.scipy.org/doc/scipy/reference/", None),
+    "pandas" : ("http://pandas-docs.github.io/pandas-docs-travis/", None),
 }
 
 
-extlinks = { 'link_github'      : ('https://some_url',None),
-}
-extlinks.update(intersphinx_mapipng)
 
 
 # Enable substitutions
 rst_prolog = """
- .. include:: /class_substitutions.txt
- .. include:: /script_substitutions.txt
- .. include:: /links.txt
+.. include:: /class_substitutions.txt
+.. include:: /links.txt
 """
 
 templates_path = ['_templates']
 source_suffix  = '.rst'
-master_doc = 'master_toctree'
 project    = u'minihmm'
 copyright  = u'2015, Joshua Griffin Dunn'
 version    = str(minihmm.__version__)
@@ -92,7 +128,8 @@ add_function_parentheses = True
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-modindex_common_prefix = ["minihmm"]
+master_doc = "index"
+modindex_common_prefix = ["minihmm."]
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
@@ -335,7 +372,3 @@ epub_exclude_files = ['search.html']
 
 # If false, no index is generated.
 #epub_use_index = True
-
-
-# Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}

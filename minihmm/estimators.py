@@ -69,8 +69,10 @@ def get_model_noise(template, weight, assymetric_weights=1):
 class AbstractProbabilityEstimator(object):
     """Helper class for reestimation of probabilities in Baum-Welch training.
     Subclasses will be used during training to extract sufficient statistics
-    from observation data (via calls to :meth:`reduce_data`, and to create new
-    factors from those statistics (via calls to :meth:`construct_factors`)
+    from observation data (via calls to
+    :meth:`AbstractProbabilityEstimator.reduce_data`, and to create new factors
+    from those statistics (via calls to
+    :meth:`AbstractProbabilityEstimator.construct_factors`)
     """
 
     @abstractmethod
@@ -108,25 +110,26 @@ class AbstractProbabilityEstimator(object):
             Observation sequence
 
         obs_logprob : float
-            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+            Observation logprob, from
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         forward : numpy.ndarray
             Scaled forward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
 
         backward : numpy.ndarray
             Scaled backward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
             Scale factors used in scaling `forward` and `backward` to
             floating-point friendly sizes, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
             `MxNxT` array describing the full probability of being in state `M`
             at time `t` and state `N` at time `t+1`. From
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
 
         Returns
         -------
@@ -142,7 +145,7 @@ class AbstractProbabilityEstimator(object):
 
         Parameters
         ----------
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from :meth:`reduce_data`
@@ -226,25 +229,26 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
             Observation sequence
 
         obs_logprob : float
-            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+            Observation logprob, from
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         forward : numpy.ndarray
             Scaled forward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         backward : numpy.ndarray
             Scaled backward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
             Scale factors used in scaling `forward` and `backward` to
             floating-point friendly sizes, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
             `MxNxT` array describing the full probability of being in state `M`
             at time `t` and state `N` at time `t+1`. From
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
 
         Returns
@@ -258,7 +262,7 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
         """Construct discrete transition factor for an HMM using reduced data
         from observation sequences
 
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -303,25 +307,25 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
             Observation sequence
 
         obs_logprob : float
-            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+            Observation logprob, from :meth:`minihmm.hmm.FirstOrderHMM.forward_backward`
 
         forward : numpy.ndarray
             Scaled forward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         backward : numpy.ndarray
             Scaled backward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
             Scale factors used in scaling `forward` and `backward` to
             floating-point friendly sizes, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
             `MxNxT` array describing the full probability of being in state `M`
             at time `t` and state `N` at time `t+1`. From
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
 
         Returns
@@ -335,7 +339,7 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
         """Construct discrete transition factor for an HMM using reduced data
         from observation sequences
 
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -390,25 +394,25 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
             Observation sequence
 
         obs_logprob : float
-            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+            Observation logprob, from :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         forward : numpy.ndarray
             Scaled forward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         backward : numpy.ndarray
             Scaled backward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
             Scale factors used in scaling `forward` and `backward` to
             floating-point friendly sizes, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
             `MxNxT` array describing the full probability of being in state `M`
             at time `t` and state `N` at time `t+1`. From
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         Returns
         -------
@@ -430,7 +434,7 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences
 
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -472,7 +476,7 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
 
     def __init__(self, pseudocount_array):
         """
-        model : |FirstOrderHMM|
+        model : :class:`~minihmm.hmm.FirstOrderHMM`
             HMM to which this estimator will be attached
 
         pseudocount_array : float or numpy.ndarray
@@ -489,7 +493,7 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
 
         Parameters
         ----------
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -541,7 +545,7 @@ class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
         """Construct discrete transition factor for an HMM using reduced data
         from observation sequences
 
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -577,7 +581,7 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
 
     def __init__(self, model, num_symbols, pseudocount_array):
         """
-        model : |FirstOrderHMM|
+        model : :class:`~minihmm.hmm.FirstOrderHMM`
             HMM to which this estimator will be attached
 
         pseudocount_array : float or numpy.ndarray
@@ -592,7 +596,7 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences
 
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -656,7 +660,7 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
 
         Parameters
         ----------
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -737,7 +741,7 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
         """Construct transition factor for an HMM using reduced data from
         observation sequences
 
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from
@@ -811,20 +815,21 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
             Observation sequence
 
         obs_logprob : float
-            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+            Observation logprob, from
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         forward : numpy.ndarray
             Scaled forward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         backward : numpy.ndarray
             Scaled backward probability matrix, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
             Scale factors used in scaling `forward` and `backward` to
             floating-point friendly sizes, from
-            :meth:`FirstOrderHMM.forward_backward`
+            :meth:`~minihmm.hmm.FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
             `MxNxT` array describing the full probability of being in state `M`
@@ -864,7 +869,7 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
 
         Parameters
         ----------
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from :meth:`reduce_data`
@@ -910,7 +915,7 @@ class UnivariateTEmissionEstimator(UnivariateGaussianEmissionEstimator):
 
         Parameters
         ----------
-        model : |FirstOrderHMM| or subclass
+        model : :class:`~minihmm.hmm.FirstOrderHMM` or subclass
 
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from

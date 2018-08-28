@@ -80,7 +80,7 @@ def build_hmm_tables(
         Initializer for transition table. Must accept `(shape, dtype)` as
         parameters. By default, this would be :func:`numpy.zeros`, to create a
         dense matrix. Another good option would be
-        :class:`scipy.spares.dok_matrix` to create a sparse matrix
+        :class:`scipy.sparse.dok_matrix` to create a sparse matrix
 
 
     Returns

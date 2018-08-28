@@ -1,26 +1,33 @@
 miniHMM
 =======
 
-This is a toy library that implements first-order homogeneous hidden Markov
-models.  I have found it useful for a number of pet projects, but I am in the
-process of factoring it out of another project and simultaneously rewriting
-substantial pieces of it, so it should not be considered remotely stable by
-anybody who happens upon it. In fact, it just *might* be broken right now!
+Summary
+-------
 
-At present, it does offer some benefits hard to find in other libraries:
+This is a toy library that implements first- through Nth-order hidden Markov
+models. 
 
-- It contains utilities to translate *high-order models* into first-order space,
-  enabling modeling of larger local interactions. High-order models, translated
-  into first-order space, are mathematically equivalent to native high-order
-  models, but moving them into first-order space enables them to be trained and
-  used for inference using classic algorithms (see ``minihmm.representation``).
+At present, `miniHMM` offers some benefits hard to find in other HMM libraries:
 
-- It's architecture is modular and flexible, enabling emissions to be
-  univariate or multivariate (for multidimensional cases). In addition,
-  emission can be continuous, or discrete. See ``minihmm.factors`` for
-  examples of distributions that can be built, and ``minihmm.estimators``
-  for examples of classes that can be used to re-estimate distributions during
-  training.
+- Its algorithms are numerically stable
+
+- It is able to compute high order hidden Markov models, which allow states
+  to depend on the Nth previous states, rather than only on the immediate
+  previous state. 
+  
+  Concretely, high-order models are implemented via a translation layer
+  that converts high-order models of arbitrary degree into mathematically
+  equivalent first-order models over a virtual state space. This implementation
+  allows all algorithms developed for first-order models to be applied in 
+  higher dimensions. See :mod:`minihmm.representation` for further detail.
+
+- Emissions may be univariate or multivariate (for multidimensional emissions),
+  continuous or discrete. See ``minihmm.factors`` for examples of distributions
+  that can be built out-of-the-box, and for hints on designing new ones,
+  
+- Multiple distinct estimators are available for probability distributions,
+  enabling e.g. addition of model noise, pseudocounts, et c during model
+  training. See :mod:`minihmm.estimators` for details.
    
 - HMMs of all sorts can be trained via a Baum-Welch implementation with some
   bells & whistles (e.g.  noise scheduling, parallelization, parameter-tying
@@ -36,9 +43,9 @@ At present, it does offer some benefits hard to find in other libraries:
   - Labeling individual states by highest posterior probabilities (even
     though this doesn't guarantee a valid path)
 
-- Aaaaaaaand some other stuff. I swear.
 
+Notes
+-----
 
-
-Cheers,
-Josh
+This library is in beta, and breaking changes are not uncommon. We try to be
+polite by announcing these in the changelog.

@@ -15,7 +15,7 @@ first two states must be handled separately from those remaining:
    P = p(S_1) * p(S_2 | S_1) * p(S_3 | S_2, S_1) * p(S_4 | S_3, S_2) *  ... * p(S_N |, S_{N-2}, S_{N-1})
 
 Rather than adding extra probability tables to represent these inhomogeneities,
-:mod:`miniHMM` creates dummy states. For a third-order model, we would need
+:mod:`minihmm` creates dummy states. For a third-order model, we would need
 to add two dummy start states in high-order space, $ S_{dummy1} $ and $ S_{dummy2} $.
 
 We rephrase the model above as:
@@ -35,7 +35,7 @@ Then:
  - Transition probabilities of p(S_i | S_{i-1}, S_{dummy2}) are set to the
    observed values for P(S_i | S_{i-1}) in the previous model description
 
-:mod:`miniHMM` contains tools for creating these dummy states, and remapping
+:mod:`minihmm` contains tools for creating these dummy states, and remapping
 state sequences accordingly.
 
 
@@ -62,12 +62,12 @@ If series of states are unknown, and training is required
 
 In this case, instantiate a :class:`~minihmm.represent.ModelReducer` and either
 (1a) create a naive model using
-:meth:`minihmm.represent.ModelReducer.get_random_model`, or, better, (1b) remap
+:meth:`~minihmm.represent.ModelReducer.get_random_model`, or, better, (1b) remap
 parameters from a related first-order model using
-:meth:`minihmm.represent.ModelReducer.remap_from_first_order` and then (2)
+:meth:`~minihmm.represent.ModelReducer.remap_from_first_order` and then (2)
 train the resulting HMM using standard method (e.g.
 :func:`~minihmm.training.train_baum_welch`), tying emission factors to improve
-fitting (see :meth:`minihmm.represent.ModelReducer.get_emission_mapping`.
+fitting (see :meth:`~minihmm.represent.ModelReducer.get_emission_mapping`.
 
 
 
@@ -99,12 +99,12 @@ from scipy.sparse import (lil_matrix, dok_matrix, coo_matrix)
 
 def _get_modelreducer_from_dict(dtmp):
     """Revive a :class:`ModelReducer` from a dictionary made by
-    :meth:`ModelReducer._to_dict`
+    :meth:`~ModelReducer._to_dict`
 
     Parameters
     ----------
     dtmp : dict
-        Dictionary exported by :meth:`ModelReducer._to_dict`
+        Dictionary exported by :meth:`~ModelReducer._to_dict`
         
     Returns
     -------
@@ -668,7 +668,7 @@ class ModelReducer(object):
 
         Returns
         -------
-        :class:`minihmm.FirstOrderHMM`
+        :class:`~minihmm.hmm.FirstOrderHMM`
             First-order representation of the high-order HMM structure
             described by `self`, with parameters from `native_hmm` remapped
             into corresponding positions.

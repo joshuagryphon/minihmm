@@ -11,8 +11,11 @@ break backward compatibility.
 Unreleased
 ---------------------
 
+- BREAKING: footprint of serialized objects now smaller
+
 - Improved screen output in ``DefaultLoggerFactory()``
 
+- Improved code styling
 
 
 v0.2.1 = [2017-11-26]
