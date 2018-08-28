@@ -38,8 +38,10 @@ def check_almost_equal(a, b, kwargs={}):
 def check_true(a, kwargs={}):
     assert_true(a, **kwargs)
 
+
 def check_none(a, msg=None):
     assert_true(a is None, msg=msg)
+
 
 def check_not_equal(a, b):
     assert_raises(AssertionError, check_array_equal, a, b)
@@ -64,10 +66,6 @@ def check_raises(cls, callable_, *args):
 #===============================================================================
 # Pre=built HMMs for testing and examples
 #===============================================================================
-
-
-def get_random_casino():
-    pass
 
 
 def get_dirty_casino():

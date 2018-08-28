@@ -2,16 +2,23 @@
 """A parallelized, extensible implementation of the Baum-Welch training algorithm
 built atop plugin estimator classes, which determine how parameters for the HMM
 are re-estimated from observation data during training (i.e. the E and M steps
-of Expectation maximization). 
+of Expectation maximization).
 
 Also includes helper functions to add decaying noise during training
 """
 from minihmm.hmm import FirstOrderHMM
-from minihmm.factors import ArrayFactor, MatrixFactor, FunctionFactor, \
-                            LogFunctionFactor, ScipyDistributionFactor
-from minihmm.estimators import DiscreteStatePriorEstimator,\
-                               DiscreteTransitionEstimator,\
-                               DiscreteEmissionEstimator
+from minihmm.factors import (
+    ArrayFactor,
+    MatrixFactor,
+    FunctionFactor,
+    LogFunctionFactor,
+    ScipyDistributionFactor,
+)
+from minihmm.estimators import (
+    DiscreteStatePriorEstimator,
+    DiscreteTransitionEstimator,
+    DiscreteEmissionEstimator,
+)
 from minihmm.util import NullWriter
 import numpy
 import datetime
@@ -25,19 +32,19 @@ import itertools
 
 
 def neg_exp_noise_gen(a=1.0, b=1.0, offset=0):
-    """Generate exponentially decaying constants following y = ae**-bx
-    
+    """Generate exponentially decaying constants following `y = ae**-bx`
+
     Parameters
     ----------
-    A : float, optional
+    a : float, optional
         Initial (maximum) value (Default: 1.0)
-    
-    B : float, optional
+
+    b : float, optional
         Decay constant (Default: 1.0)
-    
+
     offset : int, optional
         Starting offset in time (in case of training restart)
-    
+
     Yields
     ------
     float
@@ -50,19 +57,19 @@ def neg_exp_noise_gen(a=1.0, b=1.0, offset=0):
 
 
 def linear_noise_gen(m=-0.05, b=1, offset=0):
-    """Generate linearly decaying noise following y = max(m*x + b,0)
-    
+    """Generate linearly decaying noise following `y = max(m*x + b, 0)`
+
     Parameters
     ----------
     m : float, optional
         Slope of line (default: -0.05)
-        
+
     b : float, optional
         Y-intercept of line (Default: 1)
 
     offset : int, optional
         Starting offset in time (in case of training restart)
-    
+
     Yields
     ------
     float
@@ -99,7 +106,7 @@ def DefaultLoggerFactory(fh, model, maxcols=None, printer=None):
         If not `None`, only output the first `maxcols` columns of output to `fh`
 
     printer : file-like or None, optional
-        If not `None`, a file-like object to which the first five coluimns of 
+        If not `None`, a file-like object to which the first five coluimns of
         output will be dumped (e.g. :obj:`sys.stdout` )
 
 
@@ -179,13 +186,13 @@ def bw_worker(
     """Collect summary statistics from an observation sequence for Baum-Welch training.
     In an expectation-maximization context, :py:func:`bw_worker` is used in
     evaluating the Q function in the E step.
-    
-    
+
+
     Parameters
     ----------
     my_model : |FirstOrderHMM|
         Model under which observations are evaluated
-    
+
     my_tuple : tuple
         Tuple of (:class:`numpy.ndarray`, :class:`float`) corresponding to an observation
         sequence and its weight
@@ -193,11 +200,11 @@ def bw_worker(
     state_prior_estimator : instance of subclass of |AbstractProbabilityEstimator|, optional
         Estimator that extracts summary statistics regarding probabilities of
         starting in each state. Typically a |DiscretePseudocountStatePriorEstimator|
-                                    
+
     transition_estimator : instance of subclass of |AbstractProbabilityEstimator|, optional
         Estimator that extracts summary statistics regarding transition probabilities.
         Typically a |DiscretePseudocountTransitionEstimator|
-                                    
+
     emission_estimator : instance of subclass of |AbstractProbabilityEstimator|, optional
         Estimator that extracts summary statistics regarding observations
         for each state
@@ -210,17 +217,17 @@ def bw_worker(
 
     int
         Length of observation sequence
-   
+
     float
         Weight of observation sequence
 
     tuple
         numpy.ndarray
             contribution of ``my_obs`` to transition summary statistics
-        
+
         numpy.array
             contribution of ``my_obs`` to emission summary statistics
-            
+
         numpy.array
             contribution of ``my_obs`` to state prior summary statistics
     """
@@ -344,6 +351,7 @@ def bw_worker(
 #                    chunksize           = chunksize)
 #
 
+
 # yapf: disable
 def train_baum_welch(model,
                      obs,
@@ -361,8 +369,9 @@ def train_baum_welch(model,
                      chunksize               = None,
                      logfunc                 = None,
                     ):
-    """Train an HMM using the Baum-Welch algorithm on one or more unlabeled observation sequences.
-    
+    """Train an HMM using the Baum-Welch algorithm on one or more unlabeled
+    observation sequences.
+
     After Durbin et al., incorporating equations from solution guide, which
     differ from those in Rabiner
 
@@ -370,70 +379,69 @@ def train_baum_welch(model,
     ----------
     model : |FirstOrderHMM| or subclass thereof
         Starting HMM, initialized with some set of initial parameters
-    
-    obs : list of numpy.ndarray s
+
+    obs : list of numpy.ndarray
         One or more observation sequences which will be used for training.
 
     state_prior_estimator : instance of any subclass of |AbstractStatePriorEstimator|, optional
         (Default: instance of |DiscreteStatePriorEstimator|)
-                                    
+
     transition_estimator : instance of any subclass of |AbstractTransitionEstimator|, optional
         (Default: instance of |DiscreteTransitionEstimator|)
-                                    
+
     emission_estimator : instance of any subclass of AbstractEmissionEstimator
 
     pseudocount_weights : iterable or number, optional
         Iterator/generator indicating the total weight of pseudocounts that
-        should be applied relative to total number of observations in data
-        in each cycle of training. How the pseudocounts are distributed 
-        is up to the Estimators supplied above.
-        
-        If an iterator/generator and not infinite, *1e-12* pseudocounts
-        will be added after the iterator/generator raises 
-        StopIteration. (Default: 0)
-    
+        should be applied relative to total number of observations in data in
+        each cycle of training. How the pseudocounts are distributed is up to
+        the Estimators supplied above.
+
+        If an iterator/generator and not infinite, `1e-12` pseudocounts will be
+        added after the iterator/generator raises StopIteration. (Default: 0)
+
     noise_weights : iterable or number, optional
         Iterator/generator specifying the weight of noise relative to total
-        number of observations in the internal observation matrices
-        to add to each cycle.  How the noise is distributed 
-        is up to the Estimators supplied above.
-        
-        If an iterator/generator and not infinite, no noise will be added
-        after the iterator/generator raises  StopIteration.
-        (Default: 0 (no noise))
+        number of observations in the internal observation matrices to add to
+        each cycle.  How the noise is distributed is up to the Estimators
+        supplied above.
+
+        If an iterator/generator and not infinite, no noise will be added after
+        the iterator/generator raises  StopIteration.  (Default: 0 (no noise))
 
     miniter : int or 0, optional
-        Minimum number of training cycles (e.g. during which end_delta is ignored).
-        This is useful for allowing added noise to choose suboptimal parameters
-        int he hopes of better exploring the parameter space. (Default: *100*)
+        Minimum number of training cycles (e.g. during which end_delta is
+        ignored).  This is useful for allowing added noise to choose suboptimal
+        parameters int he hopes of better exploring the parameter space.
+        (Default: 100)
 
     maxiter : int or numpy.inf, optional
-        Maximum number of training cycles. Specify numpy.inf to disable
-        this termination criterion. (Default: *1000*)
-    
+        Maximum number of training cycles. Specify numpy.inf to disable this
+        termination criterion. (Default: 1000)
+
     learning_threshold : float, optional
         Minimum change in total log likelihood required to continue training.
-        Specify -numpy.inf to disable this termination criterion (Default: *1e-5*)
-    
+        Specify ``-numpy.inf`` to disable this termination criterion (Default:
+        1e-5)
+
     start_iteration : int, optional
         Label for starting iteration (in case training was halted and resumed)
-    
+
     processes : int, optional
-        Number of processes to use during training (default: *4*)
+        Number of processes to use during training (default: 4)
 
     chunksize : int, optional
         Number of observation sequences to send to each process at a time
-        (Default: calculated from ``len(obs)`` and ``processes``)
+        (Default: calculated from `len(obs)` and `processes`)
 
     logfunc : callable, optional
         Logging function. Should accept a model as a first argument, and allow
         arbitrary keywords to pass through.  At present, the following keywords
-        are passed: ``iteration``, ``counted``, ``delta``,
-        ``weighted_logprob``, ``unweighted_logprob``,
-        ``weighted_logprob_per_obs``, ``unweighted_logprob_per_obs``,
-        ``weighted_length``, ``unweighted_length``.
+        are passed: `iteration`, `counted`, `delta`, `weighted_logprob`,
+        `unweighted_logprob`, `weighted_logprob_per_obs`,
+        `unweighted_logprob_per_obs`, `weighted_length`, `unweighted_length`.
 
-    
+
     Returns
     -------
     |FirstOrderHMM|
@@ -443,14 +451,16 @@ def train_baum_welch(model,
         Final model from training trajectory
 
     str
-        Reason explaining why training ceased. *MAXITER* if maximum iterations
-        reached. *CONVERGENCE* if model converged to ``learning_threshold``.
-        *REGRESSION* if new parameters are worse than old ones, perhaps
-        due to noise, but the training iteration is past ``miniter``
+        Reason explaining why training ceased. ``MAXITER`` if maximum iterations
+        reached. ``CONVERGENCE`` if model converged to `learning_threshold`.
+        ``REGRESSION`` if new parameters are worse than old ones, perhaps
+        due to noise, but the training iteration is past `miniter`
     """
     # yapf: enable
     if emission_estimator is None:
-        raise AssertionError("Emission estimator required by train_baum_welch(), but not supplied")
+        raise AssertionError(
+            "Emission estimator required by train_baum_welch(), but not supplied"
+        )
 
     oopsie = False
 

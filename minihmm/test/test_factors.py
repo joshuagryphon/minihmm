@@ -114,7 +114,6 @@ class AbstractFactor():
 
 
 class TestArrayFactor(AbstractFactor):
-
     @classmethod
     def do_subclass_setup(cls):
         for my_len in range(10, 100, 200):

@@ -1,21 +1,21 @@
 #!/usr/bin/env python
-"""Contains classes that represent first-order Hidden Markov Models.
-These encapsulate methods for:
+"""Contains classes that represent first-order Hidden Markov Models. These
+encapsulate methods for:
 
     #. Assigning state labels to sequences of observations, decoding via
        the Viterbi algorithm or by posterior decoding.
-    
+
     #. Computing the probability of observing a sequence of observations via
        the forward algorithm
-    
-    #. Generating sequences of observations
-    
-All classes here support multivariate and univariate emissions (observation
-sequences) that can be continuous or discrete. 
 
-Training utilities for estimating model parameters may be found
-in :py:mod:`minihmm.training`. Utilities for manipulating higher-order models
-may be found in :mod:`minihmm.represent`
+    #. Generating sequences of observations
+
+All classes here support multivariate and univariate emissions (observation
+sequences) that can be continuous or discrete.
+
+Training utilities for estimating model parameters may be found in
+:mod:`minihmm.training`. Utilities for manipulating higher-order models may be
+found in :mod:`minihmm.represent`
 
 
 Important classes
@@ -32,8 +32,9 @@ References
     ISBN 978-0-521-62971-3
 
 [Rabiner1989]
-    Rabiner, LR (1989). A Tutorial on Hidden Markov Models and Selected Applications
-    in Speech Recognition. Proceedings of the IEEE, 77(2), pp 257-286
+    Rabiner, LR (1989). A Tutorial on Hidden Markov Models and Selected
+    Applications in Speech Recognition. Proceedings of the IEEE, 77(2), pp
+    257-286
 
 [WikipediaForwardBackward]
     http://en.wikipedia.org/wiki/Forward%E2%80%93backward_algorithm
@@ -59,24 +60,24 @@ from minihmm.factors import (
 
 class FirstOrderHMM(AbstractFactor):
     """First-order homogeneous Hidden Markov Model.
-    
+
     Observations/emissions can be multivariate
     """
 
     def __init__(self, state_priors=None, emission_probs=None, trans_probs=None):
         """Create a |FirstOrderHMM|.
-        
+
         Parameters
         ----------
         state_priors : |ArrayFactor|
             Probabilities of starting in any state
-                                 
+
         emission_probs  : list of Factors, or a |CompoundFactor|
             Probability distributions describing the probabilities of observing
             any emission in each state. If a list, the types of factors need
             not be identical (e.g. some could be Gaussian, others T-distributed,
-            et c) 
-        
+            et c)
+
         trans_probs : |MatrixFactor|
             |MatrixFactor| describing transition probabilities from each state
             (first index) to each other state (second index).
@@ -86,7 +87,8 @@ class FirstOrderHMM(AbstractFactor):
         elen = len(emission_probs)
         if splen != tlen or splen != elen:
             raise ValueError(
-                "State priors, transition probabilities, and emission factors must have same length. Found %s, %s, %s instead."
+                "State priors, transition probabilities, and emission factors "
+                "must have same length. Found %s, %s, %s instead."
                 % (splen, tlen, elen)
             )
 
@@ -126,7 +128,14 @@ class FirstOrderHMM(AbstractFactor):
         return "<%s, %s states>" % (self.__class__.__name__, self.num_states)
 
     def get_header(self):
-        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        """Return a list of parameter names corresponding to elements returned
+        by :meth:`FirstOrderHMM.get_row`
+
+        Returns
+        -------
+        list
+            List of parameter names
+        """
         ltmp = ["sp_%s" % X for X in self.state_priors.get_header()]
         ltmp += ["t_%s" % X for X in self.trans_probs.get_header()]
         for n, e_prob in enumerate(self.emission_probs):
@@ -135,7 +144,14 @@ class FirstOrderHMM(AbstractFactor):
         return ltmp
 
     def get_row(self):
-        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        """Serialize parameters as a list, to be used e.g. as a row in a
+        :class:`pandas.DataFrame`
+
+        Returns
+        -------
+        list
+            List of parameter values
+        """
         ltmp = self.state_priors.get_row()
         ltmp += self.trans_probs.get_row()
         for e_prob in self.emission_probs:
@@ -149,7 +165,9 @@ class FirstOrderHMM(AbstractFactor):
         for factor in self.emission_probs:
             if isinstance(factor, (FunctionFactor, LogFunctionFactor)):
                 warnings.warn(
-                    "(Log)FudenctionFactors may only be successfully revived from JSON if defined in a model, or if revived before scope is lost",
+                    "(Log)FudenctionFactors may only be successfully revived "
+                    "from JSON if defined in a model, or if revived before "
+                    "scope is lost",
                     UserWarning
                 )
 
@@ -158,7 +176,7 @@ class FirstOrderHMM(AbstractFactor):
     @staticmethod
     def from_json(stmp):
         """Revive a model from a JSON blob
-        
+
         Parameters
         ----------
         stmp : str
@@ -171,14 +189,14 @@ class FirstOrderHMM(AbstractFactor):
         return jsonpickle.decode(stmp)
 
     def probability(self, emission):
-        """Compute the probability of observing a sequence of emissions.
-        This number is likely to undeflow for long sequences.
+        """Compute the probability of observing a sequence of emissions. This
+        number is likely to undeflow for long sequences.
 
         Parameters
         ----------
         emissions : numpy.ndarray
             Sequence of observations
-        
+
         Returns
         -------
         float
@@ -193,7 +211,7 @@ class FirstOrderHMM(AbstractFactor):
         ----------
         emissions : numpy.ndarray
             Sequence of observations
-        
+
         Returns
         -------
         float
@@ -203,22 +221,23 @@ class FirstOrderHMM(AbstractFactor):
 
     def fast_forward(self, emissions):
         """Compute the log probability of observing a sequence of emissions.
-        
-        More memory efficient implementation of the forward algorithm, retaining
-        only the probability of the terminal and penultimate states at each step.
-        This implementation is not useful for posterior decoding, which requires
-        the probability of all intermediate states. For that purpose, an 
-        alternate implementation is provided by self.forward() 
 
-        Numerical underflows are prevented by scaling probabilities at each step,
-        following the procedure given in Rabiner (1989), "A Tutorial on Hidden
-        Markov Models and Selected Applications in Speech Recognition"
+        More memory efficient implementation of the forward algorithm,
+        retaining only the probability of the terminal and penultimate states
+        at each step.  This implementation is not useful for posterior
+        decoding, which requires the probability of all intermediate states.
+        For that purpose, an alternate implementation is provided by
+        :meth:`FirstOrderHMM.forward`
+
+        Numerical underflows are prevented by scaling probabilities at each
+        step, following the procedure given in Rabiner (1989), "A Tutorial on
+        Hidden Markov Models and Selected Applications in Speech Recognition"
 
         Parameters
         ----------
         emissions : numpy.ndarray
             Sequence of observations
-        
+
         Returns
         -------
         float
@@ -247,93 +266,100 @@ class FirstOrderHMM(AbstractFactor):
         regardless of the state sequence, using the Forward Algorithm. This
         implementation also retains intermediate state information useful in
         posterior decoding or Baum-Welch training.
-        
+
         Numerical underflows are prevented by scaling probabilities at each step,
         following the procedure given in Rabiner (1989), "A Tutorial on Hidden
         Markov Models and Selected Applications in Speech Recognition"
-        
+
         Vectorized implementation from Wikipedia (2014-02-20):
         http://en.wikipedia.org/wiki/Forward%E2%80%93backward_algorithm
-        
+
         Parameters
         ----------
         emissions : numpy.ndarray
             Sequence of observations
-        
+
         Returns
         -------
         float
             log probability of sequence of emissions
-        
+
         numpy.ndarray
-            [time x num_states] Array representing  scaled forward algorithm vector,
-            indicating the forward probability of being in each state at time T,
-            given the model and the observation trajectory from t = 0 to t = T
-        
+            `[time x num_states]` Array representing  scaled forward algorithm
+            vector, indicating the forward probability of being in each state
+            at time `T`, given the model and the observation trajectory from
+            `t = 0` to `t = T`
+
         numpy.ndarray
-            [time x 1] Array of scaling constants used at each step as described in Rabiner 1989.
-            The sum of the log of these equals the log probability of the observation sequence.
+            `[time x 1]` Array of scaling constants used at each step as
+            described in Rabiner 1989.  The sum of the log of these equals the
+            log probability of the observation sequence.
         """
-        total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(
-            emissions, calc_backward=False
-        )
+        total_logprob, scaled_forward, _, scale_factors, _ = self.forward_backward(emissions, calc_backward=False)
         return total_logprob, scaled_forward, scale_factors
 
     def forward_backward(self, emissions, calc_backward=True):
-        """Calculates the forward algorithm, the backward algorithm, and sufficient
-        statistics useful in Baum-Welch calculations, all in factored and 
-        vectorized forms. 
-        
-        Numerical underflows are prevented by scaling forward  probabilities at each
-        step, following the procedure given in Rabiner (1989), "A Tutorial on Hidden
-        Markov Models and Selected Applications in Speech Recognition"
-        
+        """Calculates the forward algorithm, the backward algorithm, and
+        sufficient statistics useful in Baum-Welch calculations, all in
+        factored and vectorized forms.
+
+        Numerical underflows are prevented by scaling forward  probabilities at
+        each step, following the procedure given in Rabiner (1989), "A Tutorial
+        on Hidden Markov Models and Selected Applications in Speech
+        Recognition"
+
         Vectorized implementation adapted from Wikipedia (2014-02-20):
-        http://en.wikipedia.org/wiki/Forward%E2%80%93backward_algorithm
-        but using scaling as described in Rabiner1989 and Durbin1998, rather
-        than the Wikipedia article
-        
-        
+        http://en.wikipedia.org/wiki/Forward%E2%80%93backward_algorithm but
+        using scaling as described in Rabiner1989 and Durbin1998, rather than
+        the Wikipedia article
+
+
         Parameters
         ----------
         emissions : numpy.ndarray
             Observations
-        
+
         calc_backward : bool, optional
             If True, perform backward pass and calculate Rabiner's ksi table
-        
-        
+
+
         Returns
         -------
         float
             log probability of sequence of emissions
-        
+
         numpy.array
-            Scaled forward algorithm vector of dim [time x num_states],
-            indicating the forward probability of being in each state at time T,
-            given the model and the observation trajectory from t = 0 to t = T
+            Scaled forward algorithm vector of dim `[time x num_states]`,
+            indicating the forward probability of being in each state at time
+            `T`, given the model and the observation trajectory from `t = 0` to
+            `t = T`
 
         numpy.ndarray
-            Scaled backward algorithm vector of dim [time x num_states],
-            indicating the backward probability of being in each state at time T,
-            given the model and the observation trajectory from t = T to t = end
+            Scaled backward algorithm vector of dim `[time x num_states]`,
+            indicating the backward probability of being in each state at time
+            `T`, given the model and the observation trajectory from `t = T` to
+            `t = end`
 
         numpy.ndarray
-            [time x 1] Array of scaling constants used at each step as described in Rabiner 1989.
-            The sum of the log of these equals the log probability of the observation sequence.
-            
+            `[time x 1]` Array of scaling constants used at each step as
+            described in Rabiner 1989.  The sum of the log of these equals the
+            log probability of the observation sequence.
+
         numpy.ndarray
-            [time x num_states x num_states] ksi table, as described in Rabiner 1989.
-            At each time t, ksi[t,i,j] gives the posterior
-            probability of transitioning from state i to state j. From this
-            table it is trivial to derive the expected number of transitions 
-            from state i to state j, or the posterior probability of being in
-            state i or j at a given timepoint, by taking the appropriate sum.
+            `[time x num_states x num_states]` ksi table, as described in
+            Rabiner 1989.  At each time `t`, `ksi[t,i,j]` gives the posterior
+            probability of transitioning from state `i` to state `j`. From this
+            table it is trivial to derive the expected number of transitions
+            from state `i` to state `j`, or the posterior probability of being
+            in state `i` or `j` at a given timepoint, by taking the appropriate
+            sum.
+
 
         Notes
         -----
-        This implementation casts everything to ``numpy.float128``. Whether this will
-        actually force use of IEEE float128 depends on local C library implementations
+        This implementation casts everything to ``numpy.float128``. Whether
+        this will actually force use of IEEE float128 depends on local C
+        library implementations
         """
         # probability sequence indexed by timeslice. columns are end states
         scaled_forward = numpy.tile(numpy.nan, (len(emissions), self.num_states))
@@ -396,26 +422,27 @@ class FirstOrderHMM(AbstractFactor):
         return total_logprob, scaled_forward, scaled_backward, scale_factors, ksi
 
     def posterior_decode(self, emissions):
-        """Find the most probable state for each individual state in the sequence
-        of emissions, using posterior decoding. Note, this objective is distinct
-        from finding the most probable sequence of states for all emissions, as
-        is given in Viterbi decoding. This alternative may be more appropriate
-        when multiple paths have similar probabilities.
-        
+        """Find the most probable state for each individual state in the
+        sequence of emissions, using posterior decoding. Note, this objective
+        is distinct from finding the most probable sequence of states for all
+        emissions, as is given in Viterbi decoding. This alternative may be
+        more appropriate when multiple paths have similar probabilities.
+
         Parameters
         ----------
         emissions : numpy.ndarray
             Sequence of observations
 
-        
+
         Returns
         -------
         numpy.ndarray
-            An array of dimension [t x 1] of the most likely states at each point t
-        
+            An array of dimension `[t x 1]` of the most likely states at each
+            point `t`
+
         numpy.ndarray
-            An array of dimension [t x k] of the posterior probability of being
-            in state k at time t 
+            An array of dimension `[t x k]` of the posterior probability of
+            being in state `k` at time `t`
         """
         _, forward, backward, scale_factors, _ = self.forward_backward(emissions)
         posterior_probs = forward * backward * scale_factors[:, None]
@@ -425,29 +452,31 @@ class FirstOrderHMM(AbstractFactor):
 
     def generate(self, length):
         """Generates a random sequence of states and emissions from the HMM
-        
+
         Parameters
         ----------
         length : int
             Length of sequence to generate
-        
-        
+
+
         Returns
         -------
         numpy.ndarray
-            Array of dimension [t x 1] indicating the HMM state at each timestep
-        
+            Array of dimension `[t x 1]` indicating the HMM state at each
+            timestep
+
         numpy.ndarray
-            Array of dimension [t x Q] indicating the observation at each timestep.
-            Q = 1 for univariate HMMs, or more than 1 if observations are multivariate.
-            
+            Array of dimension `[t x Q]` indicating the observation at each
+            timestep.  `Q = 1` for univariate HMMs, or more than 1 if
+            observations are multivariate.
+
         float
             Joint log probability of generated state and observation sequence.
-            **Note**: this is different from the log probability of the observation
-            sequence alone, which would be the sum of its joint probabilities
-            with all possible state sequences.
-        
-        
+            **Note**: this is different from the log probability of the
+            observation sequence alone, which would be the sum of its joint
+            probabilities with all possible state sequences.
+
+
         Notes
         -----
         The HMM can only generate sequences if all of its EmissionFactors
@@ -517,7 +546,7 @@ class FirstOrderHMM(AbstractFactor):
         Returns
         -------
         float
-            Log probability of P(path | emissions)
+            Log probability of `P(path | emissions)`
         """
         # calculate conditional pat logprob as P(path, emissions) - P(emissions)
         # P(emissions) from fast_forward
@@ -527,8 +556,8 @@ class FirstOrderHMM(AbstractFactor):
         return joint_logprob - obs_logprob
 
     def sample(self, emissions, num_samples=1):
-        """Sample state sequences from the distribution P(states | emissions),
-        by tracing backward through the matrix of forward probabilities. 
+        """Sample state sequences from the distribution `P(states | emissions)`,
+        by tracing backward through the matrix of forward probabilities.
         See Durbin1997 ch 4.3, section "Probabilistic sampling of aligments"
 
         Parameters
@@ -633,34 +662,34 @@ class FirstOrderHMM(AbstractFactor):
         """Finds the most likely state sequence underlying a set of emissions
         using the Viterbi algorithm. Also returns the natural log probability
         of that state sequence.
-        
+
         See http://en.wikipedia.org/wiki/Viterbi_algorithm
-        
+
         Parameters
         ----------
         emissions : numpy.ndarray
             Sequence of observations
-        
+
         start : int, optional
             Starting point in emissions to consider (Default: 0)
 
         end : int, optional
             Ending point in emissions to consider (Default: None, end of sequence)
-        
+
 
         Returns
         -------
         dict
             Results of decoding, with the following keys:
-            
+
             `viterbi_states`
                 :class:`numpy.ndarray`. Decoded labels for each position in
                 emissions[start:end]
-        
+
             `logprob`
                 :class:`float`. Joint log probability of sequence of
                 `emissions[start:end]` and the decoded state sequence
-        
+
             `state_paths`
                 dict[state] = log probability of final symbol being in that state
         """

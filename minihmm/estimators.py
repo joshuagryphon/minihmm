@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-"""Estimator classes for Baum-Welch training. Estimators determine how parameters
-for the HMM are re-estimated from observations during each training cycle.
+"""Estimator classes for Baum-Welch training. Estimators determine how
+parameters for the HMM are re-estimated from observations during each training
+cycle.
 
 Estimators must be able to:
 
@@ -8,7 +9,7 @@ Estimators must be able to:
        probability distribution. This is implemented by the methods
        ``is_valid()`` and ``is_invalid()``
 
-    2) Reduce a set of observations to expected summary statistics 
+    2) Reduce a set of observations to expected summary statistics
        (expectation step), implemented by the method ``reduce_data()``
 
     3) Estimate improved parameters for the model from the expected
@@ -35,15 +36,25 @@ import copy
 
 
 def get_model_noise(template, weight, assymetric_weights=1):
-    """Create an array of noise,  with total number of counts equal to weight*template.sum()
-    and shape equal to template.shape
-    
-    @param template   template array
-    @param weight     relative weight of noise
-    @param pseudocount_weights  If given, assymetric weights of pseudocounts to noise
-                                (e.g. set cells to zero to prevent noise from being
-                                added to those regions)
-    @return numpy.array
+    """Create an array of noise,  with total number of counts equal to
+    `weight*template.sum()` and shape equal to template.shape
+
+    Parameters
+    ----------
+    template : numpy.ndarray
+        Array indicating where to put noise, and in what relative distributions
+
+    weight : float
+        Relative weight of noise relative to data
+
+    pseudocount_weights : float or numpy.ndarray
+        If given, assymetric weights of pseudocounts to noise (e.g. set cells
+        to zero to prevent noise from being added to those regions)
+
+    Returns
+    -------
+    :class:`numpy.ndarray`
+        Numpy array containing noise
     """
     noise = numpy.random.random(template.shape) * assymetric_weights
     noise = noise / noise.sum() * weight * template.sum()
@@ -77,7 +88,7 @@ class AbstractProbabilityEstimator(object):
     def is_invalid(self, reduced_data):
         """Return true if data is invalid and should be excluded from current
         round of reestimation
-        
+
         Parameters
         ----------
         reduced_data
@@ -88,29 +99,34 @@ class AbstractProbabilityEstimator(object):
     @abstractmethod
     def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
-        amenable for factor construction by self.construct_factors()
-        
+        amenable for factor construction by
+        :meth:`AbstractProbabilityEstimator.construct_factors`
+
         Parameters
         ----------
         my_obs : list-like
             Observation sequence
-        
+
         obs_logprob : float
-            Observation logprob, from :py:meth:`FirstOrderHMM.forward_backward`
-       
+            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+
         forward : numpy.ndarray
-            Scaled forward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
-        
+            Scaled forward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
+
         backward : numpy.ndarray
-            Scaled backward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scaled backward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
-            Scale factors used in scaling ``forward`` and ``backward`` to floating-point
-            friendly sizes, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scale factors used in scaling `forward` and `backward` to
+            floating-point friendly sizes, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
-            MxNxT array describing the full probability of being in state *M* at time *t*
-            and state *N* at time *t+1*. From :py:meth:`FirstOrderHMM.forward_backward`
+            `MxNxT` array describing the full probability of being in state `M`
+            at time `t` and state `N` at time `t+1`. From
+            :meth:`FirstOrderHMM.forward_backward`
 
         Returns
         -------
@@ -121,24 +137,25 @@ class AbstractProbabilityEstimator(object):
 
     @abstractmethod
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
-        """Construct factor(s) for an HMM using reduced data from observation sequences
-       
+        """Construct factor(s) for an HMM using reduced data from observation
+        sequences
+
         Parameters
         ----------
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from :meth:`reduce_data`
-        
+
         noise_weight : float, optional
             weight of noise to add, relative to number of of observations
             (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            in data set. (Default: 0)
+
         pseudocount_weight : float, optional
             weight of pseudocounts to add, relative to number of of observations
             (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
+            in data set (Default: 1e-8)
 
         Returns
         -------
@@ -203,26 +220,33 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction
 
+        Parameters
+        ----------
         my_obs : list-like
             Observation sequence
-        
+
         obs_logprob : float
-            Observation logprob, from :py:meth:`FirstOrderHMM.forward_backward`
-       
+            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+
         forward : numpy.ndarray
-            Scaled forward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
-        
+            Scaled forward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
+
         backward : numpy.ndarray
-            Scaled backward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scaled backward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
-            Scale factors used in scaling ``forward`` and ``backward`` to floating-point
-            friendly sizes, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scale factors used in scaling `forward` and `backward` to
+            floating-point friendly sizes, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
-            MxNxT array describing the full probability of being in state *M* at time *t*
-            and state *N* at time *t+1*. From :py:meth:`FirstOrderHMM.forward_backward`
-        
+            `MxNxT` array describing the full probability of being in state `M`
+            at time `t` and state `N` at time `t+1`. From
+            :meth:`FirstOrderHMM.forward_backward`
+
+
         Returns
         -------
         numpy.ndarray
@@ -231,23 +255,24 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
         return ksi[0, :, :].sum(1)
 
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
-        """Construct discrete transition factor for an HMM using reduced data from
-        observation sequences
-        
+        """Construct discrete transition factor for an HMM using reduced data
+        from observation sequences
+
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`DiscreteStatePriorEstimato.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
 
         Returns
         -------
@@ -265,33 +290,40 @@ class DiscreteStatePriorEstimator(_DiscreteParameterEstimator):
 
 class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
     """Estimate transitions between states from observation sequences in Baum-Welch
-    training. Constructs a MatrixFactor 
+    training. Constructs a MatrixFactor
     """
 
     def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
         """Collect data from a single observation sequence and reduce it to a form
         amenable for factor construction
-        
+
+        Parameters
+        ----------
         my_obs : list-like
             Observation sequence
-        
+
         obs_logprob : float
-            Observation logprob, from :py:meth:`FirstOrderHMM.forward_backward`
-       
+            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+
         forward : numpy.ndarray
-            Scaled forward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
-        
+            Scaled forward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
+
         backward : numpy.ndarray
-            Scaled backward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scaled backward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
-            Scale factors used in scaling ``forward`` and ``backward`` to floating-point
-            friendly sizes, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scale factors used in scaling `forward` and `backward` to
+            floating-point friendly sizes, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
-            MxNxT array describing the full probability of being in state *M* at time *t*
-            and state *N* at time *t+1*. From :py:meth:`FirstOrderHMM.forward_backward`
-        
+            `MxNxT` array describing the full probability of being in state `M`
+            at time `t` and state `N` at time `t+1`. From
+            :meth:`FirstOrderHMM.forward_backward`
+
+
         Returns
         -------
         numpy.ndarray
@@ -300,24 +332,25 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
         return ksi.sum(0)
 
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
-        """Construct discrete transition factor for an HMM using reduced data from
-        observation sequences
-        
+        """Construct discrete transition factor for an HMM using reduced data
+        from observation sequences
+
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`DiscreteTransitionEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
+
         Returns
         -------
         |MatrixFactor|
@@ -332,13 +365,13 @@ class DiscreteTransitionEstimator(_DiscreteParameterEstimator):
 
 
 class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
-    """Estimate discrete emissions from observation sequences in Baum-Welch training,
-    modeling these as a series of ArrayFactos
+    """Estimate discrete emissions from observation sequences in Baum-Welch
+    training, modeling these as a series of ArrayFactos
     """
 
     def __init__(self, num_symbols):
         """Create a DiscreteEmissionEstimator
-        
+
         Parameters
         ----------
         num_symbols : int
@@ -348,29 +381,35 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
         _DiscreteParameterEstimator.__init__(self)
 
     def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
-        """Collect data from a single observation sequence and reduce it to a form
-        amenable for factor construction
-        
+        """Collect data from a single observation sequence and reduce it to a
+        form amenable for factor construction
+
+        Parameters
+        ----------
         my_obs : list-like
             Observation sequence
-        
+
         obs_logprob : float
-            Observation logprob, from :py:meth:`FirstOrderHMM.forward_backward`
-       
+            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+
         forward : numpy.ndarray
-            Scaled forward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
-        
+            Scaled forward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
+
         backward : numpy.ndarray
-            Scaled backward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scaled backward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
-            Scale factors used in scaling ``forward`` and ``backward`` to floating-point
-            friendly sizes, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scale factors used in scaling `forward` and `backward` to
+            floating-point friendly sizes, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
-            MxNxT array describing the full probability of being in state *M* at time *t*
-            and state *N* at time *t+1*. From :py:meth:`FirstOrderHMM.forward_backward`
-        
+            `MxNxT` array describing the full probability of being in state `M`
+            at time `t` and state `N` at time `t+1`. From
+            :meth:`FirstOrderHMM.forward_backward`
+
         Returns
         -------
         numpy.ndarray
@@ -390,21 +429,22 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences
-        
+
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`DiscreteEmissionEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
 
         Returns
         -------
@@ -425,43 +465,46 @@ class DiscreteEmissionEstimator(_DiscreteParameterEstimator):
 
 
 class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
-    """Abstract class. Subclass and define self.pseudocount_array to
-    estimate state priors using arbitrarily distributed pseudocounts
-    in Baum-Welch training
+    """Abstract class. Subclass and define `cls.pseudocount_array` to estimate
+    state priors using arbitrarily distributed pseudocounts in Baum-Welch
+    training
     """
 
     def __init__(self, pseudocount_array):
         """
         model : |FirstOrderHMM|
             HMM to which this estimator will be attached
-        
+
         pseudocount_array : float or numpy.ndarray
-            Scalar (if evenly applying pseudocounts) or numpy array
-            (if assymetrically weighting pseudocounts) pseudocounts
-            to apply during estimation.
+            Scalar (if evenly applying pseudocounts) or numpy array (if
+            assymetrically weighting pseudocounts) pseudocounts to apply during
+            estimation.
         """
         self.pseudocount_array = copy.deepcopy(pseudocount_array)
         DiscreteStatePriorEstimator.__init__(self)
 
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
-        """Construct discrete state prior factor for an HMM using reduced data from
-        observation sequences
-        
+        """Construct discrete state prior factor for an HMM using reduced data
+        from observation sequences
+
+        Parameters
+        ----------
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`PseudocountStatePriorEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
             weight of pseudocounts to add, relative to number of of observations
             (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
+            in data set (Default: 1e-8)
+
         Returns
         -------
         |MatrixFactor|
@@ -477,40 +520,43 @@ class PseudocountStatePriorEstimator(DiscreteStatePriorEstimator):
 
 
 class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
-    """Abstract class. Subclass and define self.pseudocount_array to
-    estimate state transitions using arbitrarily distributed pseudocounts
-    in Baum-Welch training
+    """Abstract class. Subclass and define `cls.pseudocount_array` to estimate
+    state transitions using arbitrarily distributed pseudocounts in Baum-Welch
+    training
     """
 
     def __init__(self, pseudocount_array):
         """
+        Parameters
+        ----------
         pseudocount_array : float or numpy.ndarray
-            Scalar (if evenly applying pseudocounts) or numpy array
-            (if assymetrically weighting pseudocounts) pseudocounts
-            to apply during estimation.
+            Scalar (if evenly applying pseudocounts) or numpy array (if
+            assymetrically weighting pseudocounts) pseudocounts to apply during
+            estimation.
         """
         self.pseudocount_array = copy.deepcopy(pseudocount_array)
         DiscreteTransitionEstimator.__init__(self)
 
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
-        """Construct discrete transition factor for an HMM using reduced data from
-        observation sequences
-        
+        """Construct discrete transition factor for an HMM using reduced data
+        from observation sequences
+
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`PseudocountTransitionEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
+
         Returns
         -------
         |MatrixFactor|
@@ -525,20 +571,19 @@ class PseudocountTransitionEstimator(DiscreteTransitionEstimator):
 
 
 class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
-    """Abstract class. Subclass and define self.pseudocount_array to
-    estimate emissions using arbitrarily distributed pseudocounts
-    in Baum-Welch training
+    """Abstract class. Subclass and define `cls.pseudocount_array` to estimate
+    emissions using arbitrarily distributed pseudocounts in Baum-Welch training
     """
 
     def __init__(self, model, num_symbols, pseudocount_array):
         """
         model : |FirstOrderHMM|
             HMM to which this estimator will be attached
-        
+
         pseudocount_array : float or numpy.ndarray
-            Scalar (if evenly applying pseudocounts) or numpy array
-            (if assymetrically weighting pseudocounts) pseudocounts
-            to apply during estimation.
+            Scalar (if evenly applying pseudocounts) or numpy array (if
+            assymetrically weighting pseudocounts) pseudocounts to apply during
+            estimation.
         """
         self.pseudocount_array = copy.deepcopy(pseudocount_array)
         DiscreteEmissionEstimator.__init__(self, model, num_symbols)
@@ -546,22 +591,23 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences
-        
+
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`PseudocountEmissionEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
+
         Returns
         -------
         list
@@ -582,20 +628,17 @@ class PseudocountEmissionEstimator(DiscreteEmissionEstimator):
 
 class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
     """Estimate state prior probabilities, but tying (pooling data for and then
-    jointly estimating) comparable states (e.g. all single states, all 
+    jointly estimating) comparable states (e.g. all single states, all
     compound states).
-    
-        self.pseudocount_array  an array of weighted pseudocounts
-        
     """
 
     def __init__(self, pseudocount_array, index_map):
         """
         pseudocount_array : float or numpy.ndarray
-            Scalar (if evenly applying pseudocounts) or numpy array
-            (if assymetrically weighting pseudocounts) pseudocounts
-            to apply during estimation.
-        
+            Scalar (if evenly applying pseudocounts) or numpy array (if
+            assymetrically weighting pseudocounts) pseudocounts to apply during
+            estimation.
+
         index_map : numpy.ndarray
             a NUM_STATES-vector in which cells containing identical
             integer values have tied parameters.
@@ -610,23 +653,26 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct state prior factor for an HMM using reduced data from
         observation sequences
-        
+
+        Parameters
+        ----------
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`TiedStatePriorEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
-        
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
+
+
         Returns
         -------
         |ArrayFactor|
@@ -665,19 +711,19 @@ class TiedStatePriorEstimator(PseudocountStatePriorEstimator):
 
 class TiedTransitionEstimator(PseudocountTransitionEstimator):
     """Estimate state prior probabilities, but tying (pooling data for and then
-    jointly estimating) comparable states (e.g. all single states, all 
+    jointly estimating) comparable states (e.g. all single states, all
     compound states).
     """
 
     def __init__(self, pseudocount_array, index_map):
         """
         pseudocount_array : float or numpy.ndarray
-            Scalar (if evenly applying pseudocounts) or numpy array
-            (if assymetrically weighting pseudocounts) pseudocounts
-            to apply during estimation.
-        
+            Scalar (if evenly applying pseudocounts) or numpy array (if
+            assymetrically weighting pseudocounts) pseudocounts to apply during
+            estimation.
+
         index_map : numpy.ndarray
-            a NUM_STATES x NUM_STATES table vector in which cells
+            a `NUM_STATES x NUM_STATES` table vector in which cells
             containing identical integer values have tied parameters.
         """
         self.index_map = copy.deepcopy(index_map)
@@ -690,22 +736,23 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
     def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
         """Construct transition factor for an HMM using reduced data from
         observation sequences
-        
+
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
+            sufficient statistics for observations, from
+            :meth:`TiedTransitionEstimator.reduce_data`
+
         noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
+            weight of noise to add, relative to number of of observations (e.g.
+            transition counts, state prior counts, emission counts, et c) in
+            data set. (Default: 0)
+
         pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
+            weight of pseudocounts to add, relative to number of of
+            observations (transition counts, state prior counts, emission
+            counts, et c) in data set (Default: 1e-8)
+
         Returns
         -------
         |MatrixFactor|
@@ -747,45 +794,49 @@ class TiedTransitionEstimator(PseudocountTransitionEstimator):
 # TODO: implement model noise? by adding Gaussian noise around the observation vectors?
 #        what would pseudocounts/regularization mean, if anything, in this context?
 class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
-    """Estimate univariate Gaussian emissions from observation sequences in 
-    Baum-Welch training. This implementation currently only works for single-process
-    training, because ScipyDistributionFactors cannot be pickled
+    """Estimate univariate Gaussian emissions from observation sequences in
+    Baum-Welch training.
     """
 
     def is_valid(self, reduced_data):
         return not (numpy.isnan(reduced_data) | numpy.isinf(reduced_data)).any()
 
     def reduce_data(self, my_obs, obs_logprob, forward, backward, scale_factors, ksi):
-        """Collect data from a single observation sequence and reduce it to a form
-        amenable for factor construction
-        
+        """Collect data from a single observation sequence and reduce it to a
+        form amenable for factor construction
+
+        Parameters
+        ----------
         my_obs : list-like
             Observation sequence
-        
+
         obs_logprob : float
-            Observation logprob, from :py:meth:`FirstOrderHMM.forward_backward`
-       
+            Observation logprob, from :meth:`FirstOrderHMM.forward_backward`
+
         forward : numpy.ndarray
-            Scaled forward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
-        
+            Scaled forward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
+
         backward : numpy.ndarray
-            Scaled backward probability matrix, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scaled backward probability matrix, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         scale_factors : numpy.ndarray
-            Scale factors used in scaling ``forward`` and ``backward`` to floating-point
-            friendly sizes, from :py:meth:`FirstOrderHMM.forward_backward`
+            Scale factors used in scaling `forward` and `backward` to
+            floating-point friendly sizes, from
+            :meth:`FirstOrderHMM.forward_backward`
 
         ksi : numpy.ndarray
-            MxNxT array describing the full probability of being in state *M* at time *t*
-            and state *N* at time *t+1*. From :py:meth:`FirstOrderHMM.forward_backward`
-        
+            `MxNxT` array describing the full probability of being in state `M`
+            at time `t` and state `N` at time `t+1`. From
+
         Returns
         -------
         numpy.ndarray
             Emission matrix for given observation sequence, in which each row
-            is a model state. The first column is the estimated mean, the second
-            the estimated variance, and the third, the number of points counted
-            in each sequence
+            is a model state. The first column is the estimated mean, the
+            second the estimated variance, and the third, the number of points
+            counted in each sequence
         """
         num_states = ksi.shape[1]
         my_E = numpy.zeros((num_states, 3))
@@ -804,28 +855,21 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
 
         return my_E
 
-    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, **ignored):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences.
-        
+
         Pooled variance estimation formula drawn from
         en.wikipedia.org/wiki/Pooled_variance
 
+        Parameters
+        ----------
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
             sufficient statistics for observations, from :meth:`reduce_data`
-        
-        noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
-        pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-       
+
+
         Returns
         -------
         list
@@ -853,33 +897,26 @@ class UnivariateGaussianEmissionEstimator(AbstractProbabilityEstimator):
 
 # NOT TESTED
 class UnivariateTEmissionEstimator(UnivariateGaussianEmissionEstimator):
-    """Estimate univariate T-distributed emissions from observation sequences in 
-    Baum-Welch training. This implementation currently only works for single-process
-    training, because ScipyDistributionFactors cannot be pickled
+    """Estimate univariate T-distributed emissions from observation sequences
+    in Baum-Welch training.
     """
 
-    def construct_factors(self, model, reduced_data, noise_weight=0, pseudocount_weight=1e-10):
+    def construct_factors(self, model, reduced_data, **ignored):
         """Construct discrete emission factor for an HMM using reduced data from
         observation sequences.
-        
+
         Pooled variance estimation formula drawn from
         en.wikipedia.org/wiki/Pooled_variance
 
+        Parameters
+        ----------
         model : |FirstOrderHMM| or subclass
-            
+
         reduced_data : numpy.ndarray
-            sufficient statistics for observations, from :meth:`reduce_data`
-        
-        noise_weight : float, optional
-            weight of noise to add, relative to number of of observations
-            (e.g. transition counts, state prior counts, emission counts, et c)
-            in data set. (Default: *0*)
-        
-        pseudocount_weight : float, optional
-            weight of pseudocounts to add, relative to number of of observations
-            (transition counts, state prior counts, emission counts, et c)
-            in data set (Default: *1e-8*)
-        
+            sufficient statistics for observations, from
+            :meth:`UnivariateTEmissionEstimator.reduce_data`
+
+
         Returns
         -------
         list

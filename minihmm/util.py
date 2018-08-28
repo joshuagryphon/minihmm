@@ -11,7 +11,8 @@ from scipy.sparse import coo_matrix
 
 
 class NullWriter(object):
-    """File-like object that actually writes nothing, in the spirit of :obj:`os.devnull`
+    """File-like object that actually writes nothing, in the spirit of
+    :obj:`os.devnull`
     """
 
     def write(inp):
@@ -45,10 +46,10 @@ def build_hmm_tables(
         initializer=numpy.zeros,
 ):
     """Build a set of state prior and transition tables from sequences of known
-    states.  This in contrast to *training*, in which parameters for transition
+    states. This in contrast to *training*, in which parameters for transition
     tables are estimated from msequences of observations and unknown states.
 
-    
+
     Parameters
     ----------
     num_states : int
@@ -59,24 +60,24 @@ def build_hmm_tables(
 
     weights : list-like or None, optional
         Weight to apply to each sequence. If `None`, each sequence will be
-        weighted equally (Default: `None`)
+        weighted equally (Default: None)
 
     staet_prior_pseudocounts : int or matrix-like
-        Pseudocounts to add to count table. If `int`, same value will be added to every
-        cell in the table. If matrix or array-like, that matrix will be added to the 
-        count matrix (Default: `0`)
+        Pseudocounts to add to count table. If an ``int``, same value will be
+        added to every cell in the table. If matrix or array-like, that matrix
+        will be added to the count matrix (Default: 0)
 
     transition_pseudocounts : int or matrix-like
-        Pseudocounts to add to count table. If `int`, same value will be added to every
-        cell in the table. If matrix or array-like, that matrix will be added to the 
-        count matrix (Default: `0`)
+        Pseudocounts to add to count table. If `int`, same value will be added
+        to every cell in the table. If matrix or array-like, that matrix will
+        be added to the count matrix (Default: 0)
 
     normalize : bool, optional
-        If `True`, return a row-normalized transition table. If `False`, return a count
-        table (Default: `True`)
+        If ``True``, return a row-normalized transition table. If ``False``,
+        return a count table (Default: ``True``)
 
     initializer : callable
-        Initializer for transition table. Must accept (shape, dtype) as
+        Initializer for transition table. Must accept `(shape, dtype)` as
         parameters. By default, this would be :func:`numpy.zeros`, to create a
         dense matrix. Another good option would be
         :class:`scipy.spares.dok_matrix` to create a sparse matrix
@@ -109,7 +110,8 @@ def build_hmm_tables(
 
     if (tmat.sum(1) == 0).any():
         warnings.warn(
-            "There are all-zero rows in the transition table! These may yield nonsensical probabilities! Consider adding pseudocounts",
+            "There are all-zero rows in the transition table! These may yield "
+            "nonsensical probabilities! Consider adding pseudocounts",
             UserWarning
         )
 

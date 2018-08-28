@@ -96,6 +96,7 @@ from scipy.sparse import (lil_matrix, dok_matrix, coo_matrix)
 # Model translation
 #===============================================================================
 
+
 def _get_modelreducer_from_dict(dtmp):
     """Revive a :class:`ModelReducer` from a dictionary made by
     :meth:`ModelReducer._to_dict`
@@ -272,7 +273,8 @@ class ModelReducer(object):
             A sequence
 
         alphadict : dict-like
-            Dictionary mapping symbols in input sequence to symbols in output sequence
+            Dictionary mapping symbols in input sequence to symbols in output
+            sequence
 
         Returns
         -------
@@ -291,7 +293,8 @@ class ModelReducer(object):
             Iterable of sequences (each, itself, an iterable like a list et c)
 
         alphadict : dict-like
-            Dictionary mapping symbols in input sequence to symbols in output sequence
+            Dictionary mapping symbols in input sequence to symbols in output
+            sequence
 
         Returns
         -------
@@ -301,10 +304,11 @@ class ModelReducer(object):
         return [ModelReducer.transcode_sequence(X, alphadict) for X in sequences]
 
     def _get_dummy_states(self):
-        """Create sorted lists of dummy states required to reduce `self` to an equivalent first-order model.
+        """Create sorted lists of dummy states required to reduce `self` to
+        an equivalent first-order model.
 
-        By convention, dummy states are given negative indices in high-order space.
-        Don't rely on this- it may change in the future
+        By convention, dummy states are given negative indices in high-order
+        space.  Don't rely on this- it may change in the future
 
         Parameters
         ----------
@@ -319,15 +323,18 @@ class ModelReducer(object):
         return list(range(1 - self.starting_order, 0))
 
     def _get_state_mapping(self):
-        """Create dicts mapping states between a high-order and a first-order HMM.
+        """Create dicts mapping states between a high-order and a first-order
+        HMM.
 
         Returns
         -------
         :class:`dict`
-            Forward state map, mapping high-order states to tuples of equivalent low-order states
+            Forward state map, mapping high-order states to tuples of
+            equivalent low-order states
 
         :class:`dict`
-            Reverse state map, mapping new first-order states to tuples of high-order states
+            Reverse state map, mapping new first-order states to tuples of
+            high-order states
         """
         forward = {}
         reverse = {}
@@ -352,7 +359,8 @@ class ModelReducer(object):
         return forward, reverse
 
     def _get_stateseq_tuples(self, state_seqs):
-        """Remap a high-order sequence of states into tuples for use in a low-order model, adding dummy start states
+        """Remap a high-order sequence of states into tuples for use in a
+        low-order model, adding dummy start states
 
         Notes
         -----
@@ -389,9 +397,9 @@ class ModelReducer(object):
         return outseqs
 
     def lower_stateseq_orders(self, state_seqs):
-        """Map a high-order sequence of states into an equivalent first-order state sequence,
-        creating dummy states as necessary and dictionaries that map states between
-        high and first-order spaces.
+        """Map a high-order sequence of states into an equivalent first-order
+        state sequence, creating dummy states as necessary and dictionaries
+        that map states between high and first-order spaces.
 
 
         Parameters
@@ -416,7 +424,8 @@ class ModelReducer(object):
         return ModelReducer.transcode_sequences(tuple_seqs, state_map)
 
     def raise_stateseq_orders(self, state_seqs):
-        """Map a state sequence from first-order space back to original high-order space
+        """Map a state sequence from first-order space back to original
+        high-order space
 
         Parameters
         ----------
@@ -454,18 +463,19 @@ class ModelReducer(object):
         -------
         `viterbi_states`
             :class:`numpy.ndarray`. Decoded labels for each position in
-            emissions[start:end]
+            `emissions[start:end]`
         """
         raw = self.hmm.viterbi(emissions)["viterbi_states"]
         high = self.raise_stateseq_orders([raw])[0]
         return high
 
     def posterior_decode(self, emissions):
-        """Find the most probable state for each individual state in the sequence
-        of emissions, using posterior decoding. Note, this objective is distinct
-        from finding the most probable sequence of states for all emissions, as
-        is given in Viterbi decoding. This alternative may be more appropriate
-        when multiple paths have similar probabilities.
+        """Find the most probable state for each individual state in the
+        sequence of emissions, using posterior decoding. Note, this objective
+        is distinct from finding the most probable sequence of states for all
+        emissions, as is given in Viterbi decoding. This alternative may be
+        more appropriate when multiple paths have similar probabilities.
+
 
         Parameters
         ----------
@@ -476,7 +486,7 @@ class ModelReducer(object):
         Returns
         -------
         numpy.ndarray
-            An array of dimension [t x 1] of the most likely states at each point t
+            An array of dimension `[t x 1]` of the most likely states at each point `t`
         """
         raw, _ = self.hmm.posterior_decode(emissions)
         return self.raise_stateseq_orders([raw])[0]
@@ -515,17 +525,19 @@ class ModelReducer(object):
         Returns
         -------
         numpy.ndarray
-            Array of dimension [t x 1] indicating the HMM state at each timestep
+            Array of dimension `[t x 1]` indicating the HMM state at each
+            timestep
 
         numpy.ndarray
-            Array of dimension [t x Q] indicating the observation at each timestep.
-            Q = 1 for univariate HMMs, or more than 1 if observations are multivariate.
+            Array of dimension `[t x Q]` indicating the observation at each
+            timestep.  `Q = 1` for univariate HMMs, or more than 1 if
+            observations are multivariate.
 
         float
             Joint log probability of generated state and observation sequence.
-            **Note**: this is different from the log probability of the observation
-            sequence alone, which would be the sum of its joint probabilities
-            with all possible state sequences.
+            **Note**: this is different from the log probability of the
+            observation sequence alone, which would be the sum of its joint
+            probabilities with all possible state sequences.
 
 
         Notes
@@ -559,12 +571,14 @@ class ModelReducer(object):
         return self.hmm.joint_path_loprob(lower_path, emissions)
 
     def remap_emission_factors(self, emission_probs):
-        """Map emission probabilities from high-order space to equivalent reduced space
+        """Map emission probabilities from high-order space to equivalent
+        reduced space
 
         Parameters
         ----------
         emission_probs : list of :class:`~minihmm.factors.AbstractFactor`
-            List of emission probabilities, indexed by state in high-order space.
+            List of emission probabilities, indexed by state in high-order
+            space.
 
         Returns
         -------
