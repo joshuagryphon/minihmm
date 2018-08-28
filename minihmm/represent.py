@@ -96,6 +96,24 @@ from scipy.sparse import (lil_matrix, dok_matrix, coo_matrix)
 # Model translation
 #===============================================================================
 
+def _get_modelreducer_from_dict(dtmp):
+    """Revive a :class:`ModelReducer` from a dictionary made by
+    :meth:`ModelReducer._to_dict`
+
+    Parameters
+    ----------
+    dtmp : dict
+        Dictionary exported by :meth:`ModelReducer._to_dict`
+        
+    Returns
+    -------
+    ModelReducer
+        Revived model
+    """
+    # code note: logic has to be in an independent function as opposed
+    # to a static method in order to enable its use in __reduce__
+    return ModelReducer(dtmp["starting_order"], dtmp["num_states"], hmm=dtmp.get("hmm", None))
+
 
 class ModelReducer(object):
     """Utility class for reducing high-order HMMs to equivalent first-order HMMs.
@@ -137,7 +155,7 @@ class ModelReducer(object):
         self._dummy_states = self._get_dummy_states()
         self.high_states_to_low, self.low_states_to_high = self._get_state_mapping()
         self.low_order_states = len(self.low_states_to_high)
-        self.hmm = hmm
+        self._hmm = hmm
 
     @property
     def hmm(self):
@@ -194,6 +212,41 @@ class ModelReducer(object):
     def __repr__(self):
         return str(self)
 
+    def __reduce__(self):
+        """Define pickling and unpickling methods for `self`"""
+        return _get_modelreducer_from_dict, (self._to_dict(), )
+
+    def _to_dict(self):
+        """Convenience method to export minimal elements required for pickling
+
+        Returns
+        -------
+        dict
+            Dictionary representation of `self`
+        """
+        dtmp = {
+                "starting_order" : self.starting_order,
+                "num_states"     : self.high_order_states,
+        } # yapf: disable
+        if self._hmm is not None:
+            dtmp["hmm"] = self._hmm
+
+        return dtmp
+
+    @staticmethod
+    def _from_dict(dtmp):
+        """Revive a :class:`ModelReducer` from a dictionary made by
+        :meth:`ModelReducer._to_dict`
+
+        Returns
+        -------
+        ModelReducer
+            Revived model
+        """
+        # code note: logic has to be in an independent function as opposed
+        # to a static method in order to enable its use in __reduce__
+        return _get_modelreducer_from_dict(dtmp)
+
     def to_json(self):
         """Convert `self` to a JSON blob
 
@@ -207,58 +260,7 @@ class ModelReducer(object):
     @staticmethod
     def from_json(stmp):
         """Revive a :class:`ModelReducer` from a string-format JSON blob"""
-        mod = jsonpickle.decode(stmp)
-
-        # for some reason, `jsonpickle` leaves integer dictionary keys as
-        # strings upon unpickling. We therefore need to re-cast to integers to
-        # avoid downstream index errors
-        mod.low_states_to_high = {
-            int(K) : V for K, V in mod.low_states_to_high.items()
-        }
-        return mod
-
-    @staticmethod
-    def _from_dict(dtmp, emission_probs=None):
-        """Revive a model from a dictionary
-
-        Parameters
-        ----------
-        dtmp : dict
-            Dictionary representation of
-            :class:`~minihmm.represent.ModelReducer`, made by
-            :meth:`ModelReducer.to_dict`
-
-        emission_probs : list
-            List of emission factors to include in revived HMM (at present
-            these are not saved by :meth:`ModelReducer.to_dict`)
-
-        Returns
-        -------
-        :class:`~minihmm.represent.ModelReducer`
-            Revived model
-        """
-        hmm = FirstOrderHMM._from_dict(
-            dtmp["first_order_hmm"], emission_probs=emission_probs
-        ) if "first_order_hmm" in dtmp else None
-        return ModelReducer(dtmp["starting_order"], dtmp["high_order_states"], hmm=hmm)
-
-    def _to_dict(self):
-        """Convert `self` to a dict (e.g. for JSON dumps)
-
-        Returns
-        -------
-        dict
-            Dictionary representation of `self`
-        """
-        dtmp = {
-            "model_class": "minihmm.represent.ModelReducer",
-            "starting_order": self.starting_order,
-            "high_order_states": self.high_order_states,
-        }
-        if self._hmm is not None:
-            dtmp["first_order_hmm"] = self.hmm._to_dict()
-
-        return dtmp
+        return jsonpickle.decode(stmp)
 
     @staticmethod
     def transcode_sequence(sequence, alphadict):

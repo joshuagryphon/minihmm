@@ -55,7 +55,6 @@ from minihmm.factors import (
     FunctionFactor,
     LogFunctionFactor,
 )
-from minihmm.util import matrix_to_dict, matrix_from_dict
 
 
 class FirstOrderHMM(AbstractFactor):
@@ -170,65 +169,6 @@ class FirstOrderHMM(AbstractFactor):
         :class:`FirstOrderHMM`
         """
         return jsonpickle.decode(stmp)
-
-    def _to_dict(self):
-        """Return a dictionary describing `self`, which can be serialized as JSON
-
-        Warning
-        -------
-        Emission factors are not yet serialized! Find a way to save those by yourselves
-
-
-        Returns
-        -------
-        dict
-            Dictionary representation of `self`
-        """
-        dtmp = {
-            "model_class": "minihmm.hmm.FirstOrderHMM",
-            "state_priors": matrix_to_dict(self.state_priors.data),
-            "trans_probs": matrix_to_dict(self.trans_probs.data),
-            "emission_probs": [X._to_dict() for X in self.emission_probs],
-        }
-        warnings.warn("This is deprecated! Use to_json()", UserWarning)
-        return dtmp
-
-    @staticmethod
-    def from_dict(dtmp, emission_probs=None):
-        """
-        Parameters
-        ----------
-        dtmp : dict
-            Dictionary containing dict representations of state priors and
-            transition probabilities from
-            :func:`minihmm.represent.matrix_to_dict`
-
-        emission_probs : list-like
-            List of emission probabilities. This parameter will probably go
-            away once we have figured out how to serialize emission
-            probabilities as dicts
-
-
-        Returns
-        -------
-        :class:`~minihmm.hmm.FirstOrderHMM`
-        """
-        if emission_probs is None:
-            raise ValueError(
-                "Need to supply emission probabilities, as these are not presently serialized"
-            )
-
-        sp = numpy.array(matrix_from_dict(dtmp["state_priors"], dense=True))
-        my_dict = {
-            "trans_probs":
-            MatrixFactor(numpy.array(matrix_from_dict(dtmp["trans_probs"], dense=True))),
-            "state_priors":
-            ArrayFactor(sp.reshape(sp.shape[1])),
-            "emission_probs":
-            emission_probs,
-        }
-
-        return FirstOrderHMM(**my_dict)
 
     def probability(self, emission):
         """Compute the probability of observing a sequence of emissions.

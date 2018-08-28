@@ -34,6 +34,7 @@ from minihmm.test.common import (
     check_tuple_equal,
     check_raises,
     check_true,
+    check_none,
     get_dirty_casino,
     get_fourstate_poisson,
 )
@@ -435,16 +436,12 @@ class TestModelReducer():
 
     def test_to_dict_no_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
-            found = model.to_dict()
+            found = model._to_dict()
             expected = {
-                "model_class": "minihmm.represent.ModelReducer",
                 "starting_order": starting_order,
-                "high_order_states": num_states,
+                "num_states": num_states,
             }
-            for k in expected:
-                yield check_equal, found[k], expected[k]
-
-            yield check_true, "first_order_hmm" not in found
+            yield check_equal, found, expected
 
     def test_to_dict_with_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
@@ -466,13 +463,12 @@ class TestModelReducer():
             model.hmm = my_hmm
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                found = model.to_dict()
+                found = model._to_dict()
 
             expected = {
-                "model_class": "minihmm.represent.ModelReducer",
                 "starting_order": starting_order,
-                "high_order_states": num_states,
-                "first_order_hmm": my_hmm.to_dict(),
+                "num_states": num_states,
+                "hmm": my_hmm,
             }
             model.hmm = None
             for k in expected:
@@ -484,15 +480,16 @@ class TestModelReducer():
     def test_from_dict_no_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
             dtmp = {
-                "model_class": "minihmm.represent.modelreducer",
                 "starting_order": starting_order,
-                "high_order_states": num_states,
+                "num_states": num_states,
             }
-            found = ModelReducer.from_dict(dtmp)
+            found = ModelReducer._from_dict(dtmp)
             expected = ModelReducer(starting_order, num_states)
 
             for k in ("starting_order", "high_order_states"):
                 yield check_equal, getattr(found, k), getattr(expected, k)
+
+            yield check_none, found._hmm
 
     def test_from_dict_with_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
@@ -512,18 +509,12 @@ class TestModelReducer():
             )
 
             dtmp = {
-                "model_class": "minihmm.represent.ModelReducer",
                 "starting_order": starting_order,
-                "high_order_states": num_states,
-                "first_order_hmm": {
-                    "model_class": "minihmm.hmm.FirstOrderHMM",
-                    "state_priors": matrix_to_dict(state_priors),
-                    "trans_probs": matrix_to_dict(trans_probs),
-                    "emission_probs": []
-                }
+                "num_states": num_states,
+                "hmm": my_hmm,
             }
 
-            found = ModelReducer.from_dict(dtmp, emission_probs=[None] * model.low_order_states)
+            found = ModelReducer._from_dict(dtmp)
             expected = ModelReducer(starting_order, num_states)
             expected.hmm = my_hmm
 

@@ -20,8 +20,8 @@ Factors must be able to:
       a ``get_model_log_likelihood()`` method
 
     - offer serialization support via pickling (we use :mod:`jsonpickle`
-      and, where necessary, implement ``__reduce__`` methods to make sane JSON
-      blobs)
+      and, where necessary, implement ``__reduce__()`` methods to make sane
+      JSON blobs)
 
 In addition, factors may:
     - supply a ``generate(n)`` function, to generate `n` observations
@@ -49,7 +49,7 @@ class AbstractFactor(object):
 
     def probability(self, *args, **kwargs):
         """Return the probability of a single observation
-        
+
         Parameters
         ----------
         args : list
@@ -67,7 +67,7 @@ class AbstractFactor(object):
 
     def logprob(self, *args, **kwargs):
         """Return the log probability of a single observation
-        
+
         Parameters
         ----------
         args : list
@@ -85,12 +85,12 @@ class AbstractFactor(object):
 
     def get_model_log_likelihood(self, observations, processes=4):
         """Return the log likelihood of a sequence of observations
-       
+
         Parameters
         ----------
         observations : list-like
             Sequence of observation
-        
+
         Processes : int, optional
             Number of processes to use when computing likelihood
             (Default: 4)
@@ -112,52 +112,23 @@ class AbstractFactor(object):
     @abstractmethod
     def generate(self, *args, **kwargs):
         """Sample a random value from the distribution"""
-        pass
 
     @abstractmethod
     def get_header(self):
-        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        """Return a list of parameter names corresponding to elements returned
+        by `self.get_row()`
+        """
 
     @abstractmethod
     def get_row(self):
-        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        """Serialize parameters as a list, to be used e.g. as a row in a
+        :class:`pandas.DataFrame`
+        """
 
 
 #===============================================================================
 # Helpers for unpickling / reviving from jsonpickle
 #===============================================================================
-
-
-def _get_arrayfactor_from_dict(dtmp):
-    """Revive a :class:`ArrayFactor` from a dictionary
-
-    Parameters
-    ----------
-    dtmp : dict
-         Dictionary, created by :meth:`ArrayFactor._to_dict`
-
-    Returns
-    -------
-    ArrayFactor
-    """
-    return ArrayFactor(numpy.array([float(X) for X in dtmp["data"]]))
-
-
-def _get_matrixfactor_from_dict(dtmp):
-    """Revive a :class:`MatrixFactor` from a dictionary
-
-    Parameters
-    ----------
-    dtmp : dict
-         Dictionary, created by :meth:`MatrixFactor._to_dict`
-
-    Returns
-    -------
-    MatrixFactor
-    """
-    data = matrix_from_dict(dtmp["data"], dense=True)
-    return MatrixFactor(data, row_conditional=dtmp["row_conditional"])
-
 
 def _get_scipydistfactor_from_dict(dtmp):
     """Revive a :class:`ScipyDistributionFactor` from a dictionary
@@ -171,6 +142,9 @@ def _get_scipydistfactor_from_dict(dtmp):
     -------
     ScipyDistributionFactor
     """
+    # code note: this function cannot be a static method of
+    # ScipyDistributionFactor because it is called by its __reduce__()
+    # function
     dist_class = getattr(scipy.stats.distributions, dtmp["dist_class"])
     return ScipyDistributionFactor(dist_class(), *dtmp["dist_args"], **dtmp["dist_kwargs"])
 
@@ -193,7 +167,6 @@ class ArrayFactor(AbstractFactor):
     --------
     MatrixFactor
     """
-    from_dict = staticmethod(_get_arrayfactor_from_dict)
 
     def __init__(self, data):
         """Create an ArrayFactor
@@ -211,45 +184,44 @@ class ArrayFactor(AbstractFactor):
     def __len__(self):
         return len(self.data)
 
-    def _to_dict(self):
-        """Serialize `self` as a dictionary"""
-        dtmp = {
-            "model_class": "minihmm.factors.ArrayFactor",
-            "data": list(self.data),
-        }
-        return dtmp
-
     def get_header(self):
-        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        """Return a list of parameter names corresponding to elements returned
+        by :meth:`ArrayFactor.get_row`
+        """
         return [str(X) for X in range(len(self.data))]
 
     def get_row(self):
-        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        """Serialize parameters as a list, to be used e.g. as a row in a
+        :class:`pandas.DataFrame`
+        """
         return list(self.data)
 
     def probability(self, i):
-        """Return probability in cell ``i`` of the array
-       
+        """Return probability in cell `i` of the array
+
         Parameters
         ----------
         i : int
-            Index of requested probability   
+            Index of requested probability
         """
         return self.data[i]
 
     def generate(self):
         """Generate a random sample from the distribution
-        
-        @return Sample
+
+        Returns
+        --------
+        int
+            Sample generated
         """
         return (self.data.cumsum() >= numpy.random.random()).argmax()
 
 
 class MatrixFactor(AbstractFactor):
     """Bivariate probability distribution constructed from a two-dimensional
-    matrix or array. MatrixFactors can represent joint distributions *P(X,Y)*
+    matrix or array. MatrixFactors can represent joint distributions `P(X, Y)`
     as well as conditional distributions *P(Y|X)*, depending upon whether
-    ``self.row_conditional`` is *True* or *False*.
+    `self.row_conditional` is ``True`` or ``False``.
 
     Attributes
     ----------
@@ -257,26 +229,25 @@ class MatrixFactor(AbstractFactor):
         MxN table of probabilities
 
     row_conditional : bool, optional
-        If *True*, ``data`` is a conditional probability table,
-        with rows specifying the conditional variable *P(column|row)*
-        If *False*, ``data`` is athejoint distribution of probabilities
-        *P(column,row)*. (Default: *True*)
+        If ``True``, `data` is a conditional probability table,
+        with rows specifying the conditional variable `P(column|row)`
+        If ``False``, `data` is athejoint distribution of probabilities
+        `P(column, row)`. (Default: ``True``)
 
     """
-    from_dict = staticmethod(_get_matrixfactor_from_dict)
 
     def __init__(self, data, row_conditional=True):
         """Create a MatrixFactor
-        
+
         Parameters
         ----------
         data : numpy.ndarray
             MxN table of probabilities
 
         row_conditional : bool, optional
-            If *True*, ``data`` is a conditional probability table,
-            with rows specifying the conditional variable *P(column|row)*
-            If *False*, ``data`` is athejoint distribution of probabilities
+            If *True*, ``data`` is a conditional probability table, with rows
+            specifying the conditional variable *P(column|row)* If *False*,
+            ``data`` is the joint distribution of probabilities
             *P(column,row)*. (Default: *True*)
         """
         self.row_conditional = row_conditional
@@ -292,24 +263,21 @@ class MatrixFactor(AbstractFactor):
             return self.data.shape[0] * self.data.shape[1]
 
     def get_header(self):
-        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        """Return a list of parameter names corresponding to elements returned
+        by :meth:`MatrixFactor.get_row`
+        """
         shape = self.data.shape
         return ["%d,%d" % (X, Y) for X in range(shape[0]) for Y in range(shape[1])]
 
     def get_row(self):
-        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        """Serialize parameters as a list, to be used e.g. as a row in a
+        :class:`pandas.DataFrame`
+        """
         return list(self.data.ravel())
 
-    def _to_dict(self):
-        return {
-            "model_class": "minihmm.factors.MatrixFactor",
-            "row_conditional": self.row_conditional,
-            "data": matrix_to_dict(self.data),
-        }
-
     def probability(self, i, j):
-        """Return probability value at *(i,j)* in underlying matrix
-        
+        """Return probability value at `(i, j)` in underlying matrix
+
         Parameters
         ----------
         i : int
@@ -321,14 +289,14 @@ class MatrixFactor(AbstractFactor):
         Returns
         -------
         float
-            *P(i|j)* if ``self.row_conditional`` is *True*, or
-            *P(i,j)* if ``self.row_conditional`` is *False*.
+            `P(i|j)` if `self.row_conditional` is ``True``, or
+            `P(i,j)` if `self.row_conditional` is ``False``.
         """
         return self.data[i, j]
 
     def generate(self, i=None, size=1):
         """Sample from the |MatrixFactor|
-        
+
         Parameters
         ----------
         i : int or None
@@ -370,24 +338,24 @@ class FunctionFactor(AbstractFactor):
 
     def __init__(self, func, generator_func, *func_args, **func_kwargs):
         """Create a FunctionFactor
-        
+
         Parameters
         ----------
         func : function
-            Function that evaluates probability, given ``func_args``,
-            ``func_kwargs``, and an observation
- 
+            Function that evaluates probability, given `func_args`,
+            `func_kwargs`, and an observation
+
         generator_func : function
-            Function that generates samples, given ``func_args``
-            and ``func_kwargs``
+            Function that generates samples, given `func_args`
+            and `func_kwargs`
 
         func_args
-            Zero or more positional arguments to pass to ``func``
-            and ``generator func``
+            Zero or more positional arguments to pass to `func`
+            and `generator func`
 
         func_kwargs
-            Zero or more keyword arguments to pass to ``func``
-            and ``geneator func``
+            Zero or more keyword arguments to pass to `func`
+            and `geneator func`
 
         """
         self.probability = functools.partial(func, *func_args, **func_kwargs)
@@ -399,7 +367,9 @@ class FunctionFactor(AbstractFactor):
         self.func_kwargs = copy.deepcopy(func_kwargs)
 
     def __eq__(self, other):
-        return self._func == other._func and self.func_args == other.func_args and self.func_kwargs == other.func_kwargs
+        return self._func == other._func \
+            and self.func_args == other.func_args \
+            and self.func_kwargs == other.func_kwargs
 
     def __repr__(self):
         return "<%s func:'%s'>" % (self.__class__.__name__, self._funcname)
@@ -408,27 +378,31 @@ class FunctionFactor(AbstractFactor):
         return repr(self)
 
     def get_header(self):
-        """Return a list of parameter names corresponding to elements returned by ``self.get_row()``"""
+        """Return a list of parameter names corresponding to elements returned
+        by :meth:`FunctionFactor.get_row()`
+        """
         ltmp = [str(X) for X in range(len(self.func_args))]
         ltmp += sorted(self.func_kwargs.keys())
         return ltmp
 
     def get_row(self):
-        """Serialize parameters as a list, to be used e.g. as a row in a :class:`pandas.DataFrame`"""
+        """Serialize parameters as a list, to be used e.g. as a row in a
+        :class:`pandas.DataFrame`
+        """
         ltmp = list(self.func_args)
         ltmp += [X[1] for X in sorted(self.func_kwargs.items())]
         return ltmp
 
     def generate(self, *args, **kwargs):
-        """Sample a random value from the distribution 
-       
+        """Sample a random value from the distribution
+
         args
             zero or more positional arguments to pass to pdf or pmf
-            **in addition** to those in ``self.func_args``
-        
+            *in addition* to those in `self.func_args`
+
         kwargs
             zero or more keyword arguments to pass to pdf or pmf
-            **in addition** to those in ``self.func_kwargs``
+            *in addition* to those in `self.func_kwargs`
 
         Returns
         -------
@@ -444,13 +418,13 @@ class LogFunctionFactor(FunctionFactor):
 
     def __init__(self, func, generator_func, *func_args, **func_kwargs):
         """Create a LogFunctionFactor
-        
+
         Parameters
         ----------
         func : function
             Function that evaluates log probability, given ``func_args``,
             ``func_kwargs``, and an observation
- 
+
         generator_func : function
             Function that generates samples, given ``func_args``
             and ``func_kwargs``
@@ -480,7 +454,7 @@ class ScipyDistributionFactor(AbstractFactor):
     ----------
     distribution : class
         A class describing a distribution from :mod:`scipy.stats`
-    
+
     Notes
     -----
     These cannot be used in parallelized processes because distributions
@@ -490,13 +464,13 @@ class ScipyDistributionFactor(AbstractFactor):
 
     def __init__(self, dist_class, *dist_args, **dist_kwargs):
         """Create a ScipyDistributionFactor
-        
+
         Parameters
         ----------
         dist_class : class
             class for a distribution from :mod:`scipy.stats`
             (e.g. :obj:`scipy.stats.poisson`)
-        
+
         dist_args
             Zero or more positional arguments to pass to ``dist_class``
 
@@ -559,7 +533,7 @@ class ScipyDistributionFactor(AbstractFactor):
         args
             zero or more positional arguments to pass to logpdf or logpmf
             **in addition** to those in ``self.dist_args``
-        
+
         kwargs
             zero or more keyword arguments to pass to logpdf or logpmf
             **in addition** to those in ``self.dist_kwargs``
@@ -573,11 +547,11 @@ class ScipyDistributionFactor(AbstractFactor):
 
     def probability(self, *args, **kwargs):
         """Return the probability of observing an observation
-        
+
         args
             zero or more positional arguments to pass to pdf or pmf
             **in addition** to those in ``self.dist_args``
-        
+
         kwargs
             zero or more keyword arguments to pass to pdf or pmf
             **in addition** to those in ``self.dist_kwargs``
@@ -590,6 +564,6 @@ class ScipyDistributionFactor(AbstractFactor):
         return self.prob_fn(*args)
 
     def generate(self, *args, **kwargs):
-        """Sample a random value from the distribution 
+        """Sample a random value from the distribution
         """
         return self.distribution.rvs(*args, **kwargs)

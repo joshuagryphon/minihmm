@@ -271,25 +271,6 @@ class _BaseExample():
         # TODO: test backward component of forward-backward algorithm
         assert False
 
-    def test_to_dict(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            found_dict = self.generating_hmm._to_dict()
-
-        for k in ("state_priors", "trans_probs"):
-            assert_dict_equal(found_dict[k], self.hmm_dict[k])
-
-        assert_list_equal(found_dict["emission_probs"], self.hmm_dict["emission_probs"])
-
-    def test_from_dict(self):
-        expected_hmm = self.generating_hmm
-        dummy_emissions = [None] * expected_hmm.num_states
-        found_model = FirstOrderHMM.from_dict(self.hmm_dict, emission_probs=dummy_emissions)
-
-        assert_list_equal(found_model.emission_probs, dummy_emissions)
-        assert_array_equal(found_model.trans_probs.data, expected_hmm.trans_probs.data)
-        assert_array_equal(found_model.state_priors.data, expected_hmm.state_priors.data)
-
 
 class TestACoin(_BaseExample):
 
