@@ -8,7 +8,7 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
-Unreleased
+v0.3.0 = [2018-08-28]
 ---------------------
 
 - BREAKING: footprint of serialized objects now smaller

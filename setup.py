@@ -5,7 +5,7 @@ with open("README.rst") as f:
     long_description = f.read()
 
 
-config_info = { "version"      : "0.2.1",
+config_info = { "version"      : "0.3.0",
                 "packages"     : find_packages(),
               }
 
