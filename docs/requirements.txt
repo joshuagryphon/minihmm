@@ -1,0 +1,12 @@
+# for running
+jsonpickle==1.4.1
+matplotlib==2.2.4
+numpy==1.13.3
+scipy==1.2.1
+
+# for documentation
+mock==3.0.4
+numpydoc==0.9.1
+Sphinx==1.8.5
+sphinx-rtd-theme==0.4.3
+sphinxcontrib-bibtex==0.4.2
