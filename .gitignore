@@ -4,6 +4,7 @@ __pycache__/
 *swp
 build/
 dist/
+docs/source/generated/
 .pydevproject
 .project
 *egg-info/
