@@ -2,8 +2,10 @@
 """
 """
 import pickle
-import numpy
+import unittest
 
+
+import numpy
 import jsonpickle
 import jsonpickle.ext.numpy
 jsonpickle.ext.numpy.register_handlers()

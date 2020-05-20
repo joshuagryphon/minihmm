@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 """Unit tests for reducing model order and for changing model representation
 """
+import itertools
 import unittest
 import warnings
-import itertools
+
 import numpy
 
-from minihmm.util import matrix_to_dict
+from minihmm.factors import MatrixFactor, ArrayFactor
 from minihmm.hmm import FirstOrderHMM
 from minihmm.represent import ModelReducer
-from minihmm.factors import MatrixFactor, ArrayFactor
+from minihmm.util import matrix_to_dict
 
 from nose.tools import (
     assert_equal,
@@ -45,6 +46,7 @@ from minihmm.test.common import (
 
 
 class TestModelReducer():
+
     @classmethod
     def setUpClass(cls):
         cls.models = {}
@@ -422,15 +424,19 @@ class TestModelReducer():
     # Gold standard would be to create a high order HMM, generate sequences from it
     # in high order space, save results, create an equivalent low-order HMM, and
     # run the unit tests below
+    @unittest.skip
     def test_viterbi(self):
         assert False
 
+    @unittest.skip
     def test_posterior_decode(self):
         assert False
 
+    @unittest.skip
     def test_sample(self):
         assert False
 
+    @unittest.skip
     def test_generate(self):
         assert False
 
