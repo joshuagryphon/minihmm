@@ -131,6 +131,122 @@ class _BaseExample():
 
         print("Set up class %s" % cls.__name__)
 
+    def test_to_json(self):
+        assert False
+
+    def test_from_json(self):
+        gen = self.generating_hmm
+        rev = self.from_json
+        yield check_array_equal, gen.state_priors.data, rev.state_priors.data
+        yield check_array_equal, gen.trans_probs.data, rev.trans_probs.data
+        for i in range(gen.num_states):
+            yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
+
+    def test_probability(self):
+        assert False
+
+    def test_logprob(self):
+        # make sure fast forward probability calculations match those calced by brute force
+        numpy.random.seed(_FORWARD_SEED)
+        for n, (obs, expected) in enumerate(zip(self.test_obs_seqs,
+                                                self.expected_forward_logprobs)):
+            found = self.generating_hmm.fast_forward(obs)
+            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
+                n, self.name, expected, found, abs(expected - found)
+            )
+            yield assert_almost_equal, expected, found, 7, msg
+
+    def test_fast_forward(self):
+        # make sure fast forward probability calculations match those calced by brute force
+        numpy.random.seed(_FORWARD_SEED)
+        for n, (obs, expected) in enumerate(
+            zip(self.test_obs_seqs, self.expected_forward_logprobs)
+        ):
+            found = self.generating_hmm.fast_forward(obs)
+            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
+                n, self.name, expected, found, abs(expected - found)
+            )
+            yield assert_almost_equal, expected, found, 7, msg
+
+    # FIXME: this is forward_backward test right now
+    def test_forward_logprob(self):
+        # make sure vectorized forward probability calculations match those calced by brute force
+        numpy.random.seed(_FORWARD_SEED)
+        for n, (expected, found) in enumerate(
+            zip(self.expected_forward_logprobs, self.found_forward_logprobs)
+        ):
+            msg = "Failed forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
+                n, self.name, expected, found, abs(expected - found)
+            )
+            yield assert_almost_equal, expected, found, 7, msg
+
+    def test_forward_backward_scaled_forward_set_to_one(self):
+        # n.b. at present we're only scaling from timestep 1 onwards
+        for n, scaled_forward in enumerate(self.found_forward_scaled_forward_matrices):
+            yield assert_almost_equal, scaled_forward[1:].sum(1), 1
+
+    def test_forward_scale_factors_product_sum_is_consistent(self):
+        # product of scale factors and forward algorithm at each timestep
+        # should equal probability of that sequence up to that point
+        #
+        # this test is misleading if fast_forward() is wrong
+
+        # n.b. at present we're only scaling from timestep 1 onwards
+        for n, obs in enumerate(self.test_obs_seqs):
+            _, scaled_forward, scale_factors = self.generating_hmm.forward(obs)
+            expected = [
+                numpy.exp(self.generating_hmm.fast_forward(obs[:X + 1])) for X in range(len(obs))
+            ]
+            found = scaled_forward.sum(1) * scale_factors.cumprod()
+            yield assert_almost_equal, expected[1:], found[1:]
+
+    def test_forward_backward_logprob(self):
+        # test forward algorithm portion of forward_backward
+        # make sure forward coefficients match those calculated by brute force
+        # at each timestep
+
+        numpy.random.seed(_FORWARD_SEED)
+        for n, (obs, expected_logprob) in enumerate(zip(self.test_obs_seqs,
+                                                        self.expected_forward_logprobs)):
+            (found_logprob, scaled_forward, scaled_backward, scale_factors,
+             ksi) = self.generating_hmm.forward_backward(obs)
+            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
+                n, self.name, expected_logprob, found_logprob,
+                abs(expected_logprob - found_logprob)
+            )
+            yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
+
+    def test_forward_backward_scalefactors_product_sum_is_consistent(self):
+        # product of scale factors and forward algorithm at each timestep
+        # should equal probability of that sequence up to that point
+        #
+        # this test is misleading if fast_forward() is wrong
+
+        # n.b. at present we're only scaling from timestep 1 onwards
+        for n, (obs, scale_factors, scaled_forward) in enumerate(
+                zip(self.test_obs_seqs, self.found_forward_scalefactors,
+                    self.found_forward_scaled_forward_matrices)):
+
+            expected = [
+                numpy.exp(self.generating_hmm.fast_forward(obs[:X + 1])) for X in range(len(obs))
+            ]
+            found = scaled_forward.sum(1) * scale_factors.cumprod()
+            yield assert_almost_equal, expected[1:], found[1:]
+
+    def test_forward_backward_backward(self):
+        # TODO: test backward component of forward-backward algorithm
+        assert False
+
+    def test_posterior_decode_path_accuracy(self):
+        # make sure posterior decode calls are above accuracy threshold listed above
+        for expected_states, obs, _ in self.decode_tests:
+            found_states = self.generating_hmm.posterior_decode(obs)[0]
+            frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
+            msg = "Failed posterior decode test for test case '%s'. Expected at least %s%% accuracy. Got %s%%." % (
+                self.name, self.min_frac_equal, frac_equal
+            )
+            assert_greater_equal(frac_equal, self.min_frac_equal, msg)
+
     def test_generate(self):
         # testable
 
@@ -139,21 +255,20 @@ class _BaseExample():
         # TODO: what else?
         assert False
 
-    def test_unpickle(self):
-        gen = self.generating_hmm
-        rev = self.from_pickle
-        yield check_array_equal, gen.state_priors.data, rev.state_priors.data
-        yield check_array_equal, gen.trans_probs.data, rev.trans_probs.data
-        for i in range(gen.num_states):
-            yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
+    def test_joint_path_logprob(self):
+        for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs,
+                                                            self.expected_joint_logprobs)):
+            for path, path_prob in expected_joint_probs.items():
+                found_joint_prob = self.generating_hmm.joint_path_logprob(path, obs)
+                assert_almost_equal(found_joint_prob, path_prob)
 
-    def test_revive_from_json(self):
-        gen = self.generating_hmm
-        rev = self.from_json
-        yield check_array_equal, gen.state_priors.data, rev.state_priors.data
-        yield check_array_equal, gen.trans_probs.data, rev.trans_probs.data
-        for i in range(gen.num_states):
-            yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
+    def test_conditional_path_logprob(self):
+        for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs,
+                                                            self.expected_joint_logprobs)):
+            total_logprob = self.generating_hmm.fast_forward(obs)
+            for path, path_prob in expected_joint_probs.items():
+                found_cond_prob = self.generating_hmm.conditional_path_logprob(path, obs)
+                assert_almost_equal(found_cond_prob, path_prob - total_logprob)
 
     def test_sample(self):
         # Test sampling algorithm by checking the slope and intercept of the regression line
@@ -177,8 +292,9 @@ class _BaseExample():
             assert_less_equal(abs(b), 1.0, "Intercept '%s' further from 0.0 than expected." % (b))
             assert_greater_equal(r, 0.95, "r '%s' less than 0.95 than expected." % r)
 
-    def test_viterbi(self):
+    def test_viterbi_path_accuracy(self):
         # make sure viterbi calls are above accuracy threshold listed above
+        # with ground-truth states
         for expected_states, obs, _ in self.decode_tests:
             found_states = self.generating_hmm.viterbi(obs)["viterbi_states"]
             frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
@@ -186,90 +302,6 @@ class _BaseExample():
                 self.name, self.min_frac_equal, frac_equal
             )
             assert_greater_equal(frac_equal, self.min_frac_equal, msg)
-
-    def test_posterior_decode(self):
-        # make sure posterior decode calls are above accuracy threshold listed above
-        for expected_states, obs, _ in self.decode_tests:
-            found_states = self.generating_hmm.posterior_decode(obs)[0]
-            frac_equal = 1.0 * (expected_states == found_states).sum() / len(expected_states)
-            msg = "Failed posterior decode test for test case '%s'. Expected at least %s%% accuracy. Got %s%%." % (
-                self.name, self.min_frac_equal, frac_equal
-            )
-            assert_greater_equal(frac_equal, self.min_frac_equal, msg)
-
-    def test_forward_logprob(self):
-        # make sure vectorized forward probability calculations match those calced by brute force
-        numpy.random.seed(_FORWARD_SEED)
-        for n, (expected, found) in enumerate(zip(self.expected_forward_logprobs,
-                                                  self.found_forward_logprobs)):
-            msg = "Failed forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
-                n, self.name, expected, found, abs(expected - found)
-            )
-            yield assert_almost_equal, expected, found, 7, msg
-
-    def test_fast_forward(self):
-        # make sure fast forward probability calculations match those calced by brute force
-        numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected) in enumerate(zip(self.test_obs_seqs,
-                                                self.expected_forward_logprobs)):
-            found = self.generating_hmm.fast_forward(obs)
-            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
-                n, self.name, expected, found, abs(expected - found)
-            )
-            yield assert_almost_equal, expected, found, 7, msg
-
-    def test_scaled_forward_is_scaled_to_one(self):
-        # n.b. at present we're only scaling from timestep 1 onwards
-        for n, scaled_forward in enumerate(self.found_forward_scaled_forward_matrices):
-            yield assert_almost_equal, scaled_forward[1:].sum(1), 1
-
-    def test_forward_backward_scalefactors_product_sum_is_consistent(self):
-        # product of scale factors and forward algorithm at each timestep
-        # should equal probability of that sequence up to that point
-
-        # n.b. at present we're only scaling from timestep 1 onwards
-        for n, (obs, scale_factors, scaled_forward) in enumerate(
-                zip(self.test_obs_seqs, self.found_forward_scalefactors,
-                    self.found_forward_scaled_forward_matrices)):
-
-            expected = [
-                numpy.exp(self.generating_hmm.fast_forward(obs[:X + 1])) for X in range(len(obs))
-            ]
-            found = scaled_forward.sum(1) * scale_factors.cumprod()
-            yield assert_almost_equal, expected[1:], found[1:]
-
-    def test_forward_backward_logprob(self):
-        # test forward algorithm portion of forward_backward
-
-        numpy.random.seed(_FORWARD_SEED)
-        for n, (obs, expected_logprob) in enumerate(zip(self.test_obs_seqs,
-                                                        self.expected_forward_logprobs)):
-            (found_logprob, scaled_forward, scaled_backward, scale_factors,
-             ksi) = self.generating_hmm.forward_backward(obs)
-            msg = "Failed fast_forward test case '%s' on HMM '%s'. Expected: '%s'. Found '%s'. Diff: '%s'." % (
-                n, self.name, expected_logprob, found_logprob,
-                abs(expected_logprob - found_logprob)
-            )
-            yield assert_almost_equal, expected_logprob, found_logprob, 7, msg
-
-    def test_joint_path_logprob(self):
-        for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs,
-                                                            self.expected_joint_logprobs)):
-            for path, path_prob in expected_joint_probs.items():
-                found_joint_prob = self.generating_hmm.joint_path_logprob(path, obs)
-                assert_almost_equal(found_joint_prob, path_prob)
-
-    def test_conditional_path_logprob(self):
-        for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs,
-                                                            self.expected_joint_logprobs)):
-            total_logprob = self.generating_hmm.fast_forward(obs)
-            for path, path_prob in expected_joint_probs.items():
-                found_cond_prob = self.generating_hmm.conditional_path_logprob(path, obs)
-                assert_almost_equal(found_cond_prob, path_prob - total_logprob)
-
-    def test_forward_backward_backward(self):
-        # TODO: test backward component of forward-backward algorithm
-        assert False
 
 
 class TestACoin(_BaseExample):
