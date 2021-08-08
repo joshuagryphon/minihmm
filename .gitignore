@@ -1,10 +1,11 @@
-.svn/
-__pycache__/
-*.pyc
-*swp
 build/
 dist/
 docs/source/generated/
-.pydevproject
+egg-info/*
 .project
-*egg-info/
+*.pyc
+__pycache__/
+.pydevproject
+*swp
+.tox/
+.tox/*

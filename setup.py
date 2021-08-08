@@ -5,21 +5,20 @@ with open("README.rst") as f:
     long_description = f.read()
 
 
-config_info = { "version"      : "0.3.0",
-                "packages"     : find_packages(),
-              }
+config_info = {
+    "version"  : "0.3.0",
+    "packages" : find_packages(),
+}
 
 
 setup(
     name = "minihmm",
     install_requires = [
-    	                "numpy>=1.5",
-                        "scipy>=0.12.0",
-                        "matplotlib>=1.3.0",
-                        "jsonpickle",
-                        ],
-
-    zip_safe = True,
+        "numpy",
+        "scipy",
+        "matplotlib",
+        "jsonpickle",
+    ],
 
     # metadata for upload to PyPI
     author           = "Joshua Griffin Dunn",
@@ -34,21 +33,16 @@ setup(
     url       = "http://github.com/joshuagryphon/minihmm",
     platforms = "POSIX",
     
-    tests_require=["nose>=1.0"],
-    #test_suite = "nose.collector",
-    
     classifiers=[
          'Development Status :: 3 - Alpha',
 
          'Programming Language :: Python',
          'Programming Language :: Python :: 2.7',
-         'Programming Language :: Python :: 3.3',
-         'Programming Language :: Python :: 3.4',
-
+         'Programming Language :: Python :: 3.7',
          'Topic :: Scientific/Engineering',
          'License :: BSD 3-Clause',
          'Operating System :: POSIX',
         ],
     
     **config_info
-    ) # yapf: disable
+) # yapf: disable
