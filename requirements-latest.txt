@@ -1,0 +1,8 @@
+# execution
+jsonpickle
+matplotlib
+numpy
+scipy
+
+# testing
+-rtest-requirements.txt
