@@ -14,9 +14,14 @@ Indices and tables
 - :ref:`search`
 
 .. _toc_api:
+   :hidden:
+   :maxdepth: 4
+
+   Module documentation <generated/minihmm>
 
 .. toctree::
    :hidden:
    :maxdepth: 4
 
+   license
   
