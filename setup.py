@@ -2,7 +2,7 @@
 from setuptools import setup, find_packages
 
 with open("README.rst") as f:
-    long_description = f.read()
+    long_description = f.read().replace(":mod:", "")
 
 
 config_info = {
@@ -22,23 +22,25 @@ setup(
 
     # metadata for upload to PyPI
     author           = "Joshua Griffin Dunn",
-    author_email     = "joshua.g.dunn@gmail.com",
     maintainer       = "Joshua Griffin Dunn",
-    maintainer_email = "Joshua Griffin Dunn",
     
-    description = "Lightweight extensible HMM engine, supporting univariate or multivariate, continuous or discrete emissions",
+    description = (
+        "Lightweight extensible HMM engine, supporting univariate or "
+        "multivariate, continuous or discrete emissions"
+    ),
     long_description = long_description,
+    long_description_content_type = "text/x-rst",
+
     license   = "BSD 3-Clause",
     keywords  = "HMM hidden Markov model machine learning modeling statistics",
     url       = "http://github.com/joshuagryphon/minihmm",
     platforms = "POSIX",
     
     classifiers=[
-         'Development Status :: 3 - Alpha',
-
+         'Development Status :: 4 - Beta',
          'Programming Language :: Python',
-         'Programming Language :: Python :: 2.7',
-         'Programming Language :: Python :: 3.7',
+         'Programming Language :: Python :: 3.6',
+         'Programming Language :: Python :: 3.9',
          'Topic :: Scientific/Engineering',
          'License :: BSD 3-Clause',
          'Operating System :: POSIX',
