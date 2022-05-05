@@ -48,26 +48,23 @@ At present, `miniHMM` offers some benefits hard to find in other HMM libraries:
 Running the tests
 -----------------
 
-Tests are currently written to run under :mod:`nose`, with the following virtual
-environments configured via :mod:`tox`:
+Tests are currently written to run under :mod:`nose` separately under Python 3.6
+and 3.9, with the following virtual environments configured via :mod:`tox`:
 
-- `py27-pinned` : run tests under Python 2.7, using versions of dependencies
-  pinned in ``requirements.txt``
+- `*-pinned` : run using versions of dependencies pinned in ``requirements.txt``
 
-- `py36-pinned` : ditto, but running tests under Python 3.6
-
-- `py39-latest` : run all tests under Python 3.9, using latest available
-  versions of each dependency. This will enable us to catch breaking changes.
+- `*-latest` : run all tests using latest available versions of each dependency.
+  This will enable us to catch breaking changes.
 
 By default, running ``tox`` from the shell will run all tests in all
 environments. To choose which environment(s) or test(s) to run, you can use
 standard :mod:`tox` or :mod:`nose` arguments (see their respective documentation
 for more details)::
 
-    # run tests only under Python 2.7
-    $ tox -e py27-pinned 
+    # run tests only under Python 3.6, with pinned requirements
+    $ tox -e py36-pinned 
 
-    # run tests only for estimator suite
+    # run tests under all environments, but only for estimator suite
     $ tox minihmm.test.test_estimators
 
     # run tests only for estimator suite, passing verbose mode to nose
@@ -75,15 +72,37 @@ for more details)::
     $ tox minihmm.test.test_estimators -- -v --nocapture
 
 
-As these environments assume you have Python 2.7, 3.6, and 3.9 all installed, we
-have defined a Dockerfile that contains all of them. This is the preferred
+As these environments assume you have Python 3.6, and 3.9 installed, we have
+defined a Dockerfile that contains all of them. This is the preferred
 environment for testing. Build the image with the following syntax::
 
     # build image from inside miniHMM folder
-    $ docker build -t minihmm .
+    $ docker build --pull -t minihmm .
 
     # start a container, mounting current folder as minihmm source
-    $ docker run --rm -t -i --mount type=bind,target=/usr/src/minihmm,src=$(pwd) minihmm
+    $ docker run -it --rm minihmm
+
+    # alternative if you are developing- mount your dev folder within
+    # the container, then run tox inside the container
+    $ docker run -it --rm $(pwd):/usr/src/minihmm minihmm
+
+
+Building the documentation
+--------------------------
+
+Documents may be built via Sphinx, either inside or outside the container.
+To build the docs, you must first install the package, as well as documentation
+dependencies. In the project folder::
+
+    # install package
+    $ pip install --user -e .
+
+    # install doc dependencies
+    $ pip install -r docs/requirements.txt
+
+    # build docs & open in browser
+    $ make -C docs html
+    $ firefox docs/build/html/index.html
 
 
 Notes

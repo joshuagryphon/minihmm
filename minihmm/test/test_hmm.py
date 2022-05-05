@@ -131,6 +131,8 @@ class _BaseExample():
 
         print("Set up class %s" % cls.__name__)
 
+    # override in subclass
+    @unittest.skip
     def test_to_json(self):
         assert False
 
@@ -142,6 +144,8 @@ class _BaseExample():
         for i in range(gen.num_states):
             yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
 
+    # override in subclass
+    @unittest.skip
     def test_probability(self):
         assert False
 
@@ -233,6 +237,8 @@ class _BaseExample():
             found = scaled_forward.sum(1) * scale_factors.cumprod()
             yield assert_almost_equal, expected[1:], found[1:]
 
+    # override in subclass
+    @unittest.skip
     def test_forward_backward_backward(self):
         # TODO: test backward component of forward-backward algorithm
         assert False
@@ -247,6 +253,8 @@ class _BaseExample():
             )
             assert_greater_equal(frac_equal, self.min_frac_equal, msg)
 
+    # override in subclass
+    @unittest.skip
     def test_generate(self):
         # testable
 

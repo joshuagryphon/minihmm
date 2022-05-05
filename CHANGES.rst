@@ -8,6 +8,16 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
+Unreleased
+---------------------
+
+- Python 2.7 support dropped
+
+- Test environments changed to Python 3.6 and 3.9
+
+- Dockerized
+
+
 v0.3.0 = [2018-08-28]
 ---------------------
 

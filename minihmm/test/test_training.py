@@ -134,6 +134,11 @@ class TestCasino(_BaseExample):
             #assert_true((sse < 1e-4).all())
             yield check_almost_equal, found.data, expected.data, {"decimal": 2}
 
+    # override this method in subclass
+    @unittest.skip
+    def test_emission_probs_trained(self):
+        assert False
+
 
 class TestGaussian(_BaseExample):
     """Test re-training on a three-state HMM with continuous emissions"""
@@ -189,3 +194,10 @@ class TestGaussian(_BaseExample):
                 yield check_almost_equal, found.dist_kwargs[k], expected.dist_kwargs[k], {
                     "decimal": 2
                 }
+
+    # override this method in subclass
+    @unittest.skip
+    def test_emission_probs_trained(self):
+        assert False
+
+
