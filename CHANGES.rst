@@ -8,7 +8,7 @@ Version numbers follow following the conventions described in `PEP440
 break backward compatibility.
 
 
-v0.3.1 = [2022-05-10]
+Unreleased
 ---------------------
 
 - Python 2.7 support dropped
