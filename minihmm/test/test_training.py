@@ -8,6 +8,7 @@ import scipy.stats
 from numpy.testing import (
     assert_almost_equal,
 )
+from nose.plugins.attrib import attr
 from nose.tools import assert_greater_equal, assert_true
 from minihmm.test.common import check_almost_equal
 
@@ -30,6 +31,7 @@ class ScreenWriter:
 
 
 class _BaseExample:
+
     @classmethod
     def setUpClass(cls):
         cls.do_subclass_setup()
@@ -85,7 +87,7 @@ class _BaseExample:
         expected = self.generating_hmm.trans_probs.data
         yield check_almost_equal, found, expected, {"decimal": 2}
 
-    def test_likelihoods_increased(self):
+    def test_likelihoods_increased_each_round(self):
         delta = numpy.convolve([1, -1], self.training_results["weight_logprobs"], mode="valid")
         assert_greater_equal((delta >= 0).sum() / len(delta), 0.9)
 
@@ -119,9 +121,10 @@ class TestCasino(_BaseExample):
             "naive_state_priors": numpy.array([0.6, 0.4]),
             "transition_probs": numpy.array([[0.95, 0.05], [0.1, 0.9]]),
             "naive_transition_probs": numpy.array([[0.6, 0.4], [0.5, 0.5]]),
-            "emission_probs":
-            [1.0 * numpy.ones(6) / 6.0,
-             numpy.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.5])],
+            "emission_probs":[
+                1.0 * numpy.ones(6) / 6.0,
+                numpy.array([0.1, 0.1, 0.1, 0.1, 0.1, 0.5])
+            ],
             "naive_emission_probs": [
                 1.0 * numpy.ones(6) / 6.0,
                 1.0 * numpy.ones(6) / 6.0,
@@ -129,18 +132,17 @@ class TestCasino(_BaseExample):
         }
 
     def test_emission_probs_trained(self):
-        for found, expected in zip(self.training_results["best_model"].emission_probs,
-                                   self.generating_hmm.emission_probs):
+        for found, expected in zip(
+               self.training_results["best_model"].emission_probs,
+               self.generating_hmm.emission_probs
+            ):
             #sse = (found.data - expected.data)**2
             #assert_true((sse < 1e-4).all())
             yield check_almost_equal, found.data, expected.data, {"decimal": 2}
 
-    # override this method in subclass
-    @unittest.skip
-    def test_emission_probs_trained(self):
-        assert False
 
 
+@attr("slow")
 class TestGaussian(_BaseExample):
     """Test re-training on a three-state HMM with continuous emissions"""
 
@@ -148,8 +150,8 @@ class TestGaussian(_BaseExample):
     def get_emission_probs(cls):
         return [
             ScipyDistributionFactor(scipy.stats.norm, loc=0, scale=0.5),
-            ScipyDistributionFactor(scipy.stats.norm, loc=5, scale=10),
-            ScipyDistributionFactor(scipy.stats.norm, loc=-2, scale=1)
+            ScipyDistributionFactor(scipy.stats.norm, loc=5, scale=3),
+            ScipyDistributionFactor(scipy.stats.norm, loc=-2, scale=1),
         ]
 
     @classmethod
@@ -170,35 +172,31 @@ class TestGaussian(_BaseExample):
         cls.emission_estimator = UnivariateGaussianEmissionEstimator()
 
         cls.arrays = {
-            "state_priors":
-            numpy.array([0.8, 0.05, 0.15]),
-            "naive_state_priors":
-            numpy.array([0.6, 0.2, 0.2]),
-            "transition_probs":
-            numpy.array([
+            "state_priors": numpy.array([0.8, 0.05, 0.15]),
+            "naive_state_priors": numpy.array([0.6, 0.2, 0.2]),
+            "transition_probs": numpy.array([
                 [0.9, 0.05, 0.05],
                 [0.1, 0.6, 0.3],
                 [0.2, 0.1, 0.7],
             ]),
-            "naive_transition_probs":
-            numpy.array([
-                [0.4, 0.3, 0.3],
-                [0.33, 0.33, 0.33],
-                [0.33, 0.33, 0.33],
+            "naive_transition_probs": numpy.array([
+                [0.40, 0.30, 0.30],
+                [0.30, 0.36, 0.33],
+                [0.33, 0.30, 0.36],
             ]),
         }
 
     def test_emission_probs_trained(self):
-        for found, expected in zip(self.training_results["best_model"].emission_probs,
-                                   self.generating_hmm.emission_probs):
+        for found, expected in zip(
+            self.training_results["best_model"].emission_probs,
+            self.generating_hmm.emission_probs
+        ):
             for k in expected.dist_kwargs.keys():
-                yield check_almost_equal, found.dist_kwargs[k], expected.dist_kwargs[k], {
-                    "decimal": 2
-                }
-
-    # override this method in subclass
-    @unittest.skip
-    def test_emission_probs_trained(self):
-        assert False
+                yield (
+                    check_almost_equal,
+                    found.dist_kwargs[k],
+                    expected.dist_kwargs[k],
+                    { "decimal": 2 },
+                )
 
 

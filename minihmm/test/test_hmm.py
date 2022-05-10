@@ -17,6 +17,8 @@ import jsonpickle.ext.numpy
 jsonpickle.ext.numpy.register_handlers()
 
 from collections import Counter
+
+from nose.plugins.attrib import attr
 from nose.tools import (
     assert_greater_equal,
     assert_less_equal,
@@ -67,6 +69,9 @@ class _BaseExample():
 
     @classmethod
     def setUpClass(cls):
+        # Note- 10 is quite slow for multiple tests below, given that the
+        # checks use brute-force implementations to verify the dynamic
+        # programming implementation used in miniHMM.
         cls.seq_lengths = [5, 10]  #,20]
 
         cls.test_obs_seqs = []  # test observation sequences
@@ -144,11 +149,12 @@ class _BaseExample():
         for i in range(gen.num_states):
             yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
 
-    # override in subclass
+    # Skip because probabilities in non-log space will always underflow.
     @unittest.skip
     def test_probability(self):
         assert False
 
+    @attr("slow")
     def test_logprob(self):
         # make sure fast forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
@@ -243,6 +249,7 @@ class _BaseExample():
         # TODO: test backward component of forward-backward algorithm
         assert False
 
+    @attr("slow")
     def test_posterior_decode_path_accuracy(self):
         # make sure posterior decode calls are above accuracy threshold listed above
         for expected_states, obs, _ in self.decode_tests:
@@ -263,6 +270,7 @@ class _BaseExample():
         # TODO: what else?
         assert False
 
+    @attr("slow")
     def test_joint_path_logprob(self):
         for n, (obs, expected_joint_probs) in enumerate(zip(self.test_obs_seqs,
                                                             self.expected_joint_logprobs)):
@@ -278,6 +286,7 @@ class _BaseExample():
                 found_cond_prob = self.generating_hmm.conditional_path_logprob(path, obs)
                 assert_almost_equal(found_cond_prob, path_prob - total_logprob)
 
+    @attr("slow")
     def test_sample(self):
         # Test sampling algorithm by checking the slope and intercept of the regression line
         # between expected and observed numbers of observations for each state path
@@ -300,6 +309,7 @@ class _BaseExample():
             assert_less_equal(abs(b), 1.0, "Intercept '%s' further from 0.0 than expected." % (b))
             assert_greater_equal(r, 0.95, "r '%s' less than 0.95 than expected." % r)
 
+    @attr("slow")
     def test_viterbi_path_accuracy(self):
         # make sure viterbi calls are above accuracy threshold listed above
         # with ground-truth states
@@ -381,7 +391,9 @@ class TestBTwoGaussian(_BaseExample):
         }
 
 
+@attr("slow")
 class TestCFourPoisson(_BaseExample):
+
     @classmethod
     def do_subclass_setup(cls):
         cls.name = "Four-state Poisson example"

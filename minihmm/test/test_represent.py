@@ -283,10 +283,10 @@ class TestModelReducer():
         for num_states in range(2, self.max_states):
             for starting_order in range(1, self.max_order):
                 model = self.models[(starting_order, num_states)]
-                factors = list("abcdefg" [:num_states])
+                factors = list("abcdefg"[:num_states])
 
-                # expected length is number starting states times the number of paths to each, including
-                # paths via dummy states
+                # expected length is number starting states times the number of
+                # paths to each, including paths via dummy states
                 elen = (num_states**numpy.arange(1, starting_order + 1)).sum()
                 mult = elen // num_states
 
@@ -301,9 +301,13 @@ class TestModelReducer():
         expected = self.expected_tuples[model_order]
         found = model._get_stateseq_tuples(self.sequences)
         assert_equal(
-            len(found), len(expected),
-            "Number of output sequences '%s' does not match number of input sequences '%s' for _get_stateseq_tuples(), order '%s'"
-            % (len(found), len(expected), model_order)
+            len(found),
+            len(expected),
+            (
+                "Number of output sequences '%s' does not match number of "
+                "input sequences '%s' for _get_stateseq_tuples(), order '%s'"
+                % (len(found), len(expected), model_order)
+            )
         )
         for e, f in zip(expected, found):
             assert_list_equal(e, f)
@@ -338,8 +342,11 @@ class TestModelReducer():
         assert len(found) > 0
         assert_equal(
             len(expected), len(found),
-            "Number of output sequences '%s' does not match number of input sequences '%s' for reduce_stateseq_orders, order '%s'"
-            % (len(found), len(self.sequences), model_order)
+            (
+                "Number of output sequences '%s' does not match number of "
+                "input sequences '%s' for reduce_stateseq_orders, order '%s'"
+                % (len(found), len(self.sequences), model_order)
+            )
         )
         for e, f in zip(expected, found):
             print("---------------------------------------")
@@ -356,7 +363,9 @@ class TestModelReducer():
     def check_raise_stateseq_orders(self, model_order):
         model = self.models[(model_order, 6)]
         expected = self.sequences
-        inp = ([model.high_states_to_low[X] for X in Y] for Y in self.expected_tuples[model_order])
+        inp = (
+            [model.high_states_to_low[X] for X in Y] for Y in self.expected_tuples[model_order]
+        )
         found = model.raise_stateseq_orders(inp)
         assert_equal(len(found), len(expected))
         for f, e in zip(found, expected):
@@ -421,9 +430,9 @@ class TestModelReducer():
 
                 yield check_array_equal, found, expected
 
-    # Gold standard would be to create a high order HMM, generate sequences from it
-    # in high order space, save results, create an equivalent low-order HMM, and
-    # run the unit tests below
+    # Gold standard would be to create a high order HMM, generate sequences
+    # from it in high order space, save results, create an equivalent low-order
+    # HMM, and run the unit tests below
     @unittest.skip
     def test_viterbi(self):
         assert False
@@ -547,8 +556,9 @@ class TestModelReducer():
             yield check_array_equal, expected, found
 
     def test_remap_from_first_order(self):
-        # test parameter remapping by asserting that log probabilities of observation sequences
-        # from remapped high-order mdodels match those of low order models
+        # test parameter remapping by asserting that log probabilities of
+        # observation sequences from remapped high-order mdodels match those of
+        # low order models
 
         models = {
             2: get_dirty_casino(),
