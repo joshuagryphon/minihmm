@@ -42,7 +42,7 @@ setup(
          'Programming Language :: Python :: 3.6',
          'Programming Language :: Python :: 3.9',
          'Topic :: Scientific/Engineering',
-         'License :: BSD 3-Clause',
+         'License :: OSI Approved :: BSD License',
          'Operating System :: POSIX',
         ],
     
