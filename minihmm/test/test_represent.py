@@ -243,255 +243,6 @@ class TestModelReducer():
         assert len(set(vals)) == len(vals)
         return {v: k for (k, v) in d.items()}
 
-    # skipping because need to define HMM for model reducer
-    def test_revive_from_json(self):
-        for k, v in self.models.items():
-            enc = v.to_json()
-            dec = ModelReducer.from_json(enc)
-            yield check_equal, v, dec
-
-    def test_eq(self):
-        for k1, k2 in itertools.combinations(self.models.keys(), r=2):
-            if k1 == k2:
-                yield check_equal, self.models[k1], self.models[k2]
-            else:
-                yield check_not_equal, self.models[k1], self.models[k2]
-
-    def test_transcode_sequence(self):
-        testseq = ["A", "B", "C", "D", "E"]
-        expected = numpy.arange(5)
-        dtmp = {K: V for K, V in zip(testseq, expected)}
-
-        found = ModelReducer.transcode_sequence(testseq, dtmp)
-        yield check_array_equal, found, expected
-
-    def test_transcode_sequences(self):
-        testseqs = [["A", "B", "C", "D", "E"], ["D", "B", "A", "A"]]
-
-        expected = [numpy.arange(5), numpy.array([3, 1, 0, 0])]
-
-        dtmp = {K: V for K, V in zip(testseqs[0], expected[0])}
-
-        found = ModelReducer.transcode_sequences(testseqs, dtmp)
-        yield check_equal, len(found), len(expected)
-        for my_found, my_expected in zip(found, expected):
-            yield check_array_equal, my_found, my_expected
-
-    def test_get_dummy_states(self):
-        for num_states in range(2, self.max_states):
-            for starting_order in range(1, self.max_order):
-                dummies = self.models[(starting_order, num_states)]._dummy_states
-                expected = list(reversed([-X for X in range(1, starting_order)]))
-                yield check_list_equal, dummies, expected
-
-    def test_remap_emission_factors(self):
-        for num_states in range(2, self.max_states):
-            for starting_order in range(1, self.max_order):
-                model = self.models[(starting_order, num_states)]
-                factors = list("abcdefg"[:num_states])
-
-                # expected length is number starting states times the number of
-                # paths to each, including paths via dummy states
-                elen = (num_states**numpy.arange(1, starting_order + 1)).sum()
-                mult = elen // num_states
-
-                f_expected = factors * mult
-                f_found = model.remap_emission_factors(factors)
-                yield check_list_equal, f_found, f_expected
-
-    def check_get_stateseq_tuples(self, model_order):
-        # n.b. test assumes _get_dummy_states is working
-        model = self.models[(model_order, 6)]
-
-        expected = self.expected_tuples[model_order]
-        found = model._get_stateseq_tuples(self.sequences)
-        assert_equal(
-            len(found),
-            len(expected),
-            (
-                "Number of output sequences '%s' does not match number of "
-                "input sequences '%s' for _get_stateseq_tuples(), order '%s'"
-                % (len(found), len(expected), model_order)
-            )
-        )
-        for e, f in zip(expected, found):
-            assert_list_equal(e, f)
-
-    def test_get_stateseq_tuples_forward(self):
-        for model_order in self.expected_tuples:
-            yield self.check_get_stateseq_tuples, model_order
-
-    def check_lower_stateseq_orders(self, model_order):
-        #requires _get_dummy_states, and get_state_mapping to function
-        model = self.models[(model_order, 6)]
-        forward = model.high_states_to_low
-        dummy_states = model._dummy_states
-        expected = []
-        for my_seq in self.sequences:
-
-            # prepend dummy states to sequence
-            my_seq = sorted(dummy_states) + my_seq
-
-            # translate
-            expected.append(
-                numpy.array(
-                    [
-                        forward[tuple(my_seq[X:X + model_order])]
-                        for X in range(0,
-                                       len(my_seq) - model_order + 1)
-                    ]
-                )
-            )
-
-        found = model.lower_stateseq_orders(self.sequences)
-        assert len(found) > 0
-        assert_equal(
-            len(expected), len(found),
-            (
-                "Number of output sequences '%s' does not match number of "
-                "input sequences '%s' for reduce_stateseq_orders, order '%s'"
-                % (len(found), len(self.sequences), model_order)
-            )
-        )
-        for e, f in zip(expected, found):
-            print("---------------------------------------")
-            print(e)
-            print(f)
-            assert_array_equal(f, e)
-
-    # NOTE: check function assumes high_states_to_low is correct
-    def test_lower_stateseq_orders(self):
-        assert_greater(len(self.expected_tuples), 0)
-        for model_order in self.expected_tuples:
-            yield self.check_lower_stateseq_orders, model_order
-
-    def check_raise_stateseq_orders(self, model_order):
-        model = self.models[(model_order, 6)]
-        expected = self.sequences
-        inp = (
-            [model.high_states_to_low[X] for X in Y] for Y in self.expected_tuples[model_order]
-        )
-        found = model.raise_stateseq_orders(inp)
-        assert_equal(len(found), len(expected))
-        for f, e in zip(found, expected):
-            assert_array_equal(f, e)
-
-    # NOTE: check function assumes high_states_to_low is correct
-    def test_raise_stateseq_orders(self):
-        for model_order in self.expected_tuples:
-            yield self.check_raise_stateseq_orders, model_order
-
-    def test_negative_input_states_raises_value_error(self):
-        model = list(self.models.values())[0]
-        assert_raises(ValueError, model.lower_stateseq_orders, [[5, 1, 3, 4, 1, 0, -1]])
-        assert_raises(ValueError, model.lower_stateseq_orders, [[-5, 1, 3, 4, 1, 0, 1]])
-        assert_raises(ValueError, model.lower_stateseq_orders, [[5, 1, 3, -4, 1, 0, 1]])
-
-    def test_high_states_to_low(self):
-        for (num_states, model_order), expected in self.expected_high_states_to_low.items():
-            found = self.models[(model_order, 4)].high_states_to_low
-            yield check_dict_equal, found, expected
-
-    def test_low_states_to_high(self):
-        for (num_states, model_order), expected in self.expected_high_states_to_low.items():
-            found = self.models[(model_order, 4)].low_states_to_high
-            yield check_dict_equal, found, self.revdict(expected)
-
-    def test_bad_parameters_raises_value_error(self):
-        for numstates, model_order in itertools.product([-1, 0, 5], [-2, -1, 0]):
-            yield check_raises, ValueError, ModelReducer, model_order, numstates
-
-    def test_first_order_is_identical(self):
-        expected = {(0, ): 0, (1, ): 1, (2, ): 2, (3, ): 3}
-        model = ModelReducer(1, 4)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
-            assert_dict_equal(model.high_states_to_low, expected)
-            assert_dict_equal(model.low_states_to_high, self.revdict(expected))
-
-    def test_transition_pseudocount_arrays(self):
-        for num_states in range(2, self.max_states):
-            for starting_order in range(1, self.max_order):
-                model = self.models[(starting_order, num_states)]
-                _, pmat = model.get_pseudocount_arrays()
-
-                for (x, y, v) in zip(pmat.row, pmat.col, pmat.data):
-                    from_state = model.low_states_to_high[x]
-                    to_state = model.low_states_to_high[y]
-
-                    yield check_tuple_equal, from_state[1:], to_state[:-1]
-
-    def test_state_prior_pseudocount_arrays(self):
-        for num_states in range(2, self.max_states):
-            for starting_order in range(1, self.max_order):
-                model = self.models[(starting_order, num_states)]
-                dummies = model._dummy_states
-                found, _ = model.get_pseudocount_arrays()
-                expected = numpy.zeros(model.low_order_states)
-                for i in range(model.high_order_states):
-                    k = tuple(dummies + [i])
-                    v = model.high_states_to_low[k]
-                    expected[v] = 1
-
-                yield check_array_equal, found, expected
-
-    # Gold standard would be to create a high order HMM, generate sequences
-    # from it in high order space, save results, create an equivalent low-order
-    # HMM, and run the unit tests below
-    def test_viterbi(self):
-        # FIXME: right now, this test only makes sure the method executes.
-        # It does *not* verify correctness of output.
-        mod = copy.deepcopy(self.models[(2, 2)])
-        my_hmm = self.get_random_hmm(mod)
-        mod.hmm = my_hmm
-        mod.viterbi(self.test_array)
-
-    def test_posterior_decode(self):
-        # FIXME: right now, this test only makes sure the method executes.
-        # It does *not* verify correctness of output.
-        mod = copy.deepcopy(self.models[(2, 2)])
-        my_hmm = self.get_random_hmm(mod)
-        mod.hmm = my_hmm
-        mod.posterior_decode(self.test_array)
-
-    def test_sample(self):
-        # FIXME: right now, this test only makes sure the method executes.
-        # It does *not* verify correctness of output.
-        mod = copy.deepcopy(self.models[(2, 2)])
-        my_hmm = self.get_random_hmm(mod)
-        mod.hmm = my_hmm
-        mod.sample(self.test_array, 2)
-
-    def test_generate(self):
-        # FIXME: right now, this test only makes sure the method executes.
-        # It does *not* verify correctness of output.
-        #
-        # Gold standard: sample 10k times, and make sure parameters converge
-        # onto high-order transitions and emissions
-        mod = copy.deepcopy(self.models[(2, 2)])
-        my_hmm = self.get_random_hmm(mod)
-        mod.hmm = my_hmm
-        mod.generate(200)
-
-    def test_joint_path_logprob(self):
-        # FIXME: right now, this test only makes sure the method executes.
-        # It does *not* verify correctness of output.
-        mod = copy.deepcopy(self.models[(2, 2)])
-        my_hmm = self.get_random_hmm(mod)
-        mod.hmm = my_hmm
-
-        my_path = numpy.random.randint(0, high=2, size=len(self.test_array))
-        mod.joint_path_logprob(my_path, self.test_array)
-    
-    def test_to_dict_no_hmm(self):
-        for (starting_order, num_states), model in sorted(self.models.items()):
-            found = model._to_dict()
-            expected = {
-                "starting_order": starting_order,
-                "num_states": num_states,
-            }
-            yield check_equal, found, expected
-
     @classmethod
     def get_random_hmm(cls, model):
         """Get a randomly-initialized HMM matching the low-order states for
@@ -525,6 +276,37 @@ class TestModelReducer():
             emission_probs=emissions,
         )
         return my_hmm
+
+
+    # tests start here --------------------------------------------------------
+
+    def test_init_bad_parameters_raises_value_error(self):
+        for numstates, model_order in itertools.product([-1, 0, 5], [-2, -1, 0]):
+            yield check_raises, ValueError, ModelReducer, model_order, numstates
+
+    def test_init_on_first_order_is_identical(self):
+        expected = {(0, ): 0, (1, ): 1, (2, ): 2, (3, ): 3}
+        model = ModelReducer(1, 4)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            assert_dict_equal(model.high_states_to_low, expected)
+            assert_dict_equal(model.low_states_to_high, self.revdict(expected))
+
+    def test_eq(self):
+        for k1, k2 in itertools.combinations(self.models.keys(), r=2):
+            if k1 == k2:
+                yield check_equal, self.models[k1], self.models[k2]
+            else:
+                yield check_not_equal, self.models[k1], self.models[k2]
+
+    def test_to_dict_no_hmm(self):
+        for (starting_order, num_states), model in sorted(self.models.items()):
+            found = model._to_dict()
+            expected = {
+                "starting_order": starting_order,
+                "num_states": num_states,
+            }
+            yield check_equal, found, expected
 
     def test_to_dict_with_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
@@ -596,6 +378,232 @@ class TestModelReducer():
 
             for k in ("trans_probs", "state_priors"):
                 yield check_array_equal, getattr(found.hmm, k).data, getattr(my_hmm, k).data
+
+    def test_to_from_json(self):
+        for k, v in self.models.items():
+            enc = v.to_json()
+            dec = ModelReducer.from_json(enc)
+            yield check_equal, v, dec
+
+    def test_transcode_sequence(self):
+        testseq = ["A", "B", "C", "D", "E"]
+        expected = numpy.arange(5)
+        dtmp = {K: V for K, V in zip(testseq, expected)}
+
+        found = ModelReducer.transcode_sequence(testseq, dtmp)
+        yield check_array_equal, found, expected
+
+    def test_transcode_sequences(self):
+        testseqs = [["A", "B", "C", "D", "E"], ["D", "B", "A", "A"]]
+
+        expected = [numpy.arange(5), numpy.array([3, 1, 0, 0])]
+
+        dtmp = {K: V for K, V in zip(testseqs[0], expected[0])}
+
+        found = ModelReducer.transcode_sequences(testseqs, dtmp)
+        yield check_equal, len(found), len(expected)
+        for my_found, my_expected in zip(found, expected):
+            yield check_array_equal, my_found, my_expected
+
+    def test_get_dummy_states(self):
+        for num_states in range(2, self.max_states):
+            for starting_order in range(1, self.max_order):
+                dummies = self.models[(starting_order, num_states)]._dummy_states
+                expected = list(reversed([-X for X in range(1, starting_order)]))
+                yield check_list_equal, dummies, expected
+
+    # get_state_mapping() is called in __init__ when models are created,
+    # and sets model.high_states_to_low as well as model.low_states_to_high
+    # We test by inspecting models created in setUpClass
+    def test_get_state_mapping_high_states_to_low(self):
+        for (num_states, model_order), expected in self.expected_high_states_to_low.items():
+            found = self.models[(model_order, 4)].high_states_to_low
+            yield check_dict_equal, found, expected
+
+    # get_state_mapping() is called in __init__ when models are created,
+    # and sets model.high_states_to_low as well as model.low_states_to_high
+    # We test by inspecting models created in setUpClass
+    def test_get_state_mapping_low_states_to_high(self):
+        for (num_states, model_order), expected in self.expected_high_states_to_low.items():
+            found = self.models[(model_order, 4)].low_states_to_high
+            yield check_dict_equal, found, self.revdict(expected)
+
+    def check_get_stateseq_tuples(self, model_order):
+        # n.b. test assumes _get_dummy_states is working
+        model = self.models[(model_order, 6)]
+
+        expected = self.expected_tuples[model_order]
+        found = model._get_stateseq_tuples(self.sequences)
+        assert_equal(
+            len(found),
+            len(expected),
+            (
+                "Number of output sequences '%s' does not match number of "
+                "input sequences '%s' for _get_stateseq_tuples(), order '%s'"
+                % (len(found), len(expected), model_order)
+            )
+        )
+        for e, f in zip(expected, found):
+            assert_list_equal(e, f)
+
+    def test_get_stateseq_tuples_forward(self):
+        for model_order in self.expected_tuples:
+            yield self.check_get_stateseq_tuples, model_order
+
+    def check_lower_stateseq_orders(self, model_order):
+        #requires _get_dummy_states, and get_state_mapping to function
+        model = self.models[(model_order, 6)]
+        forward = model.high_states_to_low
+        dummy_states = model._dummy_states
+        expected = []
+        for my_seq in self.sequences:
+
+            # prepend dummy states to sequence
+            my_seq = sorted(dummy_states) + my_seq
+
+            # translate
+            expected.append(
+                numpy.array(
+                    [
+                        forward[tuple(my_seq[X:X + model_order])]
+                        for X in range(0,
+                                       len(my_seq) - model_order + 1)
+                    ]
+                )
+            )
+
+        found = model.lower_stateseq_orders(self.sequences)
+        assert len(found) > 0
+        assert_equal(
+            len(expected), len(found),
+            (
+                "Number of output sequences '%s' does not match number of "
+                "input sequences '%s' for reduce_stateseq_orders, order '%s'"
+                % (len(found), len(self.sequences), model_order)
+            )
+        )
+        for e, f in zip(expected, found):
+            print("---------------------------------------")
+            print(e)
+            print(f)
+            assert_array_equal(f, e)
+
+    # NOTE: check function assumes high_states_to_low is correct
+    def test_lower_stateseq_orders(self):
+        assert_greater(len(self.expected_tuples), 0)
+        for model_order in self.expected_tuples:
+            yield self.check_lower_stateseq_orders, model_order
+
+    def test_lower_statseq_orders_negative_input_states_raises_value_error(self):
+        model = list(self.models.values())[0]
+        assert_raises(ValueError, model.lower_stateseq_orders, [[5, 1, 3, 4, 1, 0, -1]])
+        assert_raises(ValueError, model.lower_stateseq_orders, [[-5, 1, 3, 4, 1, 0, 1]])
+        assert_raises(ValueError, model.lower_stateseq_orders, [[5, 1, 3, -4, 1, 0, 1]])
+
+    def check_raise_stateseq_orders(self, model_order):
+        model = self.models[(model_order, 6)]
+        expected = self.sequences
+        inp = (
+            [model.high_states_to_low[X] for X in Y] for Y in self.expected_tuples[model_order]
+        )
+        found = model.raise_stateseq_orders(inp)
+        assert_equal(len(found), len(expected))
+        for f, e in zip(found, expected):
+            assert_array_equal(f, e)
+
+    # NOTE: check function assumes high_states_to_low is correct
+    def test_raise_stateseq_orders(self):
+        for model_order in self.expected_tuples:
+            yield self.check_raise_stateseq_orders, model_order
+
+    # Gold standard would be to create a high order HMM, generate sequences
+    # from it in high order space, save results, create an equivalent low-order
+    # HMM, and run the unit tests below
+    def test_viterbi(self):
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.viterbi(self.test_array)
+
+    def test_posterior_decode(self):
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.posterior_decode(self.test_array)
+
+    def test_sample(self):
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.sample(self.test_array, 2)
+
+    def test_generate(self):
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        #
+        # Gold standard: sample 10k times, and make sure parameters converge
+        # onto high-order transitions and emissions
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.generate(200)
+
+    def test_joint_path_logprob(self):
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+
+        my_path = numpy.random.randint(0, high=2, size=len(self.test_array))
+        mod.joint_path_logprob(my_path, self.test_array)
+ 
+    def test_remap_emission_factors(self):
+        for num_states in range(2, self.max_states):
+            for starting_order in range(1, self.max_order):
+                model = self.models[(starting_order, num_states)]
+                factors = list("abcdefg"[:num_states])
+
+                # expected length is number starting states times the number of
+                # paths to each, including paths via dummy states
+                elen = (num_states**numpy.arange(1, starting_order + 1)).sum()
+                mult = elen // num_states
+
+                f_expected = factors * mult
+                f_found = model.remap_emission_factors(factors)
+                yield check_list_equal, f_found, f_expected
+
+    def test_get_pseudocount_arrays_transitions(self):
+        for num_states in range(2, self.max_states):
+            for starting_order in range(1, self.max_order):
+                model = self.models[(starting_order, num_states)]
+                _, pmat = model.get_pseudocount_arrays()
+
+                for (x, y, v) in zip(pmat.row, pmat.col, pmat.data):
+                    from_state = model.low_states_to_high[x]
+                    to_state = model.low_states_to_high[y]
+
+                    yield check_tuple_equal, from_state[1:], to_state[:-1]
+
+    def test_get_pseudocount_arrays_state_priors(self):
+        for num_states in range(2, self.max_states):
+            for starting_order in range(1, self.max_order):
+                model = self.models[(starting_order, num_states)]
+                dummies = model._dummy_states
+                found, _ = model.get_pseudocount_arrays()
+                expected = numpy.zeros(model.low_order_states)
+                for i in range(model.high_order_states):
+                    k = tuple(dummies + [i])
+                    v = model.high_states_to_low[k]
+                    expected[v] = 1
+
+                yield check_array_equal, found, expected
 
     def test_get_emission_mapping(self):
         cases = {
