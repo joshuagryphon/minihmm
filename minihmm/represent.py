@@ -562,7 +562,7 @@ class ModelReducer(object):
             Log probability of P(path, emissions)
         """
         lower_path = self.lower_stateseq_orders([path])[0]
-        return self.hmm.joint_path_loprob(lower_path, emissions)
+        return self.hmm.joint_path_logprob(lower_path, emissions)
 
     def remap_emission_factors(self, emission_probs):
         """Map emission probabilities from high-order space to equivalent

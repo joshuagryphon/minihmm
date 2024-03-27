@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Unit tests for reducing model order and for changing model representation
 """
+import copy
 import itertools
 import unittest
 import warnings
@@ -231,6 +232,10 @@ class TestModelReducer():
             },
         }
 
+        # simple numerical array of observations
+        cls.test_array_high = 6
+        cls.test_array = numpy.random.randint(0, high=cls.test_array_high, size=10)
+
     @staticmethod
     def revdict(d):
         # make sure we won't overwrite entries
@@ -433,22 +438,51 @@ class TestModelReducer():
     # Gold standard would be to create a high order HMM, generate sequences
     # from it in high order space, save results, create an equivalent low-order
     # HMM, and run the unit tests below
-    @unittest.skip
     def test_viterbi(self):
-        assert False
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.viterbi(self.test_array)
 
-    @unittest.skip
     def test_posterior_decode(self):
-        assert False
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.posterior_decode(self.test_array)
 
-    @unittest.skip
     def test_sample(self):
-        assert False
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.sample(self.test_array, 2)
 
-    @unittest.skip
     def test_generate(self):
-        assert False
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        #
+        # Gold standard: sample 10k times, and make sure parameters converge
+        # onto high-order transitions and emissions
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+        mod.generate(200)
 
+    def test_joint_path_logprob(self):
+        # FIXME: right now, this test only makes sure the method executes.
+        # It does *not* verify correctness of output.
+        mod = copy.deepcopy(self.models[(2, 2)])
+        my_hmm = self.get_random_hmm(mod)
+        mod.hmm = my_hmm
+
+        my_path = numpy.random.randint(0, high=2, size=len(self.test_array))
+        mod.joint_path_logprob(my_path, self.test_array)
+    
     def test_to_dict_no_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
             found = model._to_dict()
@@ -458,24 +492,48 @@ class TestModelReducer():
             }
             yield check_equal, found, expected
 
+    @classmethod
+    def get_random_hmm(cls, model):
+        """Get a randomly-initialized HMM matching the low-order states for
+        a :class:`ModelReducer`
+
+        Parameters
+        ----------
+        model : ModelReducer
+        
+        Returns
+        -------
+        :class:`minihmm.hmm.FirstOrderHMM`
+            Randomly-initialized first-order HMM congruent with the low-order
+            state space of `model`
+        """
+        state_priors = numpy.random.random(model.low_order_states)
+        state_priors /= state_priors.sum()
+
+        trans_probs = numpy.random.random((model.low_order_states, model.low_order_states))
+        trans_probs = (trans_probs.T / trans_probs.sum(1)).T
+
+        emissions = []
+        for _ in range(model.low_order_states):
+            my_array = numpy.random.random(cls.test_array_high)
+            my_array /= my_array.sum()
+            emissions.append(ArrayFactor(my_array))
+
+        my_hmm = FirstOrderHMM(
+            state_priors=ArrayFactor(state_priors),
+            trans_probs=MatrixFactor(trans_probs),
+            emission_probs=emissions,
+        )
+        return my_hmm
+
     def test_to_dict_with_hmm(self):
         for (starting_order, num_states), model in sorted(self.models.items()):
             if starting_order >= 5:
                 continue
 
-            state_priors = numpy.random.random(model.low_order_states)
-            state_priors /= state_priors.sum()
-
-            trans_probs = numpy.random.random((model.low_order_states, model.low_order_states))
-            trans_probs = (trans_probs.T / trans_probs.sum(1)).T
-
-            my_hmm = FirstOrderHMM(
-                state_priors=ArrayFactor(state_priors),
-                trans_probs=MatrixFactor(trans_probs),
-                emission_probs=[None] * model.low_order_states
-            )
-
+            my_hmm = self.get_random_hmm(model)
             model.hmm = my_hmm
+
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 found = model._to_dict()
