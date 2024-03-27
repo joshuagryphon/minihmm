@@ -7,6 +7,17 @@ Version numbers follow following the conventions described in `PEP440
 <http://semver.org/>`_. Because we're still below v1, minor updates might
 break backward compatibility.
 
+Unreleased
+---------------------
+
+- Fixed breaking code typo in
+  :class:`minihmm.represent.ModelReducer.joint_path_logprob`
+
+- Added placeholder tests that at least guarantee execution of
+  :class:`minihmm.represent.ModelReducer` methods
+
+- Reorganized & clarified test names
+
 
 v0.3.2 = [2022-05-10]
 ---------------------
