@@ -7,7 +7,7 @@ Version numbers follow following the conventions described in `PEP440
 <http://semver.org/>`_. Because we're still below v1, minor updates might
 break backward compatibility.
 
-Unreleased
+v0.3.3 = [2024-03-28]
 ---------------------
 
 - Fixed breaking code typo in
