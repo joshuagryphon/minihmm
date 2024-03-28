@@ -149,11 +149,6 @@ class _BaseExample():
         for i in range(gen.num_states):
             yield check_equal, gen.emission_probs[i], rev.emission_probs[i]
 
-    # Skip because probabilities in non-log space will always underflow.
-    @unittest.skip
-    def test_probability(self):
-        assert False
-
     @attr("slow")
     def test_logprob(self):
         # make sure fast forward probability calculations match those calced by brute force
@@ -178,7 +173,6 @@ class _BaseExample():
             )
             yield assert_almost_equal, expected, found, 7, msg
 
-    # FIXME: this is forward_backward test right now
     def test_forward_logprob(self):
         # make sure vectorized forward probability calculations match those calced by brute force
         numpy.random.seed(_FORWARD_SEED)
@@ -247,6 +241,8 @@ class _BaseExample():
     @unittest.skip
     def test_forward_backward_backward(self):
         # TODO: test backward component of forward-backward algorithm
+        # this is currently tested implicitly, as the tests in test_train.py
+        # pass
         assert False
 
     @attr("slow")
@@ -263,11 +259,15 @@ class _BaseExample():
     # override in subclass
     @unittest.skip
     def test_generate(self):
-        # testable
-
+        # FIXME: implement this isolated test.
+        #
+        #
+        # generate() is currently tested implicitly, as retraining on generated
+        # sequences in test_train.py actually converges.
+        #
+        #
         # 1. test length of state and observation sequences is correct
-        # 2. test sampling is according to joint distribution?
-        # TODO: what else?
+        # 2. test sampling is according to joint distribution
         assert False
 
     @attr("slow")
